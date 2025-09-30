@@ -1,19 +1,34 @@
-import { pgTable, serial, varchar, text, integer, timestamp, boolean, decimal } from "drizzle-orm/pg-core";
+import { pgEnum,pgTable, serial, varchar, text, integer, timestamp, boolean, decimal } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
+
+//ENUMS
+export const RoleEnum = pgEnum("role", ["admin", "vendor", "customer"]); 
+export const ShopStatusEnum = pgEnum("status", ["pending", "active", "suspended"]);
+export const OrderStatusEnum = pgEnum("status", ["pending", "paid", "shipped", "completed", "cancelled"]);
+export const PaymentStatusEnum = pgEnum("payment_status", ["unpaid", "paid", "failed"]); 
+export const ShippingStatusEnum = pgEnum("shipping_status", ["preparing", "dispatched", "in-transit", "delivered"]); 
+export const FlashSalesStatusEnum = pgEnum("flash_status", ["upcoming", "active", "ended"]);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
 
 // USERS
 export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
-  name: varchar("name", { length: 255 }).notNull(),
+  id: serial("id").primaryKey(),                                                                                                                                                                                                                                                                                                                                 
+  firstname: varchar("firstname", { length: 255 }).notNull(),
+  lastname: varchar("lastname", { length: 255 }).notNull(),
   email: varchar("email", { length: 255 }).notNull().unique(),
   password: varchar("password", { length: 255 }).notNull(),
   phone: varchar("phone", { length: 20 }),
-  role: varchar("role", { length: 20 }).default("customer"), // admin, vendor, customer
+  role: RoleEnum("role").default("customer"), // admin, vendor, customer
+  image_url: varchar("image_url", { length: 255 }).default(
+    "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y"
+  ),
   isVerified: boolean("is_verified").default(false),
+  verificationCode: varchar("verification_code", { length: 10 }),
+  verificationCodeExpiresAt: timestamp("verification_code_expires_at"),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// VENDOR SHOPS
+// VENDOR SHOPS                                                                                                                                                                                                                                
 export const shops = pgTable("shops", {
   id: serial("id").primaryKey(),
   ownerId: integer("owner_id").references(() => users.id).notNull(),
@@ -21,7 +36,7 @@ export const shops = pgTable("shops", {
   description: text("description"),
   logoUrl: text("logo_url"),
   coverUrl: text("cover_url"),
-  status: varchar("status", { length: 20 }).default("pending"), // pending, active, suspended
+  status: ShopStatusEnum("status").default("pending"), // pending, active, suspended
   rating: decimal("rating", { precision: 2, scale: 1 }).default("0"),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -89,9 +104,9 @@ export const wishlists = pgTable("wishlists", {
 export const orders = pgTable("orders", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id).notNull(),
-  status: varchar("status", { length: 20 }).default("pending"), // pending, paid, shipped, completed, cancelled
+  status: OrderStatusEnum("status").default("pending"), // pending, paid, shipped, completed, cancelled
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
-  paymentStatus: varchar("payment_status", { length: 20 }).default("unpaid"),
+  paymentStatus: PaymentStatusEnum("payment_status").default("unpaid"),
   shippingAddress: text("shipping_address").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -122,7 +137,7 @@ export const shipping = pgTable("shipping", {
   orderId: integer("order_id").references(() => orders.id).notNull(),
   courier: varchar("courier", { length: 100 }),
   trackingNumber: varchar("tracking_number", { length: 255 }),
-  status: varchar("status", { length: 20 }).default("preparing"), // preparing, dispatched, in-transit, delivered
+  status: ShippingStatusEnum("shipping_status").default("preparing"), // preparing, dispatched, in-transit, delivered
   estimatedDelivery: timestamp("estimated_delivery"),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -157,7 +172,7 @@ export const flashSales = pgTable("flash_sales", {
   soldCount: integer("sold_count").default(0),
   startTime: timestamp("start_time").notNull(),
   endTime: timestamp("end_time").notNull(),
-  status: varchar("status", { length: 20 }).default("upcoming"), // upcoming, active, ended
+  status: FlashSalesStatusEnum("flash_status").default("upcoming"), // upcoming, active, ended
   createdAt: timestamp("created_at").defaultNow(),
 });
 

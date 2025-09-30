@@ -7,9 +7,11 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "npm run build && node dist/index.js",
-    "generate":"drizzle-kit generate",
-    "migrate":"tsx src/drizzle/migrate.ts",
-    "seed": "tsx src/Drizzle/seed.ts"
+    "generate": "drizzle-kit generate",
+    "migrate": "tsx src/Drizzle/migrate.ts",
+    "seed": "tsx src/Drizzle/seed.ts",
+    "push": "drizzle-kit push",
+    "studio": "drizzle-kit studio"
   },
   "keywords": [],
   "author": "",
@@ -17,13 +19,15 @@
   "packageManager": "pnpm@10.11.0",
   "devDependencies": {
     "@types/pg": "^8.15.5",
-    "drizzle-kit": "^0.31.5",
-    "tsx": "^4.20.6",
-    "typescript": "^5.9.2"
+    "drizzle-kit": "^0.31.5"
+    
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.0.1",
     "dotenv": "^17.2.2",
     "drizzle-orm": "^0.44.5",
-    "pg": "^8.16.3"
+    "pg": "^8.16.3",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.2"
   }
 }
