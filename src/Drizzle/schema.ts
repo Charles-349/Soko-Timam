@@ -64,6 +64,7 @@ export const products = pgTable("products", {
   rating: decimal("rating", { precision: 2, scale: 1 }).default("0"),
   salesCount: integer("sales_count").default(0),                                                                                                                                                                                                                                                           
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const productImages = pgTable("product_images", {
@@ -242,6 +243,18 @@ export const productsRelations = relations(products, ({ one, many }) => ({
   flashSales: many(flashSales),
 }));
 
+// 🔥 Extra deep product relations
+export const productsDeepRelations = relations(products, ({ one, many }) => ({
+  category: one(categories, {
+    fields: [products.categoryId],
+    references: [categories.id],
+  }),
+  reviews: many(reviews),
+  wishlists: many(wishlists),
+  cartItems: many(cartItems),
+  orderItems: many(orderItems),
+}));
+
 export const cartsRelations = relations(carts, ({ one, many }) => ({
   user: one(users, {
     fields: [carts.userId],
@@ -343,6 +356,7 @@ export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
   }),
 }));
 
+
 // TYPE INFERENCE 
 export type TIUser = typeof users.$inferInsert;
 export type TSUser = typeof users.$inferSelect;
@@ -398,4 +412,3 @@ export type TSNotification = typeof notifications.$inferSelect;
 
 export type TIAuditLog = typeof auditLogs.$inferInsert;
 export type TSAuditLog = typeof auditLogs.$inferSelect;
-
