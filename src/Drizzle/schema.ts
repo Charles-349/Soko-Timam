@@ -64,7 +64,7 @@ export const products = pgTable("products", {
   rating: decimal("rating", { precision: 2, scale: 1 }).default("0"),
   salesCount: integer("sales_count").default(0),                                                                                                                                                                                                                                                           
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const productImages = pgTable("product_images", {
@@ -130,6 +130,7 @@ export const payments = pgTable("payments", {
   status: varchar("status", { length: 20 }).default("pending"),
   transactionRef: varchar("transaction_ref", { length: 255 }),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 //  SHIPPING
@@ -243,7 +244,7 @@ export const productsRelations = relations(products, ({ one, many }) => ({
   flashSales: many(flashSales),
 }));
 
-// 🔥 Extra deep product relations
+// Extra deep product relations
 export const productsDeepRelations = relations(products, ({ one, many }) => ({
   category: one(categories, {
     fields: [products.categoryId],
