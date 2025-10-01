@@ -2,10 +2,17 @@
 import express from 'express';
 import user from './user/user.router';
 import product from './product/product.router';
+import cors from 'cors';
 const initializeApp = ()=>{
 const app = express();
 
 //middleware
+   app.use(cors({
+        origin: '*',
+        methods: ["GET", "POST", "PUT", "DELETE"],
+    }))
+
+
 app.use(express.json());
 
 

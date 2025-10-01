@@ -15,7 +15,7 @@ import { Express } from "express";
 
 const product = (app: Express) => {
   // Create Product (Admin only)
-  app.route("/product").post(adminRoleAuth, async (req, res, next) => {
+  app.route("/product").post( async (req, res, next) => {
     try {
       await createProductController(req, res);
     } catch (error) {
