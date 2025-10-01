@@ -1,5 +1,6 @@
 
 import express from 'express';
+import user from './user/user.router';
 const initializeApp = ()=>{
 const app = express();
 
@@ -8,7 +9,7 @@ app.use(express.json());
 
 
 //routes
-
+user(app);
 
 app.get('/', (req, res) => {
     res.send('Welcome to the Hospital API');

@@ -342,3 +342,60 @@ export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
     references: [users.id],
   }),
 }));
+
+// TYPE INFERENCE 
+export type TIUser = typeof users.$inferInsert;
+export type TSUser = typeof users.$inferSelect;
+
+export type TIShop = typeof shops.$inferInsert;
+export type TSShop = typeof shops.$inferSelect;
+
+export type TICategory = typeof categories.$inferInsert;
+export type TSCategory = typeof categories.$inferSelect;
+
+export type TIProduct = typeof products.$inferInsert;
+export type TSProduct = typeof products.$inferSelect;
+
+export type TIProductImage = typeof productImages.$inferInsert;
+export type TSProductImage = typeof productImages.$inferSelect;
+
+export type TIProductAttribute = typeof productAttributes.$inferInsert;
+export type TSProductAttribute = typeof productAttributes.$inferSelect;
+
+export type TICart = typeof carts.$inferInsert;
+export type TSCart = typeof carts.$inferSelect;
+
+export type TICartItem = typeof cartItems.$inferInsert;
+export type TSCartItem = typeof cartItems.$inferSelect;
+
+export type TIWishlist = typeof wishlists.$inferInsert;
+export type TSWishlist = typeof wishlists.$inferSelect;
+
+export type TIOrder = typeof orders.$inferInsert;
+export type TSOrder = typeof orders.$inferSelect;
+
+export type TIOrderItem = typeof orderItems.$inferInsert;
+export type TSOrderItem = typeof orderItems.$inferSelect;
+
+export type TIPayment = typeof payments.$inferInsert;
+export type TSPayment = typeof payments.$inferSelect;
+export type UpdatePayment = Partial<Omit<TIPayment, 'orderId'>> & { updatedAt?: Date | null };
+
+export type TIShipping = typeof shipping.$inferInsert;
+export type TSShipping = typeof shipping.$inferSelect;
+
+export type TIReview = typeof reviews.$inferInsert;
+export type TSReview = typeof reviews.$inferSelect;
+
+export type TICoupon = typeof coupons.$inferInsert;
+export type TSCoupon = typeof coupons.$inferSelect;
+
+export type TIFlashSale = typeof flashSales.$inferInsert;
+export type TSFlashSale = typeof flashSales.$inferSelect;
+
+export type TINotification = typeof notifications.$inferInsert;
+export type TSNotification = typeof notifications.$inferSelect;
+
+export type TIAuditLog = typeof auditLogs.$inferInsert;
+export type TSAuditLog = typeof auditLogs.$inferSelect;
+
