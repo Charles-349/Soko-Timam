@@ -7,7 +7,7 @@ const initializeApp = ()=>{
 const app = express();
 
 //middleware
-   app.use(cors({
+app.use(cors({
         origin: '*',
         methods: ["GET", "POST", "PUT", "DELETE"],
     }))
