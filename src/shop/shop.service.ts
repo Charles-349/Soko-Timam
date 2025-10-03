@@ -3,12 +3,12 @@ import { shops } from "../Drizzle/schema";
 import { eq } from "drizzle-orm";
 import type { TIShop } from "../Drizzle/schema";
 
-// ---------------- CREATE ----------------
+// CREATE
 export const createShopService = (data: TIShop) => {
   return db.insert(shops).values(data).returning();
 };
 
-// ---------------- READ ALL ----------------
+// READ ALL
 export const getAllShopsService = () => {
   return db.query.shops.findMany({
     with: {
@@ -19,7 +19,7 @@ export const getAllShopsService = () => {
   });
 };
 
-// ---------------- READ ONE ----------------
+// READ ONE 
 export const getShopByIdService = (id: number) => {
   return db.query.shops.findFirst({
     where: eq(shops.id, id),
@@ -31,7 +31,7 @@ export const getShopByIdService = (id: number) => {
   });
 };
 
-// ---------------- READ BY OWNER ----------------
+//READ BY OWNER 
 export const getShopsByOwnerService = (ownerId: number) => {
   return db.query.shops.findMany({
     where: eq(shops.ownerId, ownerId),
@@ -42,17 +42,16 @@ export const getShopsByOwnerService = (ownerId: number) => {
   });
 };
 
-// ---------------- UPDATE ----------------
+//UPDATE
 export const updateShopService = (id: number, data: Partial<TIShop>) => {
   return db.update(shops).set(data).where(eq(shops.id, id)).returning();
 };
 
-// ---------------- DELETE ----------------
+// DELETE
 export const deleteShopService = (id: number) => {
   return db.delete(shops).where(eq(shops.id, id)).returning();
 };
 
-// ---------------- RELATIONS ----------------
 
 // Shop with Products
 export const getShopWithProductsService = (id: number) => {

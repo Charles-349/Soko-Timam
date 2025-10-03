@@ -106,7 +106,7 @@ export const deleteShopController = async (req: Request, res: Response) => {
   }
 };
 
-// RELATIONS
+
 
 // Shop with Products
 export const getShopWithProductsController = async (

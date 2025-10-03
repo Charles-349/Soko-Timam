@@ -96,8 +96,6 @@ export const deleteCategoryController = async (req: Request, res: Response) => {
   }
 };
 
-// RELATIONS
-
 // Category with Parent
 export const getCategoryWithParentController = async (
   req: Request,

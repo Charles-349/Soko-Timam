@@ -91,7 +91,6 @@ export const deleteUserService = async (id: number) => {
   return "User deleted successfully";
 };
 
-// RELATIONS
 
 // User with Orders
 export const getUserWithOrdersService = async (id: number) => {

@@ -34,6 +34,7 @@ export const shops = pgTable("shops", {
   ownerId: integer("owner_id").references(() => users.id).notNull(),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
+  location: varchar("location", { length: 255 }),
   logoUrl: text("logo_url"),
   coverUrl: text("cover_url"),
   status: ShopStatusEnum("status").default("pending"), // pending, active, suspended
@@ -246,7 +247,6 @@ export const productsRelations = relations(products, ({ one, many }) => ({
   flashSales: many(flashSales),
 }));
 
-// Extra deep product relations
 export const productsDeepRelations = relations(products, ({ one, many }) => ({
   category: one(categories, {
     fields: [products.categoryId],

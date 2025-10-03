@@ -57,8 +57,6 @@ export const deleteCategoryService = async (id: number) => {
   return "Category deleted successfully";
 };
 
-// RELATIONS
-
 // Category with parent
 export const getCategoryWithParentService = async (id: number) => {
   return await db.query.categories.findFirst({

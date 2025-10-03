@@ -233,7 +233,7 @@ export const deleteUserController = async (req: Request, res: Response) => {
   }
 };
 
-// ---------------- RELATIONS ----------------
+
 
 // User with Orders
 export const getUserWithOrdersController = async (req: Request, res: Response) => {
