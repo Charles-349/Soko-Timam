@@ -53,12 +53,16 @@ export const deleteWishlistService = async (id: number) => {
   return "Wishlist item deleted successfully";
 };
 // Wishlist with User
-export const getWishlistWithUserService = async (id: number) => {
+export const getWishlistWithUserService = async (userId: number) => {
   return await db.query.wishlists.findFirst({
-    where: eq(wishlists.id, id),
-    with: { user: true, product: true },
+    where: eq(wishlists.userId, userId),
+    with: {
+      user: true,
+      product: true,
+    },
   });
 };
+
 
 // Wishlist with Product
 export const getWishlistWithProductService = async (id: number) => {
