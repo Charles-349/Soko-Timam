@@ -4,8 +4,12 @@ import { TIReview, reviews } from "../Drizzle/schema";
 
 // Create review
 export const createReviewService = async (review: TIReview) => {
-  await db.insert(reviews).values(review);
-  return "Review created successfully";
+  const [createdReview] = await db
+    .insert(reviews)
+    .values(review)
+    .returning(); 
+
+  return createdReview;
 };
 
 // Get all reviews
