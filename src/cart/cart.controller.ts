@@ -80,39 +80,17 @@ export const addCartItemController = async (req: Request, res: Response) => {
 };
 
 // Update Cart Item
-// export const updateCartItemController = async (req: Request, res: Response) => {
-//   try {
-//     const itemId = parseInt(req.params.itemId);
-//     const { quantity } = req.body;
-//     const updatedItem = await updateCartItemService(itemId, quantity);
-//     if (!updatedItem) return res.status(404).json({ message: "Cart item not found" });
-//     return res.status(200).json({ message: "Cart item updated successfully" });
-//   } catch (error: any) {
-//     return res.status(500).json({ message: error.message });
-//   }
-// };
-
 export const updateCartItemController = async (req: Request, res: Response) => {
   try {
     const itemId = parseInt(req.params.itemId);
     const { quantity } = req.body;
-
-    if (quantity === undefined) {
-      return res.status(400).json({ message: "Quantity is required" });
-    }
-
     const updatedItem = await updateCartItemService(itemId, quantity);
-
-    if (!updatedItem) {
-      return res.status(404).json({ message: "Cart item not found" });
-    }
-
-    return res.status(200).json({ message: "Cart item updated successfully", updatedItem });
+    if (!updatedItem) return res.status(404).json({ message: "Cart item not found" });
+    return res.status(200).json({ message: "Cart item updated successfully" });
   } catch (error: any) {
     return res.status(500).json({ message: error.message });
   }
 };
-
 
 // Remove Cart Item
 export const removeCartItemController = async (req: Request, res: Response) => {
