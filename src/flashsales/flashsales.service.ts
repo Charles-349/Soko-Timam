@@ -38,16 +38,19 @@ export const getFlashSaleByIdService = async (id: number) => {
 export const getActiveFlashSalesService = async () => {
   const now = new Date();
 
-  return await db.query.flashSales.findMany({
+  const activeSales = await db.query.flashSales.findMany({
     where: and(
       eq(flashSales.status, "active"), 
       lt(flashSales.startTime, now),
       gt(flashSales.endTime, now)
     ),
     with: {
-      product: true,
+      product: true, 
     },
+    orderBy: flashSales.startTime,
   });
+
+  return activeSales;
 };
 
 // Get Upcoming Flash Sales
