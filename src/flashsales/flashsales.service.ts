@@ -3,10 +3,17 @@ import db from "../Drizzle/db";
 import { flashSales, products, TIFlashSale } from "../Drizzle/schema";
 
 // Create Flash Sale
-export const createFlashSaleService = async (flashSale: TIFlashSale) => {
-  await db.insert(flashSales).values(flashSale);
+export const createFlashSaleService = async (flashSale: any) => {
+  const data = {
+    ...flashSale,
+    startTime: new Date(flashSale.startTime),
+    endTime: new Date(flashSale.endTime),
+  };
+
+  await db.insert(flashSales).values(data);
   return "Flash sale created successfully";
 };
+
 
 // Get All Flash Sales
 export const getFlashSalesService = async () => {
