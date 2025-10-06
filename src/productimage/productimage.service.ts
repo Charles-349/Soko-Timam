@@ -4,8 +4,12 @@ import { TIProductImage, productImages, products } from "../Drizzle/schema";
 
 // Create Product Image
 export const createProductImageService = async (image: TIProductImage) => {
-  await db.insert(productImages).values(image);
-  return "Product image created successfully";
+    try{
+  const[ProductImage]=await db.insert(productImages).values(image).returning();
+  return ProductImage as TIProductImage;
+  } catch (err) {
+    throw new Error("Failed to create productImage: " + (err as Error).message);
+  }
 };
 
 // Get All Product Images
