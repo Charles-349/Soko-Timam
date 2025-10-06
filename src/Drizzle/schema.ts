@@ -166,6 +166,10 @@ export const coupons = pgTable("coupons", {
   minOrderValue: decimal("min_order_value", { precision: 10, scale: 2 }),
   expiryDate: timestamp("expiry_date"),
   usageLimit: integer("usage_limit"),
+  isActive: boolean("is_active").default(true).notNull(),
+  discountType: varchar("discount_type", { length: 20 }).notNull().default("percent"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const flashSales = pgTable("flash_sales", {
@@ -232,6 +236,7 @@ export const categoriesRelations = relations(categories, ({ one, many }) => ({
 export const productsRelations = relations(products, ({ one, many }) => ({
   shop: one(shops, {
     fields: [products.shopId],
+    
     references: [shops.id],
   }),
   category: one(categories, {
@@ -252,6 +257,7 @@ export const productsDeepRelations = relations(products, ({ one, many }) => ({
     fields: [products.categoryId],
     references: [categories.id],
   }),
+  images: many(productImages),
   reviews: many(reviews),
   wishlists: many(wishlists),
   cartItems: many(cartItems),
