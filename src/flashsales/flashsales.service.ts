@@ -37,9 +37,10 @@ export const getFlashSaleByIdService = async (id: number) => {
 // Get Active Flash Sales
 export const getActiveFlashSalesService = async () => {
   const now = new Date();
+
   return await db.query.flashSales.findMany({
     where: and(
-      eq(flashSales.status, "active"),
+      eq(flashSales.status, "active"), 
       lt(flashSales.startTime, now),
       gt(flashSales.endTime, now)
     ),
