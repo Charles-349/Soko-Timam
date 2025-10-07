@@ -1,6 +1,6 @@
 import { adminRoleAuth } from "../middleware/bearAuth";
 import {
-  createShopController,
+  createShop,
   getAllShopsController,
   getShopByIdController,
   getShopsByOwnerController,
@@ -9,17 +9,33 @@ import {
   getShopWithProductsController,
   getShopWithOrdersController,
 } from "./shop.controller";
-import { Express } from "express";
+
+import multer from "multer";
+import { Express} from "express";
+import { Request, Response } from "express";
+
+const upload = multer({ dest: "temp/" }); // temporary upload folder
 
 const shop = (app: Express) => {
-  // Create Shop
-  app.route("/shop").post(async (req, res, next) => {
-    try {
-      await createShopController(req, res);
-    } catch (error) {
-      next(error);
-    }
-  });
+  // Create Shop (only authenticated user)
+  app
+    .route("/shop")
+    .post(
+      adminRoleAuth,
+      upload.fields([
+        { name: "logo", maxCount: 1 },
+        { name: "cover", maxCount: 1 },
+      ]),
+      async (req, res, next) => {
+        try {
+          await createShop(req, res);
+        } catch (error) {
+          next(error);
+        }
+      }
+    );
+
+
 
   // Get All Shops (Admin only)
   app.route("/shop").get(adminRoleAuth, async (req, res, next) => {
