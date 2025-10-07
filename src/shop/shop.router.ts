@@ -28,15 +28,12 @@ const shop = (app: Express) => {
       ]),
       async (req, res, next) => {
         try {
-          req.body.status = req.body.status?.toString();
-
           await createShop(req, res);
         } catch (error) {
           next(error);
         }
       }
     );
-
   // Get All Shops (Admin only)
   app.route("/shop").get(adminRoleAuth, async (req, res, next) => {
     try {
