@@ -32,8 +32,8 @@ export const createShopService = async (data: ICreateShopInput) => {
     coverUrl = await uploadToCloudinary(data.coverFile);
   }
 
-  // Insert into shops table
-  const shop = await db
+  // Insert into shops table and return the inserted row
+  const insertedShops = await db
     .insert(shops)
     .values({
       name: data.name,
@@ -42,12 +42,13 @@ export const createShopService = async (data: ICreateShopInput) => {
       ownerId: data.ownerId,
       logoUrl,
       coverUrl,
-      // status and rating will use defaults from schema
+      // status and rating use defaults from schema
     })
     .returning();
 
-  return shop;
+  return insertedShops[0]; 
 };
+
 
 // READ ALL
 export const getAllShopsService = () => {
