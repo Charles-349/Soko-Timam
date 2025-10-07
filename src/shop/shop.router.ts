@@ -17,7 +17,7 @@ import { Request, Response } from "express";
 const upload = multer({ dest: "temp/" }); // temporary upload folder
 
 const shop = (app: Express) => {
-  // Create Shop (only authenticated user)
+   // Create Shop (only authenticated user)
   app
     .route("/shop")
     .post(
@@ -28,14 +28,14 @@ const shop = (app: Express) => {
       ]),
       async (req, res, next) => {
         try {
+          req.body.status = req.body.status?.toString();
+
           await createShop(req, res);
         } catch (error) {
           next(error);
         }
       }
     );
-
-
 
   // Get All Shops (Admin only)
   app.route("/shop").get(adminRoleAuth, async (req, res, next) => {
