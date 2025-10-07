@@ -10,6 +10,9 @@ import {
   getShopWithOrdersService,
 } from "../shop/shop.service";
 import type { Multer } from "multer";
+import Jwt from 'jsonwebtoken';
+import { shops } from "../Drizzle/schema";
+import db from "../Drizzle/db";
 
 
 
@@ -69,33 +72,65 @@ import type { Multer } from "multer";
 // };
 
 
-export const createShopController = async (req: Request, res: Response) => {
+// export const createShopController = async (req: Request, res: Response) => {
+//   try {
+//     const { name, description, location } = req.body;
+
+//     const files = req.files as {
+//       logo?: Express.Multer.File[];
+//       cover?: Express.Multer.File[];
+//     };
+
+//     const shop = await createShopService({
+//       name,
+//       description,
+//       location,
+//       ownerId: req.user!.id, // fully typed!
+//       logoFile: files.logo?.[0],
+//       coverFile: files.cover?.[0],
+//     });
+
+//     return res.status(201).json({
+//       message: "Shop created successfully",
+//       shop,
+//     });
+//   } catch (error: any) {
+//     console.error(error);
+//     return res.status(500).json({ message: error.message || "Internal Server Error" });
+//   }
+// };
+
+
+
+export const createShop = async (req: Request, res: Response) => {
   try {
-    const { name, description, location } = req.body;
+    // extract user ID directly from token if req.user is undefined
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ message: "Unauthorized: No token provided" });
+    }
 
-    const files = req.files as {
-      logo?: Express.Multer.File[];
-      cover?: Express.Multer.File[];
-    };
+    const token = authHeader.split(" ")[1];
+    const decoded: any = Jwt.verify(token, process.env.JWT_SECRET_KEY as string);
 
-    const shop = await createShopService({
+    const ownerId = decoded.id; // or whatever field you use for user ID
+
+    const { name, description, status } = req.body;
+
+    const newShop = await db.insert(shops).values({
+      ownerId,
       name,
       description,
-      location,
-      ownerId: req.user!.id, // fully typed!
-      logoFile: files.logo?.[0],
-      coverFile: files.cover?.[0],
+      status,
     });
 
-    return res.status(201).json({
-      message: "Shop created successfully",
-      shop,
-    });
-  } catch (error: any) {
+    res.status(201).json({ message: "Shop created successfully", shop: newShop });
+  } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: error.message || "Internal Server Error" });
+    res.status(500).json({ message: "Failed to create shop" });
   }
 };
+
 
 
 
