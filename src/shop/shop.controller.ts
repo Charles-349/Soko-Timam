@@ -104,29 +104,39 @@ import db from "../Drizzle/db";
 
 export const createShop = async (req: Request, res: Response) => {
   try {
-    // extract user ID directly from token if req.user is undefined
+    // Extract token from header
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res.status(401).json({ message: "Unauthorized: No token provided" });
     }
 
+    // Decode token
     const token = authHeader.split(" ")[1];
     const decoded: any = Jwt.verify(token, process.env.JWT_SECRET_KEY as string);
 
-    const ownerId = decoded.id; // or whatever field you use for user ID
+    const ownerId = decoded.id;
 
+    // Extract shop data
     const { name, description, status } = req.body;
 
-    const newShop = await db.insert(shops).values({
-      ownerId,
-      name,
-      description,
-      status,
-    });
+    // Insert into DB and return the new shop
+    const newShop = await db
+      .insert(shops)
+      .values({
+        ownerId,
+        name,
+        description,
+        status,
+      })
+      .returning();
 
-    res.status(201).json({ message: "Shop created successfully", shop: newShop });
+    // Respond with clean JSON
+    res.status(201).json({
+      message: "Shop created successfully",
+      shop: newShop[0],
+    });
   } catch (error) {
-    console.error(error);
+    console.error("Error creating shop:", error);
     res.status(500).json({ message: "Failed to create shop" });
   }
 };
