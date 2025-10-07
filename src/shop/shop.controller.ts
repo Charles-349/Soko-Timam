@@ -13,8 +13,8 @@ import type { Multer } from "multer";
 import Jwt from 'jsonwebtoken';
 import { shops } from "../Drizzle/schema";
 import db from "../Drizzle/db";
-// import  uploadToCloudinary  from "../utils/cloudinary";
-import cloudinary from "../utils/cloudinary";
+import { ICreateShopInput} from "../shop/shop.service";
+import { uploadToCloudinary } from "../utils/upload";
 
 
 
@@ -102,23 +102,9 @@ import cloudinary from "../utils/cloudinary";
 //   }
 // };
 
-
-// Helper function to upload a file to Cloudinary
-const uploadToCloudinary = async (file: Express.Multer.File) => {
-  try {
-    const result = await cloudinary.uploader.upload(file.path, {
-      folder: "shops",
-    });
-    return result.secure_url;
-  } catch (error) {
-    console.error("Cloudinary upload error:", error);
-    throw new Error("Failed to upload file");
-  }
-};
-
 export const createShop = async (req: Request, res: Response) => {
   try {
-    // Extract token from header
+    // Extract and verify JWT
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res.status(401).json({ message: "Unauthorized: No token provided" });
@@ -126,7 +112,7 @@ export const createShop = async (req: Request, res: Response) => {
 
     const token = authHeader.split(" ")[1];
     const decoded: any = Jwt.verify(token, process.env.JWT_SECRET_KEY as string);
-    const ownerId = decoded.id;
+    const ownerId: number = decoded.id;
 
     // Extract shop data
     const { name, description, status, location } = req.body;
@@ -137,42 +123,35 @@ export const createShop = async (req: Request, res: Response) => {
       cover?: Express.Multer.File[];
     };
 
-    let logoUrl: string | undefined;
-    let coverUrl: string | undefined;
+    // Upload files to Cloudinary
+    const logoFile = files?.logo?.[0];
+    const coverFile = files?.cover?.[0];
 
-    if (files?.logo?.[0]) {
-      logoUrl = await uploadToCloudinary(files.logo[0]);
-    }
+    const logoUrl = logoFile ? await uploadToCloudinary(logoFile) : undefined;
+    const coverUrl = coverFile ? await uploadToCloudinary(coverFile) : undefined;
 
-    if (files?.cover?.[0]) {
-      coverUrl = await uploadToCloudinary(files.cover[0]);
-    }
+    // Create shop using service
+    const shopInput: ICreateShopInput = {
+      name,
+      description,
+      location,
+      ownerId,
+      logoFile,
+      coverFile,
+    };
 
-    // Insert into DB
-    const newShop = await db
-      .insert(shops)
-      .values({
-        ownerId,
-        name,
-        description,
-        location,
-        status,
-        logoUrl,
-        coverUrl,
-      })
-      .returning();
+    const newShop = await createShopService(shopInput);
 
     // Respond
     res.status(201).json({
       message: "Shop created successfully",
-      shop: newShop[0],
+      shop: newShop,
     });
   } catch (error: any) {
     console.error("Error creating shop:", error);
     res.status(500).json({ message: error.message || "Failed to create shop" });
   }
 };
-
 
 //READ ALL 
 export const getAllShopsController = async (req: Request, res: Response) => {

@@ -5,13 +5,15 @@ import type { TIShop } from "../Drizzle/schema";
 import type { Express } from "express";
 import { uploadToCloudinary } from "../utils/upload";
 import cloudinary from "../utils/cloudinary";
+import { Readable } from "stream";
 
 // // CREATE
 // export const createShopService = (data: TIShop) => {
 //   return db.insert(shops).values(data).returning();
 // };
 
-interface ICreateShopInput {
+
+export interface ICreateShopInput {
   name: string;
   description?: string;
   location?: string;
@@ -24,15 +26,13 @@ export const createShopService = async (data: ICreateShopInput) => {
   let logoUrl: string | undefined;
   let coverUrl: string | undefined;
 
-  // Upload files to Cloudinary if they exist
+  // Upload files if provided
   if (data.logoFile) {
-    const logoResult = await cloudinary.uploader.upload(data.logoFile.path);
-    logoUrl = logoResult.secure_url;
+    logoUrl = await uploadToCloudinary(data.logoFile);
   }
 
   if (data.coverFile) {
-    const coverResult = await cloudinary.uploader.upload(data.coverFile.path);
-    coverUrl = coverResult.secure_url;
+    coverUrl = await uploadToCloudinary(data.coverFile);
   }
 
   // Insert shop into DB
