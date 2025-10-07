@@ -2,10 +2,51 @@ import db from "../Drizzle/db";
 import { shops } from "../Drizzle/schema";
 import { eq } from "drizzle-orm";
 import type { TIShop } from "../Drizzle/schema";
+import type { Express } from "express";
+import { uploadToCloudinary } from "../utils/upload";
 
-// CREATE
-export const createShopService = (data: TIShop) => {
-  return db.insert(shops).values(data).returning();
+// // CREATE
+// export const createShopService = (data: TIShop) => {
+//   return db.insert(shops).values(data).returning();
+// };
+
+interface ICreateShopInput {
+  name: string;
+  description?: string;
+  location?: string;
+  ownerId: number;
+  logoFile?: Express.Multer.File;
+  coverFile?: Express.Multer.File;
+}
+
+export const createShopService = async (data: ICreateShopInput) => {
+  let logoUrl: string | undefined = undefined;
+  let coverUrl: string | undefined = undefined;
+
+  // Upload files to Cloudinary if they exist
+  if (data.logoFile) {
+    logoUrl = await uploadToCloudinary(data.logoFile);
+  }
+
+  if (data.coverFile) {
+    coverUrl = await uploadToCloudinary(data.coverFile);
+  }
+
+  // Insert into shops table
+  const shop = await db
+    .insert(shops)
+    .values({
+      name: data.name,
+      description: data.description,
+      location: data.location,
+      ownerId: data.ownerId,
+      logoUrl,
+      coverUrl,
+      // status and rating will use defaults from schema
+    })
+    .returning();
+
+  return shop;
 };
 
 // READ ALL

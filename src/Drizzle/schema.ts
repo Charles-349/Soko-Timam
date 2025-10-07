@@ -7,7 +7,7 @@ export const ShopStatusEnum = pgEnum("status", ["pending", "active", "suspended"
 export const OrderStatusEnum = pgEnum("status", ["pending", "paid", "shipped", "completed", "cancelled"]);
 export const PaymentStatusEnum = pgEnum("payment_status", ["unpaid", "paid", "failed"]); 
 export const ShippingStatusEnum = pgEnum("shipping_status", ["preparing", "dispatched", "in-transit", "delivered"]); 
-export const FlashSalesStatusEnum = pgEnum("flash_status", ["upcoming", "active", "ended"]);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
+export const FlashSalesStatusEnum = pgEnum("status", ["upcoming", "active", "ended"]);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
 
 // USERS
 export const users = pgTable("users", {
@@ -181,7 +181,7 @@ export const flashSales = pgTable("flash_sales", {
   soldCount: integer("sold_count").default(0),
   startTime: timestamp("start_time").notNull(),
   endTime: timestamp("end_time").notNull(),
-  status: FlashSalesStatusEnum("flash_status").default("upcoming"), // upcoming, active, ended
+  status: FlashSalesStatusEnum("status").default("upcoming"), // upcoming, active, ended
   createdAt: timestamp("created_at").defaultNow(),
 });
 
