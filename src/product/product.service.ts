@@ -52,7 +52,7 @@ export const getAllProductsService = async (params?: {
       order = "desc",
     } = params || {};
 
-    const whereClauses = [];
+    const whereClauses: (ReturnType<typeof eq> | ReturnType<typeof like>)[] = [];
 
     if (search) {
       whereClauses.push(like(products.name, `%${search}%`));
