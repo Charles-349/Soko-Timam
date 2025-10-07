@@ -14,6 +14,7 @@ import productImage from './productimage/productimage.router';
 import notification from './notification/notification.router';
 import flashsales from './flashsales/flashsales.routere';
 import coupon from './coupons/coupon.router';
+import {v2 as cloudinary} from 'cloudinary';
 const initializeApp = ()=>{
 const app = express();
 
@@ -41,6 +42,13 @@ productImage(app);
 notification(app);
 flashsales(app);
 coupon(app);
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+console.log("cloudinary config", cloudinary.config());
 
 
 app.get('/', (req, res) => {
