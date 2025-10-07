@@ -13,6 +13,8 @@ import type { Multer } from "multer";
 import Jwt from 'jsonwebtoken';
 import { shops } from "../Drizzle/schema";
 import db from "../Drizzle/db";
+// import  uploadToCloudinary  from "../utils/cloudinary";
+import cloudinary from "../utils/cloudinary";
 
 
 
@@ -101,6 +103,18 @@ import db from "../Drizzle/db";
 // };
 
 
+// Helper function to upload a file to Cloudinary
+const uploadToCloudinary = async (file: Express.Multer.File) => {
+  try {
+    const result = await cloudinary.uploader.upload(file.path, {
+      folder: "shops",
+    });
+    return result.secure_url;
+  } catch (error) {
+    console.error("Cloudinary upload error:", error);
+    throw new Error("Failed to upload file");
+  }
+};
 
 export const createShop = async (req: Request, res: Response) => {
   try {
@@ -110,38 +124,54 @@ export const createShop = async (req: Request, res: Response) => {
       return res.status(401).json({ message: "Unauthorized: No token provided" });
     }
 
-    // Decode token
     const token = authHeader.split(" ")[1];
     const decoded: any = Jwt.verify(token, process.env.JWT_SECRET_KEY as string);
-
     const ownerId = decoded.id;
 
     // Extract shop data
-    const { name, description, status } = req.body;
+    const { name, description, status, location } = req.body;
 
-    // Insert into DB and return the new shop
+    // Extract files from multer
+    const files = req.files as {
+      logo?: Express.Multer.File[];
+      cover?: Express.Multer.File[];
+    };
+
+    let logoUrl: string | undefined;
+    let coverUrl: string | undefined;
+
+    if (files?.logo?.[0]) {
+      logoUrl = await uploadToCloudinary(files.logo[0]);
+    }
+
+    if (files?.cover?.[0]) {
+      coverUrl = await uploadToCloudinary(files.cover[0]);
+    }
+
+    // Insert into DB
     const newShop = await db
       .insert(shops)
       .values({
         ownerId,
         name,
         description,
+        location,
         status,
+        logoUrl,
+        coverUrl,
       })
       .returning();
 
-    // Respond with clean JSON
+    // Respond
     res.status(201).json({
       message: "Shop created successfully",
       shop: newShop[0],
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating shop:", error);
-    res.status(500).json({ message: "Failed to create shop" });
+    res.status(500).json({ message: error.message || "Failed to create shop" });
   }
 };
-
-
 
 
 //READ ALL 

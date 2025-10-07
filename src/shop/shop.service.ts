@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import type { TIShop } from "../Drizzle/schema";
 import type { Express } from "express";
 import { uploadToCloudinary } from "../utils/upload";
+import cloudinary from "../utils/cloudinary";
 
 // // CREATE
 // export const createShopService = (data: TIShop) => {
@@ -20,19 +21,21 @@ interface ICreateShopInput {
 }
 
 export const createShopService = async (data: ICreateShopInput) => {
-  let logoUrl: string | undefined = undefined;
-  let coverUrl: string | undefined = undefined;
+  let logoUrl: string | undefined;
+  let coverUrl: string | undefined;
 
   // Upload files to Cloudinary if they exist
   if (data.logoFile) {
-    logoUrl = await uploadToCloudinary(data.logoFile);
+    const logoResult = await cloudinary.uploader.upload(data.logoFile.path);
+    logoUrl = logoResult.secure_url;
   }
 
   if (data.coverFile) {
-    coverUrl = await uploadToCloudinary(data.coverFile);
+    const coverResult = await cloudinary.uploader.upload(data.coverFile.path);
+    coverUrl = coverResult.secure_url;
   }
 
-  // Insert into shops table and return the inserted row
+  // Insert shop into DB
   const insertedShops = await db
     .insert(shops)
     .values({
@@ -42,13 +45,11 @@ export const createShopService = async (data: ICreateShopInput) => {
       ownerId: data.ownerId,
       logoUrl,
       coverUrl,
-      // status and rating use defaults from schema
     })
     .returning();
 
-  return insertedShops[0]; 
+  return insertedShops[0]; // return first inserted row
 };
-
 
 // READ ALL
 export const getAllShopsService = () => {
