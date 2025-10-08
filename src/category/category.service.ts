@@ -15,7 +15,7 @@ export const getCategoryByNameService = async (name: string) => {
   });
 };
 
-Get all categories
+//Get all categories
 export const getCategoriesService = async () => {
   return await db.query.categories.findMany();
 };
