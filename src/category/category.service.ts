@@ -15,33 +15,33 @@ export const getCategoryByNameService = async (name: string) => {
   });
 };
 
-// Get all categories
-// export const getCategoriesService = async () => {
-//   return await db.query.categories.findMany();
-// };
+Get all categories
+export const getCategoriesService = async () => {
+  return await db.query.categories.findMany();
+};
 //get main categories only
-export const getMainCategoriesService = async () => {
-  try {
-    const mainCategories = await db
-      .select()
-      .from(categories)
-      .where(isNull(categories.parentId));
+// export const getMainCategoriesService = async () => {
+//   try {
+//     const mainCategories = await db
+//       .select()
+//       .from(categories)
+//       .where(isNull(categories.parentId));
 
-    return mainCategories;
-  } catch (error: any) {
-    console.error("Error fetching main categories:", error);
-    throw new Error("Failed to fetch main categories");
-  }
-};                                                      
+//     return mainCategories;
+//   } catch (error: any) {
+//     console.error("Error fetching main categories:", error);
+//     throw new Error("Failed to fetch main categories");
+//   }
+// };                                                      
    
 
-  //fetch subcategories by parent id
-export const getSubCategoriesByParentIdService = async (parentId: number) => {
-  const subCategories = await db.query.categories.findMany({
-    where:(c) => eq(c.parentId, parentId),
-  });
-  return subCategories;
-}
+//   //fetch subcategories by parent id
+// export const getSubCategoriesByParentIdService = async (parentId: number) => {
+//   const subCategories = await db.query.categories.findMany({
+//     where:(c) => eq(c.parentId, parentId),
+//   });
+//   return subCategories;
+// }
 
 // Get category by ID
 export const getCategoryByIdService = async (id: number) => {

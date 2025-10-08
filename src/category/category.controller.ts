@@ -1,8 +1,9 @@
 import { Request, Response } from "express";
 import {
   createCategoryService,
-  getMainCategoriesService ,
-  getSubCategoriesByParentIdService,
+  // getMainCategoriesService ,
+  // getSubCategoriesByParentIdService,
+  getCategoriesService,
   getCategoryByIdService,
   getCategoryByNameService,
   updateCategoryService,
@@ -38,46 +39,46 @@ export const createCategoryController = async (req: Request, res: Response) => {
 };
 
 // READ ALL
-// export const getCategoriesController = async (req: Request, res: Response) => {
+export const getCategoriesController = async (req: Request, res: Response) => {
+  try {
+    const categories = await getCategoriesService();
+    return res
+      .status(200)
+      .json({ message: "Categories retrieved successfully", categories });
+  } catch (error: any) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+// export const getMainCategoriesController = async (req: Request, res: Response) => {
 //   try {
-//     const categories = await getCategoriesService();
-//     return res
+//     const categories = await getMainCategoriesService ();
+//     res
 //       .status(200)
-//       .json({ message: "Categories retrieved successfully", categories });
+//       .json({
+//         message: "Main categories retrieved successfully",categories,
+//       });
 //   } catch (error: any) {
-//     return res.status(500).json({ message: error.message });
+//     return res.status(500).json({
+//       message: error.message || "Failed to fetch categories",
+//     });
 //   }
 // };
 
-export const getMainCategoriesController = async (req: Request, res: Response) => {
-  try {
-    const categories = await getMainCategoriesService ();
-    res
-      .status(200)
-      .json({
-        message: "Main categories retrieved successfully",categories,
-      });
-  } catch (error: any) {
-    return res.status(500).json({
-      message: error.message || "Failed to fetch categories",
-    });
-  }
-};
+// //get subcategories by parent category
+// export const getSubCategoriesByParentIdController = async (req: Request, res: Response) => {
+//   try {
+//     const parentId = parseInt(req.params.parentId);
+//     if (!parentId) return res.status(400).json({ message: "Invalid parent category ID" });
 
-//get subcategories by parent category
-export const getSubCategoriesByParentIdController = async (req: Request, res: Response) => {
-  try {
-    const parentId = parseInt(req.params.parentId);
-    if (!parentId) return res.status(400).json({ message: "Invalid parent category ID" });
-
-    const subCategories = await getSubCategoriesByParentIdService(parentId);
-    return res
-      .status(200)
-      .json({ message: "Subcategories retrieved successfully", subCategories });
-  } catch (error: any) {
-    return res.status(500).json({ message: error.message || "Failed to fetch subcategories" });
-  }
-};
+//     const subCategories = await getSubCategoriesByParentIdService(parentId);
+//     return res
+//       .status(200)
+//       .json({ message: "Subcategories retrieved successfully", subCategories });
+//   } catch (error: any) {
+//     return res.status(500).json({ message: error.message || "Failed to fetch subcategories" });
+//   }
+// };
 
 // READ ONE
 export const getCategoryByIdController = async (req: Request, res: Response) => {
