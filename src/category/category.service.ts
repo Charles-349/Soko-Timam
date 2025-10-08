@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { eq, isNull, sql } from "drizzle-orm";
 import db from "../Drizzle/db";
 import { TICategory, categories } from "../Drizzle/schema";
 
@@ -16,9 +16,32 @@ export const getCategoryByNameService = async (name: string) => {
 };
 
 // Get all categories
-export const getCategoriesService = async () => {
-  return await db.query.categories.findMany();
-};
+// export const getCategoriesService = async () => {
+//   return await db.query.categories.findMany();
+// };
+//get main categories only
+export const getMainCategoriesService = async () => {
+  try {
+    const mainCategories = await db
+      .select()
+      .from(categories)
+      .where(isNull(categories.parentId));
+
+    return mainCategories;
+  } catch (error: any) {
+    console.error("Error fetching main categories:", error);
+    throw new Error("Failed to fetch main categories");
+  }
+};                                                      
+   
+
+  //fetch subcategories by parent id
+export const getSubCategoriesByParentIdService = async (parentId: number) => {
+  const subCategories = await db.query.categories.findMany({
+    where:(c) => eq(c.parentId, parentId),
+  });
+  return subCategories;
+}
 
 // Get category by ID
 export const getCategoryByIdService = async (id: number) => {

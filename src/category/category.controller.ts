@@ -1,7 +1,8 @@
 import { Request, Response } from "express";
 import {
   createCategoryService,
-  getCategoriesService,
+  getMainCategoriesService ,
+  getSubCategoriesByParentIdService,
   getCategoryByIdService,
   getCategoryByNameService,
   updateCategoryService,
@@ -11,6 +12,8 @@ import {
   getCategoryWithProductsService,
   getCategoryWithRelationsService,
 } from "./category.service";
+import db from "../Drizzle/db";
+import { eq, isNull } from "drizzle-orm";
 
 // CREATE
 export const createCategoryController = async (req: Request, res: Response) => {
@@ -35,14 +38,44 @@ export const createCategoryController = async (req: Request, res: Response) => {
 };
 
 // READ ALL
-export const getCategoriesController = async (req: Request, res: Response) => {
+// export const getCategoriesController = async (req: Request, res: Response) => {
+//   try {
+//     const categories = await getCategoriesService();
+//     return res
+//       .status(200)
+//       .json({ message: "Categories retrieved successfully", categories });
+//   } catch (error: any) {
+//     return res.status(500).json({ message: error.message });
+//   }
+// };
+
+export const getMainCategoriesController = async (req: Request, res: Response) => {
   try {
-    const categories = await getCategoriesService();
+    const categories = await getMainCategoriesService ();
+    res
+      .status(200)
+      .json({
+        message: "Main categories retrieved successfully",categories,
+      });
+  } catch (error: any) {
+    return res.status(500).json({
+      message: error.message || "Failed to fetch categories",
+    });
+  }
+};
+
+//get subcategories by parent category
+export const getSubCategoriesByParentIdController = async (req: Request, res: Response) => {
+  try {
+    const parentId = parseInt(req.params.parentId);
+    if (!parentId) return res.status(400).json({ message: "Invalid parent category ID" });
+
+    const subCategories = await getSubCategoriesByParentIdService(parentId);
     return res
       .status(200)
-      .json({ message: "Categories retrieved successfully", categories });
+      .json({ message: "Subcategories retrieved successfully", subCategories });
   } catch (error: any) {
-    return res.status(500).json({ message: error.message });
+    return res.status(500).json({ message: error.message || "Failed to fetch subcategories" });
   }
 };
 

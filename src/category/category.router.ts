@@ -1,7 +1,8 @@
 import { adminRoleAuth } from "../middleware/bearAuth";
 import {
   createCategoryController,
-  getCategoriesController,
+  getMainCategoriesController,
+  getSubCategoriesByParentIdController,
   getCategoryByIdController,
   updateCategoryController,
   deleteCategoryController,
@@ -22,7 +23,16 @@ const category = (app: Express) => {
   // Get All Categories
   app.route("/category").get(async (req, res, next) => {
     try {
-      await getCategoriesController(req, res);
+      await getMainCategoriesController(req, res);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Get Subcategories by Parent Category ID
+  app.route("/category/subcategories/:parentId").get(async (req, res, next) => {
+    try {
+      await getSubCategoriesByParentIdController(req, res);
     } catch (error) {
       next(error);
     }
