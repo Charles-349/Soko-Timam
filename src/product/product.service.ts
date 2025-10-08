@@ -5,16 +5,65 @@ import {
   products,
   type TIProduct,
   type TSProduct,
+  productImages,
 } from "../Drizzle/schema";
+import type { Express } from "express";
+import { uploadToCloudinary } from "../utils/upload";
 
 // Create a new product
-export const createProductService = async (data: TIProduct) => {
-  try {
-    const [newProduct] = await db.insert(products).values(data).returning();
-    return newProduct as TSProduct;
-  } catch (err) {
-    throw new Error("Failed to create product: " + (err as Error).message);
+export interface ICreateProductInput {
+  shopId: number;
+  categoryId: number;
+  name: string;
+  description?: string;
+  price: number;
+  stock?: number;
+  sku?: string;
+  status?: string;
+  imageFiles?: Express.Multer.File[]; // multiple files
+}
+
+export const createProductService = async (data: ICreateProductInput) => {
+  // Insert product first
+  const insertedProducts = await db
+    .insert(products)
+    .values({
+      shopId: data.shopId,
+      categoryId: data.categoryId,
+      name: data.name,
+      description: data.description,
+      price: data.price.toString(),
+      stock: data.stock ?? 0,
+      sku: data.sku,
+      status: data.status ?? "active",
+    })
+    .returning();
+
+  const newProduct = insertedProducts[0];
+
+  // Handle multiple image uploads
+  if (data.imageFiles && data.imageFiles.length > 0) {
+    const uploadedImages = await Promise.all(
+      data.imageFiles.map(file => uploadToCloudinary(file))
+    );
+
+    // Insert uploaded images into productImages table
+    const imageInserts = uploadedImages.map((url, index) => ({
+      productId: newProduct.id,
+      imageUrl: url,
+      isMain: index === 0, // first image as main
+    }));
+
+    await db.insert(productImages).values(imageInserts);
   }
+
+  // Optionally, return product with images
+  const productWithImages = await db.query.products.findFirst({
+     where: eq(products.id, newProduct.id),
+    with: { images: true },
+  });
+
+  return productWithImages;
 };
 
 // Get single product by ID

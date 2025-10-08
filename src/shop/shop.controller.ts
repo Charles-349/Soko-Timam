@@ -17,91 +17,6 @@ import { ICreateShopInput} from "../shop/shop.service";
 import { uploadToCloudinary } from "../utils/upload";
 
 
-
-// CREATE 
-// export const createShopController = async (req: Request, res: Response) => {
-//   try {
-//     const shop = await createShopService(req.body);
-//     return res.status(201).json({
-//       message: "Shop created successfully",
-//       shop,
-//     });
-//   } catch (error: any) {
-//     return res.status(500).json({ message: error.message });
-//   }
-// };
-
-
-// interface AuthenticatedRequest extends Request {
-//   user: {
-//     id: number;
-//     email?: string;
-//     role?: string;
-//   };
-// }
-// interface MulterFiles {
-//   logo?: Express.Multer.File[];
-//   cover?: Express.Multer.File[];
-// }
-
-// export const createShopController = async (req: AuthenticatedRequest, res: Response) => {
-//   try {
-//     const { name, description, location } = req.body;
-
-//     // Typecast files
-//     const files = req.files as MulterFiles;
-
-//     const logoFile = files?.logo?.[0];
-//     const coverFile = files?.cover?.[0];
-
-//     const shop = await createShopService({
-//       name,
-//       description,
-//       location,
-//       ownerId: req.user.id, 
-//       logoFile,
-//       coverFile,
-//     });
-
-//     return res.status(201).json({
-//       message: "Shop created successfully",
-//       shop,
-//     });
-//   } catch (error: any) {
-//     console.error(error);
-//     return res.status(500).json({ message: error.message || "Internal Server Error" });
-//   }
-// };
-
-
-// export const createShopController = async (req: Request, res: Response) => {
-//   try {
-//     const { name, description, location } = req.body;
-
-//     const files = req.files as {
-//       logo?: Express.Multer.File[];
-//       cover?: Express.Multer.File[];
-//     };
-
-//     const shop = await createShopService({
-//       name,
-//       description,
-//       location,
-//       ownerId: req.user!.id, // fully typed!
-//       logoFile: files.logo?.[0],
-//       coverFile: files.cover?.[0],
-//     });
-
-//     return res.status(201).json({
-//       message: "Shop created successfully",
-//       shop,
-//     });
-//   } catch (error: any) {
-//     console.error(error);
-//     return res.status(500).json({ message: error.message || "Internal Server Error" });
-//   }
-// };
-
 export const createShop = async (req: Request, res: Response) => {
   try {
     // Extract and verify JWT token
@@ -126,18 +41,6 @@ export const createShop = async (req: Request, res: Response) => {
       logo?: Express.Multer.File[];
       cover?: Express.Multer.File[];
     };
-
-    // Upload files to Cloudinary if provided
-    let logoUrl: string | undefined;
-    let coverUrl: string | undefined;
-
-    if (files?.logo?.[0]) {
-      logoUrl = await uploadToCloudinary(files.logo[0]);
-    }
-
-    if (files?.cover?.[0]) {
-      coverUrl = await uploadToCloudinary(files.cover[0]);
-    }
 
     //  Build shop input object
     const shopData: ICreateShopInput = {

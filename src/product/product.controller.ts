@@ -11,6 +11,8 @@ import {
   getProductWithCartService,
   getProductWithOrdersService,
 } from "./product.service";
+import type { ICreateProductInput } from "./product.service";
+import Jwt from "jsonwebtoken";
 
 // Helper: Parse int safely 
 const toInt = (val: any, fallback?: number): number | undefined => {
@@ -18,20 +20,59 @@ const toInt = (val: any, fallback?: number): number | undefined => {
   return isNaN(parsed) ? fallback : parsed;
 };
 
-// Create Product
-export const createProductController = async (req: Request, res: Response) => {
+export const createProduct = async (req: Request, res: Response) => {
   try {
-    const product = await createProductService(req.body);
-    return res
-      .status(201)
-      .json({ message: "Product created successfully", product });
+    // Verify JWT token
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ message: "Unauthorized: No token provided" });
+    }
+
+    const token = authHeader.split(" ")[1];
+    const decoded: any = Jwt.verify(token, process.env.JWT_SECRET_KEY as string);
+    const userId = decoded.id;
+
+    // Extract product data from body
+    const { shopId, categoryId, name, description, price, stock, sku, status } = req.body;
+
+    if (!shopId || !categoryId || !name || !price) {
+      return res.status(400).json({
+        message: "Missing required fields: shopId, categoryId, name, and price",
+      });
+    }
+
+    // Extract images from multer
+    const files = req.files as { images?: Express.Multer.File[] };
+
+    // Build product input object
+    const productData: ICreateProductInput = {
+      shopId: Number(shopId),
+      categoryId: Number(categoryId),
+      name,
+      description,
+      price: Number(price),
+      stock: stock ? Number(stock) : 0,
+      sku,
+      status,
+      imageFiles: files?.images,
+    };
+
+    // Call service
+    const newProduct = await createProductService(productData);
+
+    // Send success response
+    res.status(201).json({
+      message: "Product created successfully",
+      product: newProduct,
+    });
   } catch (error: any) {
-    return res.status(500).json({
+    console.error("Error creating product:", error);
+    res.status(500).json({
       message: error.message || "Failed to create product",
-      error: error.stack,
     });
   }
 };
+
 
 // Get All Products (with filters & pagination)
 export const getProductsController = async (req: Request, res: Response) => {

@@ -2,15 +2,9 @@ import db from "../Drizzle/db";
 import { shops } from "../Drizzle/schema";
 import { eq } from "drizzle-orm";
 import type { TIShop } from "../Drizzle/schema";
-import type { Express } from "express";
 import { uploadToCloudinary } from "../utils/upload";
-import cloudinary from "../utils/cloudinary";
-import { Readable } from "stream";
 
-// // CREATE
-// export const createShopService = (data: TIShop) => {
-//   return db.insert(shops).values(data).returning();
-// };
+
 
 
 export interface ICreateShopInput {
@@ -48,7 +42,7 @@ export const createShopService = async (data: ICreateShopInput) => {
     })
     .returning();
 
-  return insertedShops[0]; // return first inserted row
+  return insertedShops[0]; 
 };
 
 // READ ALL
