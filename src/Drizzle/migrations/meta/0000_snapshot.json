@@ -1,5 +1,5 @@
 {
-  "id": "d02249ba-f1b0-4595-8b27-d88799c74a07",
+  "id": "f48e5054-e076-408a-9635-ce1172214558",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -256,6 +256,34 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": false
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "discount_type": {
+          "name": "discount_type",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'percent'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
         }
       },
       "indexes": {},
@@ -328,9 +356,9 @@
           "primaryKey": false,
           "notNull": true
         },
-        "flash_status": {
-          "name": "flash_status",
-          "type": "flash_status",
+        "flash_sale_status": {
+          "name": "flash_sale_status",
+          "type": "flash_sale_status",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": false,
@@ -537,9 +565,9 @@
           "primaryKey": false,
           "notNull": true
         },
-        "status": {
-          "name": "status",
-          "type": "status",
+        "order_status": {
+          "name": "order_status",
+          "type": "order_status",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": false,
@@ -641,6 +669,13 @@
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
           "default": "now()"
         }
       },
@@ -816,44 +851,24 @@
           "notNull": true,
           "default": 0
         },
-        "sku": {
-          "name": "sku",
-          "type": "varchar(100)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "status": {
-          "name": "status",
-          "type": "varchar(20)",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'active'"
-        },
         "image_url": {
           "name": "image_url",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "rating": {
-          "name": "rating",
-          "type": "numeric(2, 1)",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'0'"
-        },
-        "sales_count": {
-          "name": "sales_count",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "default": 0
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
           "default": "now()"
         }
       },
@@ -1069,6 +1084,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "location": {
+          "name": "location",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
         "logo_url": {
           "name": "logo_url",
           "type": "text",
@@ -1088,13 +1109,6 @@
           "primaryKey": false,
           "notNull": false,
           "default": "'pending'"
-        },
-        "rating": {
-          "name": "rating",
-          "type": "numeric(2, 1)",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'0'"
         },
         "created_at": {
           "name": "created_at",
@@ -1291,8 +1305,8 @@
     }
   },
   "enums": {
-    "public.flash_status": {
-      "name": "flash_status",
+    "public.flash_sale_status": {
+      "name": "flash_sale_status",
       "schema": "public",
       "values": [
         "upcoming",
@@ -1300,13 +1314,15 @@
         "ended"
       ]
     },
-    "public.status": {
-      "name": "status",
+    "public.order_status": {
+      "name": "order_status",
       "schema": "public",
       "values": [
         "pending",
-        "active",
-        "suspended"
+        "paid",
+        "shipped",
+        "completed",
+        "cancelled"
       ]
     },
     "public.payment_status": {
@@ -1335,6 +1351,15 @@
         "dispatched",
         "in-transit",
         "delivered"
+      ]
+    },
+    "public.status": {
+      "name": "status",
+      "schema": "public",
+      "values": [
+        "pending",
+        "active",
+        "suspended"
       ]
     }
   },

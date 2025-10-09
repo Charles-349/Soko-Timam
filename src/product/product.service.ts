@@ -34,8 +34,8 @@ export const createProductService = async (data: ICreateProductInput) => {
       description: data.description,
       price: data.price.toString(),
       stock: data.stock ?? 0,
-      sku: data.sku,
-      status: data.status ?? "active",
+      // sku: data.sku,
+      // status: data.status ?? "active",
     })
     .returning();
 
@@ -57,7 +57,7 @@ export const createProductService = async (data: ICreateProductInput) => {
     await db.insert(productImages).values(imageInserts);
   }
 
-  // Optionally, return product with images
+  // return product with images
   const productWithImages = await db.query.products.findFirst({
      where: eq(products.id, newProduct.id),
     with: { images: true },
@@ -119,8 +119,8 @@ export const getAllProductsService = async (params?: {
     const sortColumn = {
       createdAt: products.createdAt,
       price: products.price,
-      rating: products.rating,
-      salesCount: products.salesCount,
+      // rating: products.rating,
+      // salesCount: products.salesCount,
     }[sortBy];
 
     const orderBy = order === "asc" ? asc(sortColumn) : desc(sortColumn);

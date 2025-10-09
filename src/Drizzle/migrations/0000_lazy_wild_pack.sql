@@ -1,8 +1,9 @@
-CREATE TYPE "public"."flash_status" AS ENUM('upcoming', 'active', 'ended');--> statement-breakpoint
-CREATE TYPE "public"."status" AS ENUM('pending', 'active', 'suspended');--> statement-breakpoint
+CREATE TYPE "public"."flash_sale_status" AS ENUM('upcoming', 'active', 'ended');--> statement-breakpoint
+CREATE TYPE "public"."order_status" AS ENUM('pending', 'paid', 'shipped', 'completed', 'cancelled');--> statement-breakpoint
 CREATE TYPE "public"."payment_status" AS ENUM('unpaid', 'paid', 'failed');--> statement-breakpoint
 CREATE TYPE "public"."role" AS ENUM('admin', 'vendor', 'customer');--> statement-breakpoint
 CREATE TYPE "public"."shipping_status" AS ENUM('preparing', 'dispatched', 'in-transit', 'delivered');--> statement-breakpoint
+CREATE TYPE "public"."status" AS ENUM('pending', 'active', 'suspended');--> statement-breakpoint
 CREATE TABLE "audit_logs" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"user_id" integer,
@@ -39,6 +40,10 @@ CREATE TABLE "coupons" (
 	"min_order_value" numeric(10, 2),
 	"expiry_date" timestamp,
 	"usage_limit" integer,
+	"is_active" boolean DEFAULT true NOT NULL,
+	"discount_type" varchar(20) DEFAULT 'percent' NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "coupons_code_unique" UNIQUE("code")
 );
 --> statement-breakpoint
@@ -51,7 +56,7 @@ CREATE TABLE "flash_sales" (
 	"sold_count" integer DEFAULT 0,
 	"start_time" timestamp NOT NULL,
 	"end_time" timestamp NOT NULL,
-	"flash_status" "flash_status" DEFAULT 'upcoming',
+	"flash_sale_status" "flash_sale_status" DEFAULT 'upcoming',
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
@@ -76,7 +81,7 @@ CREATE TABLE "order_items" (
 CREATE TABLE "orders" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"user_id" integer NOT NULL,
-	"status" "status" DEFAULT 'pending',
+	"order_status" "order_status" DEFAULT 'pending',
 	"total_amount" numeric(10, 2) NOT NULL,
 	"payment_status" "payment_status" DEFAULT 'unpaid',
 	"shipping_address" text NOT NULL,
@@ -90,7 +95,8 @@ CREATE TABLE "payments" (
 	"amount" numeric(10, 2) NOT NULL,
 	"status" varchar(20) DEFAULT 'pending',
 	"transaction_ref" varchar(255),
-	"created_at" timestamp DEFAULT now()
+	"created_at" timestamp DEFAULT now(),
+	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "product_attributes" (
@@ -115,12 +121,9 @@ CREATE TABLE "products" (
 	"description" text,
 	"price" numeric(10, 2) NOT NULL,
 	"stock" integer DEFAULT 0 NOT NULL,
-	"sku" varchar(100),
-	"status" varchar(20) DEFAULT 'active',
 	"image_url" text,
-	"rating" numeric(2, 1) DEFAULT '0',
-	"sales_count" integer DEFAULT 0,
-	"created_at" timestamp DEFAULT now()
+	"created_at" timestamp DEFAULT now(),
+	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "reviews" (
@@ -147,10 +150,10 @@ CREATE TABLE "shops" (
 	"owner_id" integer NOT NULL,
 	"name" varchar(255) NOT NULL,
 	"description" text,
+	"location" varchar(255),
 	"logo_url" text,
 	"cover_url" text,
 	"status" "status" DEFAULT 'pending',
-	"rating" numeric(2, 1) DEFAULT '0',
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint

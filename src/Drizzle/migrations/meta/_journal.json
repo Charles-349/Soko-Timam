@@ -5,43 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1759213575944,
-      "tag": "0000_certain_silverclaw",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1759324331889,
-      "tag": "0001_tearful_mattie_franklin",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1759327106215,
-      "tag": "0002_fancy_omega_red",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1759478720734,
-      "tag": "0003_fuzzy_red_hulk",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1759738068675,
-      "tag": "0004_charming_titanium_man",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1759757163797,
-      "tag": "0005_marvelous_scrambler",
+      "when": 1759993430328,
+      "tag": "0000_lazy_wild_pack",
       "breakpoints": true
     }
   ]
