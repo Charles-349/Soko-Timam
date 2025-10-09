@@ -52,7 +52,7 @@ export const getFlashSaleByIdController = async (req: Request, res: Response) =>
 };
 
 // Get Active Flash Sales
-export const getActiveFlashSalesController = async (req: Request, res: Response) => {
+export const getActiveFlashSalesController = async (req, res) => {
   try {
     const activeSales = await getActiveFlashSalesService();
     return res.status(200).json({
@@ -63,6 +63,7 @@ export const getActiveFlashSalesController = async (req: Request, res: Response)
     return res.status(500).json({ message: error.message });
   }
 };
+
 
 // Get Upcoming Flash Sales
 export const getUpcomingFlashSalesController = async (req: Request, res: Response) => {

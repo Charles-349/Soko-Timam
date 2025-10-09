@@ -52,6 +52,7 @@ export const getActiveFlashSalesService = async () => {
       product: {
         id: products.id,
         name: products.name,
+        description: products.description,
         price: products.price,
         stock: products.stock,
         imageUrl: products.ImageUrl,
