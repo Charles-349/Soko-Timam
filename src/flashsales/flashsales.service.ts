@@ -38,17 +38,35 @@ export const getFlashSaleByIdService = async (id: number) => {
 export const getActiveFlashSalesService = async () => {
   const now = new Date();
 
-  const activeSales = await db.query.flashSales.findMany({
-    where: and(
-      eq(flashSales.status, "active"), 
-      lt(flashSales.startTime, now),
-      gt(flashSales.endTime, now)
-    ),
-    with: {
-      product: true, 
-    },
-    orderBy: flashSales.startTime,
-  });
+  const activeSales = await db
+    .select({
+      id: flashSales.id,
+      discountPercent: flashSales.discountPercent,
+      discountPrice: flashSales.discountPrice,
+      stockLimit: flashSales.stockLimit,
+      soldCount: flashSales.soldCount,
+      startTime: flashSales.startTime,
+      endTime: flashSales.endTime,
+      status: flashSales.status,
+      createdAt: flashSales.createdAt,
+      product: {
+        id: products.id,
+        name: products.name,
+        price: products.price,
+        stock: products.stock,
+        imageUrl: products.ImageUrl,
+      },
+    })
+    .from(flashSales)
+    .innerJoin(products, eq(products.id, flashSales.productId))
+    .where(
+      and(
+        eq(flashSales.status, "active"),
+        lt(flashSales.startTime, now),
+        gt(flashSales.endTime, now)
+      )
+    )
+    .orderBy(flashSales.startTime);
 
   return activeSales;
 };
