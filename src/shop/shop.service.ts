@@ -109,7 +109,6 @@
 //     },
 //   });
 // };
-
 import db from "../Drizzle/db";
 import { shops } from "../Drizzle/schema";
 import { eq } from "drizzle-orm";
@@ -141,6 +140,11 @@ export const createShopService = async (data: ICreateShopInput) => {
     logoUrl = await uploadToCloudinary(data.logoFile);
   }
 
+  // 
+  const productCategories = Array.isArray(data.productCategories)
+    ? data.productCategories
+    : [];
+
   // Insert shop into DB
   const insertedShops = await db
     .insert(shops)
@@ -152,12 +156,12 @@ export const createShopService = async (data: ICreateShopInput) => {
       city: data.city,
       primaryCategory: data.primaryCategory,
       businessType: data.businessType,
-      productCategories: data.productCategories ?? [],
+      productCategories,
       businessRegistrationNumber: data.businessRegistrationNumber,
       kraPin: data.kraPin,
       taxId: data.taxId,
       postalCode: data.postalCode,
-      expectedMonthlyOrders: data.expectedMonthlyOrders,
+      expectedMonthlyOrders: data.expectedMonthlyOrders ?? null,
       logoUrl,
     })
     .returning();
@@ -228,4 +232,3 @@ export const getShopWithOrdersService = (id: number) => {
     },
   });
 };
-
