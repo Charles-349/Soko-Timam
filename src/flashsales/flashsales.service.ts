@@ -47,7 +47,7 @@ export const getActiveFlashSalesService = async () => {
       soldCount: flashSales.soldCount,
       startTime: flashSales.startTime,
       endTime: flashSales.endTime,
-      status: flashSales.status,
+      status: flashSales.flash_sale_status,
       createdAt: flashSales.createdAt,
       product: {
         id: products.id,
@@ -62,7 +62,7 @@ export const getActiveFlashSalesService = async () => {
     .innerJoin(products, eq(products.id, flashSales.productId))
     .where(
       and(
-        eq(flashSales.status, "active"),
+        eq(flashSales.flash_sale_status, "active"),
         lt(flashSales.startTime, now),
         gt(flashSales.endTime, now)
       )
@@ -76,7 +76,7 @@ export const getActiveFlashSalesService = async () => {
 export const getUpcomingFlashSalesService = async () => {
   const now = new Date();
   return await db.query.flashSales.findMany({
-    where: and(eq(flashSales.status, "upcoming"), gt(flashSales.startTime, now)),
+    where: and(eq(flashSales.flash_sale_status, "upcoming"), gt(flashSales.startTime, now)),
     with: {
       product: true,
     },
@@ -87,7 +87,7 @@ export const getUpcomingFlashSalesService = async () => {
 export const getEndedFlashSalesService = async () => {
   const now = new Date();
   return await db.query.flashSales.findMany({
-    where: and(eq(flashSales.status, "ended"), lt(flashSales.endTime, now)),
+    where: and(eq(flashSales.flash_sale_status, "ended"), lt(flashSales.endTime, now)),
     with: {
       product: true,
     },
@@ -137,12 +137,12 @@ export const updateFlashSaleStatusesService = async () => {
   // Activate sales that should now be active
   await db
     .update(flashSales)
-    .set({ status: "active" })
-    .where(and(eq(flashSales.status, "upcoming"), lt(flashSales.startTime, now)));
+    .set({flash_sale_status: "active" })
+    .where(and(eq(flashSales.flash_sale_status, "upcoming"), lt(flashSales.startTime, now)));
 
   // End sales that have expired
   await db
     .update(flashSales)
-    .set({ status: "ended" })
-    .where(and(eq(flashSales.status, "active"), lt(flashSales.endTime, now)));
+    .set({ flash_sale_status: "ended" })
+    .where(and(eq(flashSales.flash_sale_status, "active"), lt(flashSales.endTime, now)));
 };

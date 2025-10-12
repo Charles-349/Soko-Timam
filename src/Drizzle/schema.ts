@@ -17,13 +17,24 @@ export const users = pgTable("users", {
   email: varchar("email", { length: 255 }).notNull().unique(),
   password: varchar("password", { length: 255 }).notNull(),
   phone: varchar("phone", { length: 20 }),
-  role: RoleEnum("role").default("customer"), // admin, vendor, customer
+  role: RoleEnum("role").default("customer"), // admin, seller, customer
   image_url: varchar("image_url", { length: 255 }).default(
     "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y"
   ),
   isVerified: boolean("is_verified").default(false),
   verificationCode: varchar("verification_code", { length: 10 }),
   verificationCodeExpiresAt: timestamp("verification_code_expires_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const sellers = pgTable("sellers", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  fullname: varchar("fullname", { length: 200 }).notNull(),
+  email: varchar("email", { length: 200 }).notNull(),
+  phone: varchar("phone", { length: 50 }).notNull(),
+  nationalId: varchar("national_id", { length: 50 }).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -143,6 +154,9 @@ export const shipping = pgTable("shipping", {
   courier: varchar("courier", { length: 100 }),
   trackingNumber: varchar("tracking_number", { length: 255 }),
   status: ShippingStatusEnum("shipping_status").default("preparing"), // preparing, dispatched, in-transit, delivered
+  recipientName: varchar("recipient_name", { length: 255 }),
+  recipientPhone: varchar("recipient_phone", { length: 20 }),
+  address: text("address").notNull(),
   estimatedDelivery: timestamp("estimated_delivery"),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -181,7 +195,7 @@ export const flashSales = pgTable("flash_sales", {
   soldCount: integer("sold_count").default(0),
   startTime: timestamp("start_time").notNull(),
   endTime: timestamp("end_time").notNull(),
-  status: FlashSalesStatusEnum("flash_sale_status").default("upcoming"), // upcoming, active, ended
+  flash_sale_status: FlashSalesStatusEnum("flash_sale_status").default("upcoming"), // upcoming, active, ended
   createdAt: timestamp("created_at").defaultNow(),
 });
 
