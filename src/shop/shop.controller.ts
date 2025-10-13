@@ -222,7 +222,7 @@ export const createShop = async (req: Request, res: Response) => {
     const decoded: any = Jwt.verify(token, process.env.JWT_SECRET_KEY as string);
     const sellerId = decoded.id;
 
-    // Extract data
+    // Extract data from body
     const {
       name,
       description,
@@ -244,7 +244,7 @@ export const createShop = async (req: Request, res: Response) => {
       });
     }
 
-    // Files 
+    // Files
     const files = req.files as { logo?: Express.Multer.File[] };
 
     const shopData: ICreateShopInput = {
@@ -253,28 +253,28 @@ export const createShop = async (req: Request, res: Response) => {
       description,
       primaryCategory,
       businessType,
-      productCategories, 
+      productCategories: Array.isArray(productCategories)
+        ? productCategories
+        : [], 
       businessRegistrationNumber,
       kraPin,
       taxId,
       address,
       city,
       postalCode,
-      expectedMonthlyOrders: expectedMonthlyOrders
-        ? Number(expectedMonthlyOrders)
-        : undefined,
+      expectedMonthlyOrders: expectedMonthlyOrders ? Number(expectedMonthlyOrders) : undefined,
       logoFile: files?.logo?.[0],
     };
 
     const newShop = await createShopService(shopData);
 
-    return res.status(201).json({
+    res.status(201).json({
       message: "Shop created successfully",
       shop: newShop,
     });
   } catch (error: any) {
     console.error("Error creating shop:", error);
-    return res.status(500).json({ message: error.message || "Failed to create shop" });
+    res.status(500).json({ message: error.message || "Failed to create shop" });
   }
 };
 

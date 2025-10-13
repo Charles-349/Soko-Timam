@@ -123,7 +123,7 @@ export interface ICreateShopInput {
   city?: string;
   primaryCategory: string;
   businessType: string;
-  productCategories?: string[] | string; 
+  productCategories?: string[]; 
   businessRegistrationNumber?: string;
   kraPin?: string;
   taxId?: string;
@@ -132,40 +132,15 @@ export interface ICreateShopInput {
   logoFile?: Express.Multer.File;
 }
 
-
 export const createShopService = async (data: ICreateShopInput) => {
   let logoUrl: string | undefined;
 
+  // Upload logo if provided
   if (data.logoFile) {
     logoUrl = await uploadToCloudinary(data.logoFile);
   }
 
-  // Normalize productCategories into string[]
-  let parsedCategories: string[] = [];
-
-  if (Array.isArray(data.productCategories)) {
-    parsedCategories = data.productCategories;
-  } else if (typeof data.productCategories === "string") {
-    try {
-      if (
-        data.productCategories.trim().startsWith("[") &&
-        data.productCategories.trim().endsWith("]")
-      ) {
-        parsedCategories = JSON.parse(data.productCategories);
-      } else {
-        parsedCategories = data.productCategories
-          .split(",")
-          .map((c) => c.trim());
-      }
-    } catch {
-      parsedCategories = [data.productCategories];
-    }
-  }
-
-  // Convert to Postgres array literal
-  const pgArray = `{${parsedCategories.map((v) => `"${v}"`).join(",")}}`;
-
-  // Insert with explicit ::text[] cast
+  // Insert shop into DB
   const insertedShops = await db
     .insert(shops)
     .values({
@@ -176,7 +151,7 @@ export const createShopService = async (data: ICreateShopInput) => {
       city: data.city,
       primaryCategory: data.primaryCategory,
       businessType: data.businessType,
-      productCategories: sql`${pgArray}::text[]`,
+      productCategories: data.productCategories ?? [], 
       businessRegistrationNumber: data.businessRegistrationNumber,
       kraPin: data.kraPin,
       taxId: data.taxId,
@@ -188,9 +163,6 @@ export const createShopService = async (data: ICreateShopInput) => {
 
   return insertedShops[0];
 };
-
-
-
 
 // READ ALL
 export const getAllShopsService = () => {
