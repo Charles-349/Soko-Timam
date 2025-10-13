@@ -16,6 +16,7 @@ import flashsales from './flashsales/flashsales.routere';
 import coupon from './coupons/coupon.router';
 import {v2 as cloudinary} from 'cloudinary';
 import seller from './seller/seller.router';
+import bank from './bank/bank.router';
 
 const initializeApp = ()=>{
 const app = express();
@@ -45,6 +46,8 @@ notification(app);
 flashsales(app);
 coupon(app);
 seller(app);
+bank(app);
+
 
 
 cloudinary.config({

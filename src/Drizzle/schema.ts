@@ -59,6 +59,16 @@ export const shops = pgTable("shops", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+export const bankAccounts = pgTable("bank_accounts", {
+  id: serial("id").primaryKey(),
+  sellerId: integer("seller_id").references(() => sellers.id, { onDelete: "cascade" }).notNull(),
+  bankName: varchar("bank_name", { length: 100 }).notNull(),
+  accountNumber: varchar("account_number", { length: 50 }).notNull(),
+  accountName: varchar("account_name", { length: 100 }).notNull(),
+  branchCode: varchar("branch_code", { length: 20 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
 
 //CATEGORIES 
 export const categories = pgTable("categories", {
