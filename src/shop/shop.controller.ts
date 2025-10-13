@@ -212,7 +212,7 @@ import { ICreateShopInput } from "../shop/shop.service";
 // CREATE SHOP
 export const createShop = async (req: Request, res: Response) => {
   try {
-    // Verify JWT
+    // Verify JWT token
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith("Bearer ")) {
       return res.status(401).json({ message: "Unauthorized: Missing token" });
@@ -222,7 +222,7 @@ export const createShop = async (req: Request, res: Response) => {
     const decoded: any = Jwt.verify(token, process.env.JWT_SECRET_KEY as string);
     const sellerId = decoded.id;
 
-    // Extract data from body
+    // Extract form fields
     const {
       name,
       description,
@@ -244,20 +244,7 @@ export const createShop = async (req: Request, res: Response) => {
       });
     }
 
-   
-    let parsedCategories: string[] = [];
-    if (Array.isArray(productCategories)) {
-      parsedCategories = productCategories;
-    } else if (typeof productCategories === "string") {
-      try {
-        parsedCategories = JSON.parse(productCategories);
-      } catch {
-        console.warn("Invalid productCategories format, defaulting to empty array");
-        parsedCategories = [];
-      }
-    }
-
-    // Files 
+    // Get uploaded files (from Multer)
     const files = req.files as {
       logo?: Express.Multer.File[];
     };
@@ -268,14 +255,16 @@ export const createShop = async (req: Request, res: Response) => {
       description,
       primaryCategory,
       businessType,
-      productCategories: parsedCategories,
+      productCategories, 
       businessRegistrationNumber,
       kraPin,
       taxId,
       address,
       city,
       postalCode,
-      expectedMonthlyOrders: expectedMonthlyOrders ? Number(expectedMonthlyOrders) : undefined,
+      expectedMonthlyOrders: expectedMonthlyOrders
+        ? Number(expectedMonthlyOrders)
+        : undefined,
       logoFile: files?.logo?.[0],
     };
 
@@ -287,9 +276,12 @@ export const createShop = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error("Error creating shop:", error);
-    res.status(500).json({ message: error.message || "Failed to create shop" });
+    res
+      .status(500)
+      .json({ message: error.message || "Failed to create shop" });
   }
 };
+
 
 // READ ALL
 export const getAllShopsController = async (req: Request, res: Response) => {

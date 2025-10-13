@@ -123,7 +123,7 @@ export interface ICreateShopInput {
   city?: string;
   primaryCategory: string;
   businessType: string;
-  productCategories?: string[];
+  productCategories?: string[] | string; 
   businessRegistrationNumber?: string;
   kraPin?: string;
   taxId?: string;
@@ -140,10 +140,25 @@ export const createShopService = async (data: ICreateShopInput) => {
     logoUrl = await uploadToCloudinary(data.logoFile);
   }
 
-  // 
-  const productCategories = Array.isArray(data.productCategories)
-    ? data.productCategories
-    : [];
+  // Normalize productCategories into a proper string[]
+  let parsedCategories: string[] = [];
+
+  if (Array.isArray(data.productCategories)) {
+    parsedCategories = data.productCategories;
+  } else if (typeof data.productCategories === "string") {
+    try {
+      if (data.productCategories.includes(",")) {
+        // Handle comma-separated format
+        parsedCategories = data.productCategories.split(",").map((c) => c.trim());
+      } else {
+        // Handle JSON format
+        parsedCategories = JSON.parse(data.productCategories);
+      }
+    } catch {
+      // Fallback to single-item array
+      parsedCategories = [data.productCategories];
+    }
+  }
 
   // Insert shop into DB
   const insertedShops = await db
@@ -156,9 +171,7 @@ export const createShopService = async (data: ICreateShopInput) => {
       city: data.city,
       primaryCategory: data.primaryCategory,
       businessType: data.businessType,
-      productCategories: Array.isArray(data.productCategories)
-      ? data.productCategories
-      : [],
+      productCategories: parsedCategories, 
       businessRegistrationNumber: data.businessRegistrationNumber,
       kraPin: data.kraPin,
       taxId: data.taxId,
@@ -170,6 +183,7 @@ export const createShopService = async (data: ICreateShopInput) => {
 
   return insertedShops[0];
 };
+
 
 // READ ALL
 export const getAllShopsService = () => {
