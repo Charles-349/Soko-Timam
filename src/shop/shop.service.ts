@@ -123,7 +123,6 @@ export interface ICreateShopInput {
   city?: string;
   primaryCategory: string;
   businessType: string;
-  productCategories?: string[]; 
   businessRegistrationNumber?: string;
   kraPin?: string;
   taxId?: string;
@@ -151,7 +150,6 @@ export const createShopService = async (data: ICreateShopInput) => {
       city: data.city,
       primaryCategory: data.primaryCategory,
       businessType: data.businessType,
-      productCategories: data.productCategories ?? [], 
       businessRegistrationNumber: data.businessRegistrationNumber,
       kraPin: data.kraPin,
       taxId: data.taxId,

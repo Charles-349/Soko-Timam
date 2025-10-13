@@ -228,7 +228,6 @@ export const createShop = async (req: Request, res: Response) => {
       description,
       primaryCategory,
       businessType,
-      productCategories,
       businessRegistrationNumber,
       kraPin,
       taxId,
@@ -253,9 +252,6 @@ export const createShop = async (req: Request, res: Response) => {
       description,
       primaryCategory,
       businessType,
-      productCategories: Array.isArray(productCategories)
-        ? productCategories
-        : [], 
       businessRegistrationNumber,
       kraPin,
       taxId,

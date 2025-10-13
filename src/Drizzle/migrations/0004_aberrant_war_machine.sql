@@ -1,0 +1,1 @@
+ALTER TABLE "shops" DROP COLUMN "product_categories";

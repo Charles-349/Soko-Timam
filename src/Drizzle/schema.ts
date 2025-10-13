@@ -50,7 +50,6 @@ export const shops = pgTable("shops", {
   status: ShopStatusEnum("status").default("pending"), // pending, active, suspended
   primaryCategory: varchar("primary_category", { length: 100 }).notNull(),
   businessType: varchar("business_type", { length: 100 }).notNull(),
-  productCategories: text("product_categories").array(), //multiple checkboxes 
   businessRegistrationNumber: varchar("business_registration_number", { length: 100 }),
   kraPin: varchar("kra_pin", { length: 50 }),
   taxId: varchar("tax_id", { length: 50 }),
