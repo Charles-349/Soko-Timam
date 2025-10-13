@@ -111,7 +111,7 @@
 // };
 import db from "../Drizzle/db";
 import { shops } from "../Drizzle/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { TIShop } from "../Drizzle/schema";
 import { uploadToCloudinary } from "../utils/upload";
 
@@ -135,19 +135,17 @@ export interface ICreateShopInput {
 export const createShopService = async (data: ICreateShopInput) => {
   let logoUrl: string | undefined;
 
-  // Upload logo if provided
   if (data.logoFile) {
     logoUrl = await uploadToCloudinary(data.logoFile);
   }
 
-  // Normalize productCategories into a string[]
+  // Normalize productCategories into string[]
   let parsedCategories: string[] = [];
 
   if (Array.isArray(data.productCategories)) {
     parsedCategories = data.productCategories;
   } else if (typeof data.productCategories === "string") {
     try {
-      // Handle JSON or comma-separated formats
       if (data.productCategories.trim().startsWith("[") && data.productCategories.trim().endsWith("]")) {
         parsedCategories = JSON.parse(data.productCategories);
       } else {
@@ -158,7 +156,7 @@ export const createShopService = async (data: ICreateShopInput) => {
     }
   }
 
-  // Make sure we pass a pure string[] (no nested JSON)
+  // Ensure we send proper Postgres text[]
   const insertedShops = await db
     .insert(shops)
     .values({
@@ -169,7 +167,7 @@ export const createShopService = async (data: ICreateShopInput) => {
       city: data.city,
       primaryCategory: data.primaryCategory,
       businessType: data.businessType,
-      productCategories: parsedCategories, 
+      productCategories: sql`${parsedCategories}::text[]`,
       businessRegistrationNumber: data.businessRegistrationNumber,
       kraPin: data.kraPin,
       taxId: data.taxId,
