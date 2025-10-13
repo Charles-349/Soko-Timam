@@ -1,9 +1,8 @@
-import db  from "../Drizzle/db"; 
+import db from "../Drizzle/db";
 import { bankAccounts } from "../Drizzle/schema";
 
-
 export interface ICreateBankInput {
-  sellerId: number;
+  sellerId: number; 
   bankName: string;
   accountNumber: string;
   accountName: string;
@@ -14,7 +13,7 @@ export const createBankAccountService = async (data: ICreateBankInput) => {
   const inserted = await db
     .insert(bankAccounts)
     .values({
-      sellerId: data.sellerId,
+      sellerId: data.sellerId, 
       bankName: data.bankName,
       accountNumber: data.accountNumber,
       accountName: data.accountName,
