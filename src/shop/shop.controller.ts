@@ -208,6 +208,9 @@ import {
   getShopWithOrdersService,
 } from "../shop/shop.service";
 import { ICreateShopInput } from "../shop/shop.service";
+import db from "../Drizzle/db";
+import { sellers, shops } from "../Drizzle/schema";
+import { eq } from "drizzle-orm";
 
 // CREATE SHOP
 export const createShop = async (req: Request, res: Response) => {
@@ -220,7 +223,16 @@ export const createShop = async (req: Request, res: Response) => {
 
     const token = authHeader.split(" ")[1];
     const decoded: any = Jwt.verify(token, process.env.JWT_SECRET_KEY as string);
-    const sellerId = decoded.id;
+    const userId = decoded.id;
+    // fetch sellerId from sellers table using userId
+    const [seller] = await db
+    .select()
+    .from(sellers)
+    .where(eq(sellers.userId, userId))
+    .limit(1);
+
+    const sellerId = seller?.id;
+   
 
     //  Extract data from form-data (all values come as strings)
     const {

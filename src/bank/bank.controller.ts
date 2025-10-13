@@ -7,7 +7,7 @@ import { sql } from "drizzle-orm";
 
 export const createBankAccount = async (req: Request, res: Response) => {
   try {
-    // 1. Verify JWT and extract userId
+    // Verified JWT and extracted userId
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith("Bearer ")) {
       return res.status(401).json({ message: "Unauthorized: Missing token" });
@@ -26,7 +26,6 @@ export const createBankAccount = async (req: Request, res: Response) => {
       return res.status(401).json({ message: "Unauthorized: Invalid token payload" });
     }
 
-    // 2. Extract and validate bank details from request body
     const { bankName, accountNumber, accountName, branchCode } = req.body;
 
     if (!bankName || !accountNumber || !accountName) {
@@ -35,7 +34,6 @@ export const createBankAccount = async (req: Request, res: Response) => {
       });
     }
 
-    // 3. Fetch seller and create bank account in one go
     const seller = await db
       .select()
       .from(sellers)
