@@ -135,32 +135,30 @@ export interface ICreateShopInput {
 export const createShopService = async (data: ICreateShopInput) => {
   let logoUrl: string | undefined;
 
-  // Upload logo if provided
+  // Upload logo 
   if (data.logoFile) {
     logoUrl = await uploadToCloudinary(data.logoFile);
   }
 
-  // Normalize productCategories into a proper string[]
+  // Normalize categories
   let parsedCategories: string[] = [];
 
   if (Array.isArray(data.productCategories)) {
     parsedCategories = data.productCategories;
   } else if (typeof data.productCategories === "string") {
     try {
-      if (data.productCategories.includes(",")) {
-        // Handle comma-separated format
-        parsedCategories = data.productCategories.split(",").map((c) => c.trim());
-      } else {
-        // Handle JSON format
-        parsedCategories = JSON.parse(data.productCategories);
-      }
+      
+      parsedCategories = JSON.parse(data.productCategories);
     } catch {
-      // Fallback to single-item array
-      parsedCategories = [data.productCategories];
+     
+      parsedCategories = data.productCategories
+        .split(",")
+        .map((c) => c.trim())
+        .filter(Boolean);
     }
   }
 
-  // Insert shop into DB
+  
   const insertedShops = await db
     .insert(shops)
     .values({
@@ -183,6 +181,7 @@ export const createShopService = async (data: ICreateShopInput) => {
 
   return insertedShops[0];
 };
+
 
 
 // READ ALL

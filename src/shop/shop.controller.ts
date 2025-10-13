@@ -212,7 +212,7 @@ import { ICreateShopInput } from "../shop/shop.service";
 // CREATE SHOP
 export const createShop = async (req: Request, res: Response) => {
   try {
-    // Verify JWT token
+    // Verify JWT
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith("Bearer ")) {
       return res.status(401).json({ message: "Unauthorized: Missing token" });
@@ -222,7 +222,7 @@ export const createShop = async (req: Request, res: Response) => {
     const decoded: any = Jwt.verify(token, process.env.JWT_SECRET_KEY as string);
     const sellerId = decoded.id;
 
-    // Extract form fields
+    // Extract data
     const {
       name,
       description,
@@ -244,10 +244,8 @@ export const createShop = async (req: Request, res: Response) => {
       });
     }
 
-    // Get uploaded files (from Multer)
-    const files = req.files as {
-      logo?: Express.Multer.File[];
-    };
+    // Files 
+    const files = req.files as { logo?: Express.Multer.File[] };
 
     const shopData: ICreateShopInput = {
       sellerId,
@@ -270,17 +268,16 @@ export const createShop = async (req: Request, res: Response) => {
 
     const newShop = await createShopService(shopData);
 
-    res.status(201).json({
+    return res.status(201).json({
       message: "Shop created successfully",
       shop: newShop,
     });
   } catch (error: any) {
     console.error("Error creating shop:", error);
-    res
-      .status(500)
-      .json({ message: error.message || "Failed to create shop" });
+    return res.status(500).json({ message: error.message || "Failed to create shop" });
   }
 };
+
 
 
 // READ ALL
