@@ -244,7 +244,20 @@ export const createShop = async (req: Request, res: Response) => {
       });
     }
 
-    // Files
+   
+    let parsedCategories: string[] = [];
+    if (Array.isArray(productCategories)) {
+      parsedCategories = productCategories;
+    } else if (typeof productCategories === "string") {
+      try {
+        parsedCategories = JSON.parse(productCategories);
+      } catch {
+        console.warn("Invalid productCategories format, defaulting to empty array");
+        parsedCategories = [];
+      }
+    }
+
+    // Files 
     const files = req.files as {
       logo?: Express.Multer.File[];
     };
@@ -255,9 +268,7 @@ export const createShop = async (req: Request, res: Response) => {
       description,
       primaryCategory,
       businessType,
-      productCategories: Array.isArray(productCategories)
-        ? productCategories
-        : JSON.parse(productCategories || "[]"),
+      productCategories: parsedCategories,
       businessRegistrationNumber,
       kraPin,
       taxId,
