@@ -132,6 +132,7 @@ export interface ICreateShopInput {
   logoFile?: Express.Multer.File;
 }
 
+
 export const createShopService = async (data: ICreateShopInput) => {
   let logoUrl: string | undefined;
 
@@ -146,17 +147,25 @@ export const createShopService = async (data: ICreateShopInput) => {
     parsedCategories = data.productCategories;
   } else if (typeof data.productCategories === "string") {
     try {
-      if (data.productCategories.trim().startsWith("[") && data.productCategories.trim().endsWith("]")) {
+      if (
+        data.productCategories.trim().startsWith("[") &&
+        data.productCategories.trim().endsWith("]")
+      ) {
         parsedCategories = JSON.parse(data.productCategories);
       } else {
-        parsedCategories = data.productCategories.split(",").map((c) => c.trim());
+        parsedCategories = data.productCategories
+          .split(",")
+          .map((c) => c.trim());
       }
     } catch {
       parsedCategories = [data.productCategories];
     }
   }
 
-  // Ensure we send proper Postgres text[]
+  // Convert to Postgres array literal
+  const pgArray = `{${parsedCategories.map((v) => `"${v}"`).join(",")}}`;
+
+  // Insert with explicit ::text[] cast
   const insertedShops = await db
     .insert(shops)
     .values({
@@ -167,7 +176,7 @@ export const createShopService = async (data: ICreateShopInput) => {
       city: data.city,
       primaryCategory: data.primaryCategory,
       businessType: data.businessType,
-      productCategories: sql`${parsedCategories}::text[]`,
+      productCategories: sql`${pgArray}::text[]`,
       businessRegistrationNumber: data.businessRegistrationNumber,
       kraPin: data.kraPin,
       taxId: data.taxId,
