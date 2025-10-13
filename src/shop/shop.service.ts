@@ -156,7 +156,9 @@ export const createShopService = async (data: ICreateShopInput) => {
       city: data.city,
       primaryCategory: data.primaryCategory,
       businessType: data.businessType,
-      productCategories,
+      productCategories: Array.isArray(data.productCategories)
+      ? data.productCategories
+      : [],
       businessRegistrationNumber: data.businessRegistrationNumber,
       kraPin: data.kraPin,
       taxId: data.taxId,
