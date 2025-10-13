@@ -24,7 +24,7 @@ const cart = (app: Express) => {
   });
 
   // Get All Carts (Admin only)
-  app.route("/cart").get(adminRoleAuth, async (req, res, next) => {
+  app.route("/cart").get( async (req, res, next) => {
     try {
       await getCartsController(req, res);
     } catch (error) {
@@ -96,7 +96,7 @@ const cart = (app: Express) => {
   });
 
   // Get All Carts with Items
-  app.route("/cart/with/items").get(adminRoleAuth, async (req, res, next) => {
+  app.route("/cart/with/items").get(async (req, res, next) => {
     try {
       await getCartsWithItemsController(req, res);
     } catch (error) {
