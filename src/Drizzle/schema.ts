@@ -73,6 +73,7 @@ export const bankAccounts = pgTable("bank_accounts", {
 //CATEGORIES 
 export const categories = pgTable("categories", {
   id: serial("id").primaryKey(),
+  shopId: integer("shop_id").references(() => shops.id).notNull(),
   name: varchar("name", { length: 255 }).notNull(),
   parentId: integer("parent_id"), 
   createdAt: timestamp("created_at").defaultNow(),

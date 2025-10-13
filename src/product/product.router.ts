@@ -1,4 +1,4 @@
-import { adminRoleAuth } from "../middleware/bearAuth";
+import { adminRoleAuth, SellerRoleAuth } from "../middleware/bearAuth";
 import {
   createProduct,
   getProductsController,
@@ -17,11 +17,11 @@ import multer from "multer";
 
 const upload = multer({ dest: "temp/" });
 const product = (app: Express) => {
-  // Create Product (Admin only)
+  // Create Product 
    app
     .route("/products")
     .post(
-      adminRoleAuth,
+      SellerRoleAuth,
       upload.fields([{ name: "images", maxCount: 5 }]), // support multiple image uploads
       async (req, res, next) => {
         try {
