@@ -135,30 +135,30 @@ export interface ICreateShopInput {
 export const createShopService = async (data: ICreateShopInput) => {
   let logoUrl: string | undefined;
 
-  // Upload logo 
+  // Upload logo if provided
   if (data.logoFile) {
     logoUrl = await uploadToCloudinary(data.logoFile);
   }
 
-  // Normalize categories
+  // Normalize productCategories into a string[]
   let parsedCategories: string[] = [];
 
   if (Array.isArray(data.productCategories)) {
     parsedCategories = data.productCategories;
   } else if (typeof data.productCategories === "string") {
     try {
-      
-      parsedCategories = JSON.parse(data.productCategories);
+      // Handle JSON or comma-separated formats
+      if (data.productCategories.trim().startsWith("[") && data.productCategories.trim().endsWith("]")) {
+        parsedCategories = JSON.parse(data.productCategories);
+      } else {
+        parsedCategories = data.productCategories.split(",").map((c) => c.trim());
+      }
     } catch {
-     
-      parsedCategories = data.productCategories
-        .split(",")
-        .map((c) => c.trim())
-        .filter(Boolean);
+      parsedCategories = [data.productCategories];
     }
   }
 
-  
+  // Make sure we pass a pure string[] (no nested JSON)
   const insertedShops = await db
     .insert(shops)
     .values({
@@ -181,6 +181,7 @@ export const createShopService = async (data: ICreateShopInput) => {
 
   return insertedShops[0];
 };
+
 
 
 
