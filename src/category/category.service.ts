@@ -1,6 +1,6 @@
-import { eq, isNull, sql } from "drizzle-orm";
+import { eq, inArray, isNull, sql } from "drizzle-orm";
 import db from "../Drizzle/db";
-import { TICategory, categories } from "../Drizzle/schema";
+import { TICategory, categories, shops } from "../Drizzle/schema";
 
 // Create category
 export const createCategoryService = async (category: TICategory) => {
@@ -19,29 +19,6 @@ export const getCategoryByNameService = async (name: string) => {
 export const getCategoriesService = async () => {
   return await db.query.categories.findMany();
 };
-//get main categories only
-// export const getMainCategoriesService = async () => {
-//   try {
-//     const mainCategories = await db
-//       .select()
-//       .from(categories)
-//       .where(isNull(categories.parentId));
-
-//     return mainCategories;
-//   } catch (error: any) {
-//     console.error("Error fetching main categories:", error);
-//     throw new Error("Failed to fetch main categories");
-//   }
-// };                                                      
-   
-
-//   //fetch subcategories by parent id
-// export const getSubCategoriesByParentIdService = async (parentId: number) => {
-//   const subCategories = await db.query.categories.findMany({
-//     where:(c) => eq(c.parentId, parentId),
-//   });
-//   return subCategories;
-// }
 
 // Get category by ID
 export const getCategoryByIdService = async (id: number) => {
@@ -120,4 +97,33 @@ export const getCategoryWithRelationsService = async (id: number) => {
       products: true,
     },
   });
+};
+
+//Get categories by Shop ID
+export const getCategoriesByShopIdService = async (shopId: number) => {
+  return await db.query.categories.findMany({
+    where: eq(categories.shopId, shopId),
+  });
+};
+
+//Get categories by Seller ID (supports multiple shops)
+export const getCategoriesBySellerIdService = async (sellerId: number) => {
+  // Step 1: Find all shops owned by the seller
+  const sellerShops = await db.query.shops.findMany({
+    where: eq(shops.sellerId, sellerId),
+  });
+
+  if (sellerShops.length === 0) {
+    return [];
+  }
+
+  // Step 2: Extract all shop IDs
+  const shopIds = sellerShops.map((shop) => shop.id);
+
+  // Step 3: Fetch all categories belonging to those shop IDs
+  const sellerCategories = await db.query.categories.findMany({
+    where: inArray(categories.shopId, shopIds),
+  });
+
+  return sellerCategories;
 };

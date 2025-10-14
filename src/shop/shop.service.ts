@@ -225,3 +225,4 @@ export const getShopWithOrdersService = (id: number) => {
     },
   });
 };
+

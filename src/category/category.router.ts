@@ -8,12 +8,14 @@ import {
   updateCategoryController,
   deleteCategoryController,
   getCategoryWithProductsController,
+  getCategoriesBySellerIdController,
+  getCategoriesByShopIdController,
 } from "./category.controller";
 import { Express } from "express";
 
 const category = (app: Express) => {
   // Create Category (Admin only)
-  app.route("/category").post(adminRoleAuth, async (req, res, next) => {
+  app.route("/category").post( async (req, res, next) => {
     try {
       await createCategoryController(req, res);
     } catch (error) {
@@ -30,15 +32,6 @@ const category = (app: Express) => {
     }
   });
 
-  // Get Subcategories by Parent Category ID
-  // app.route("/category/subcategories/:parentId").get(async (req, res, next) => {
-  //   try {
-  //     await getSubCategoriesByParentIdController(req, res);
-  //   } catch (error) {
-  //     next(error);
-  //   }
-  // });
-
   // Get Category by ID
   app.route("/category/:id").get(async (req, res, next) => {
     try {
@@ -48,8 +41,8 @@ const category = (app: Express) => {
     }
   });
 
-  // Update Category by ID (Admin only)
-  app.route("/category/:id").put(adminRoleAuth, async (req, res, next) => {
+  // Update Category by ID 
+  app.route("/category/:id").put( async (req, res, next) => {
     try {
       await updateCategoryController(req, res);
     } catch (error) {
@@ -57,8 +50,8 @@ const category = (app: Express) => {
     }
   });
 
-  // Delete Category by ID (Admin only)
-  app.route("/category/:id").delete(adminRoleAuth, async (req, res, next) => {
+  // Delete Category by ID 
+  app.route("/category/:id").delete( async (req, res, next) => {
     try {
       await deleteCategoryController(req, res);
     } catch (error) {
@@ -74,6 +67,27 @@ const category = (app: Express) => {
       next(error);
     }
   });
+
+  // 🔹 Get Categories by Shop ID
+  app.route("/shop/:shopId/categories").get(async (req, res, next) => {
+    try {
+      await getCategoriesByShopIdController(req, res);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // 🔹 Get Categories by Seller ID (across multiple shops)
+  app.route("/seller/:sellerId/categories").get(async (req, res, next) => {
+    try {
+      await getCategoriesBySellerIdController(req, res);
+    } catch (error) {
+      next(error);
+    }
+  });
+
 };
+
+
 
 export default category;

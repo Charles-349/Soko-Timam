@@ -12,6 +12,8 @@ import {
   getCategoryWithChildrenService,
   getCategoryWithProductsService,
   getCategoryWithRelationsService,
+  getCategoriesByShopIdService,
+  getCategoriesBySellerIdService,
 } from "./category.service";
 import db from "../Drizzle/db";
 import { eq, isNull } from "drizzle-orm";
@@ -50,35 +52,6 @@ export const getCategoriesController = async (req: Request, res: Response) => {
   }
 };
 
-// export const getMainCategoriesController = async (req: Request, res: Response) => {
-//   try {
-//     const categories = await getMainCategoriesService ();
-//     res
-//       .status(200)
-//       .json({
-//         message: "Main categories retrieved successfully",categories,
-//       });
-//   } catch (error: any) {
-//     return res.status(500).json({
-//       message: error.message || "Failed to fetch categories",
-//     });
-//   }
-// };
-
-// //get subcategories by parent category
-// export const getSubCategoriesByParentIdController = async (req: Request, res: Response) => {
-//   try {
-//     const parentId = parseInt(req.params.parentId);
-//     if (!parentId) return res.status(400).json({ message: "Invalid parent category ID" });
-
-//     const subCategories = await getSubCategoriesByParentIdService(parentId);
-//     return res
-//       .status(200)
-//       .json({ message: "Subcategories retrieved successfully", subCategories });
-//   } catch (error: any) {
-//     return res.status(500).json({ message: error.message || "Failed to fetch subcategories" });
-//   }
-// };
 
 // READ ONE
 export const getCategoryByIdController = async (req: Request, res: Response) => {
@@ -195,5 +168,53 @@ export const getCategoryWithRelationsController = async (
     });
   } catch (error: any) {
     return res.status(500).json({ message: error.message });
+  }
+};
+
+//Get categories by Shop ID
+export const getCategoriesByShopIdController = async (req: Request, res: Response) => {
+  try {
+    const shopId = parseInt(req.params.shopId);
+    if (!shopId) {
+      return res.status(400).json({ message: "Invalid shop ID" });
+    }
+
+    const categories = await getCategoriesByShopIdService(shopId);
+    if (!categories.length) {
+      return res.status(404).json({ message: "No categories found for this shop" });
+    }
+
+    return res.status(200).json({
+      message: "Categories retrieved successfully for shop",
+      categories,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      message: error.message || "Failed to retrieve categories by shop ID",
+    });
+  }
+};
+
+//Get categories by Seller ID (across multiple shops)
+export const getCategoriesBySellerIdController = async (req: Request, res: Response) => {
+  try {
+    const sellerId = parseInt(req.params.sellerId);
+    if (!sellerId) {
+      return res.status(400).json({ message: "Invalid seller ID" });
+    }
+
+    const categories = await getCategoriesBySellerIdService(sellerId);
+    if (!categories.length) {
+      return res.status(404).json({ message: "No categories found for this seller" });
+    }
+
+    return res.status(200).json({
+      message: "Categories retrieved successfully for seller",
+      categories,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      message: error.message || "Failed to retrieve categories by seller ID",
+    });
   }
 };
