@@ -68,7 +68,7 @@ const category = (app: Express) => {
     }
   });
 
-  // 🔹 Get Categories by Shop ID
+  //Get Categories by Shop ID
   app.route("/shop/:shopId/categories").get(async (req, res, next) => {
     try {
       await getCategoriesByShopIdController(req, res);
@@ -77,7 +77,7 @@ const category = (app: Express) => {
     }
   });
 
-  // 🔹 Get Categories by Seller ID (across multiple shops)
+  //Get Categories by Seller ID (across multiple shops)
   app.route("/seller/:sellerId/categories").get(async (req, res, next) => {
     try {
       await getCategoriesBySellerIdController(req, res);
@@ -87,7 +87,4 @@ const category = (app: Express) => {
   });
 
 };
-
-
-
 export default category;

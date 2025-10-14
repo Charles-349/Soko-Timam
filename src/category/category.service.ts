@@ -108,7 +108,7 @@ export const getCategoriesByShopIdService = async (shopId: number) => {
 
 //Get categories by Seller ID (supports multiple shops)
 export const getCategoriesBySellerIdService = async (sellerId: number) => {
-  // Step 1: Find all shops owned by the seller
+  //Finding all shops owned by the seller
   const sellerShops = await db.query.shops.findMany({
     where: eq(shops.sellerId, sellerId),
   });
@@ -117,10 +117,10 @@ export const getCategoriesBySellerIdService = async (sellerId: number) => {
     return [];
   }
 
-  // Step 2: Extract all shop IDs
+  //Extracting all shop IDs
   const shopIds = sellerShops.map((shop) => shop.id);
 
-  // Step 3: Fetch all categories belonging to those shop IDs
+  //Fetching all categories belonging to those shop IDs
   const sellerCategories = await db.query.categories.findMany({
     where: inArray(categories.shopId, shopIds),
   });

@@ -43,6 +43,13 @@
       "when": 1760347462068,
       "tag": "0005_opposite_chameleon",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1760423158136,
+      "tag": "0006_thin_mole_man",
+      "breakpoints": true
     }
   ]
 }
