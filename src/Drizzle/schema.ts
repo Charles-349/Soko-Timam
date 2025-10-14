@@ -2,7 +2,7 @@ import { pgEnum,pgTable, serial, varchar, text, integer, timestamp, boolean, dec
 import { relations } from "drizzle-orm";
 
 //ENUMS
-export const RoleEnum = pgEnum("role", ["admin", "vendor", "customer"]); 
+export const RoleEnum = pgEnum("role", ["admin", "seller", "customer"]); 
 export const ShopStatusEnum = pgEnum("status", ["pending", "active", "suspended"]);
 export const OrderStatusEnum = pgEnum("order_status", ["pending", "paid", "shipped", "completed", "cancelled"]);
 export const PaymentStatusEnum = pgEnum("payment_status", ["unpaid", "paid", "failed"]); 

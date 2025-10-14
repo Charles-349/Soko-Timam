@@ -50,6 +50,13 @@
       "when": 1760423158136,
       "tag": "0006_thin_mole_man",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1760430172215,
+      "tag": "0007_productive_sinister_six",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,6 @@
 import { Express } from "express";
 import { createBankAccount, deleteBankAccount, getAllBankAccounts, getBankAccountById, getSellerBankAccounts, updateBankAccount } from "./bank.controller";
-import { adminRoleAuth, customerRoleAuth } from "../middleware/bearAuth";
+import { adminRoleAuth, customerRoleAuth, SellerRoleAuth } from "../middleware/bearAuth";
 
 const bank = (app: Express) => {
   // Create Bank Account
@@ -13,7 +13,7 @@ const bank = (app: Express) => {
   });
 
    //Get all bank accounts for logged-in seller
-  app.route("/bank/accounts/seller").get(customerRoleAuth, async (req, res, next) => {
+  app.route("/bank/accounts/seller").get(SellerRoleAuth, async (req, res, next) => {
     try {
       await getSellerBankAccounts(req, res);
     } catch (error) {
