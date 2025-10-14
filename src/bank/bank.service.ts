@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import db from "../Drizzle/db";
-import { bankAccounts } from "../Drizzle/schema";
+import { bankAccounts, sellers, users } from "../Drizzle/schema";
 
 export interface ICreateBankInput {
   sellerId: number; 
@@ -77,4 +77,28 @@ export const deleteBankAccountService = async (id: number) => {
     .where(eq(bankAccounts.id, id))
     .returning();
   return deleted;
+};
+
+export const getBankAccountsBySellerUsernameService = async (username: string) => {
+  const results = await db
+    .select({
+      bankId: bankAccounts.id,
+      bankName: bankAccounts.bankName,
+      accountNumber: bankAccounts.accountNumber,
+      accountName: bankAccounts.accountName,
+      branchCode: bankAccounts.branchCode,
+      sellerName: sellers.fullname,
+      sellerEmail: sellers.email,
+      createdAt: bankAccounts.createdAt,
+    })
+    .from(bankAccounts)
+    .innerJoin(sellers, eq(bankAccounts.sellerId, sellers.id))
+    .innerJoin(users, eq(sellers.userId, users.id))
+    .where(
+      sql`${users.firstname} || ' ' || ${users.lastname} ILIKE ${`%${username}%`} 
+      OR ${users.email} ILIKE ${`%${username}%`} 
+      OR ${sellers.fullname} ILIKE ${`%${username}%`}`
+    );
+
+  return results;
 };

@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import Jwt from "jsonwebtoken";
 import db from "../Drizzle/db";
 import { sellers } from "../Drizzle/schema";
-import { createBankAccountService, deleteBankAccountService, getAllBankAccountsService, getBankAccountByIdService, getBankAccountsBySellerIdService, ICreateBankInput, IUpdateBankAccountInput, updateBankAccountService } from "./bank.service";
+import { createBankAccountService, deleteBankAccountService, getAllBankAccountsService, getBankAccountByIdService, getBankAccountsBySellerIdService, getBankAccountsBySellerUsernameService, ICreateBankInput, IUpdateBankAccountInput, updateBankAccountService } from "./bank.service";
 import { sql } from "drizzle-orm";
 
 const verifyToken = (req: Request, res: Response): any | null => {
@@ -170,5 +170,37 @@ export const deleteBankAccount = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error("Error deleting bank account:", error);
     return res.status(500).json({ message: "Failed to delete bank account" });
+  }
+};
+
+export const getBankAccountsBySellerUsername = async (req: Request, res: Response) => {
+  try {
+    const { username } = req.params;
+
+    // Validating parameter
+    if (!username || username.trim() === "") {
+      return res.status(400).json({ message: "Username parameter is required" });
+    }
+
+    // Calling the service
+    const accounts = await getBankAccountsBySellerUsernameService(username);
+
+    // Handling not found case
+    if (!accounts || accounts.length === 0) {
+      return res.status(404).json({ message: "No bank accounts found for this seller" });
+    }
+
+    // Return the results
+    return res.status(200).json({
+      message: "Bank accounts fetched successfully",
+      count: accounts.length,
+      data: accounts,
+    });
+  } catch (error: any) {
+    console.error("Error fetching bank accounts by seller username:", error);
+    return res.status(500).json({
+      message: "Failed to fetch bank accounts by seller username",
+      error: error.message,
+    });
   }
 };
