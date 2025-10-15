@@ -19,73 +19,7 @@ import {
   getUserWithReviewsService,
 } from "./user.service";
 import { sendEmail } from "../mailer/mailer";
-
-// Create User
-// export const createUserController = async (req: Request, res: Response) => {
-//   try {
-//     const user = req.body;
-//     const password = user.password;
-
-//     if (!password || password.length < 6) {
-//       return res
-//         .status(400)
-//         .json({ message: "Password must be at least 6 characters long" });
-//     }
-
-//     const hashedPassword = await bcrypt.hash(password, 10);
-//     user.password = hashedPassword;
-
-//     const verificationCode = Math.floor(
-//       100000 + Math.random() * 900000
-//     ).toString();
-//     const expirationTime = new Date(Date.now() + 60 * 60 * 1000);
-//     user.verificationCode = verificationCode;
-//     user.verificationCodeExpiresAt = expirationTime;
-//     user.isVerified = false;
-
-//     await createUserService(user);
-
-//     const [createdUser] = await db
-//       .select()
-//       .from(users)
-//       .where(eq(users.email, user.email))
-//       .execute();
-
-//     if (!createdUser) {
-//       return res
-//         .status(500)
-//         .json({ message: "User was not created properly." });
-//     }
-
-//     try {
-//       await sendEmail(
-//         createdUser.email,
-//         "Verify your account",
-//         `Hello ${createdUser.firstname}, your verification code is: ${verificationCode}.`,
-//         `<div>
-//           <h2>Hello ${createdUser.firstname},</h2>
-//           <p>Your verification code is <strong>${verificationCode}</strong>.</p>
-//           <p>Please use this code to verify your account.</p>
-//         </div>`
-//       );
-//     } catch (emailError) {
-//       console.error("Failed to send verification email:", emailError);
-//     }
-
-//     return res.status(201).json({
-//       message:
-//         "User created successfully. Please check your email for the verification code.",
-//       user: {
-//         id: createdUser.id,
-//         email: createdUser.email,
-//       },
-//     });
-//   } catch (error: any) {
-//     return res.status(500).json({ message: error.message });
-//   }
-// };
-
-
+// Create user
 export const createUserController = async (req: Request, res: Response) => {
   try {
     const user = req.body;

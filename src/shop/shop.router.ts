@@ -19,19 +19,18 @@ const upload = multer({ dest: "temp/" }); // temporary upload folder
 
 const shop = (app: Express) => {
   // CREATE SHOP (Authenticated seller)
-  app
-    .route("/shop")
-    .post(
-      customerRoleAuth,
-      upload.fields([{ name: "logo", maxCount: 1 }]),
-      async (req, res, next) => {
-        try {
-          await createShop(req, res);
-        } catch (error) {
-          next(error);
-        }
+ app
+  .route("/shop")
+  .post(
+    upload.fields([{ name: "logo", maxCount: 1 }]),
+    async (req, res, next) => {
+      try {
+        await createShop(req, res);
+      } catch (error) {
+        next(error);
       }
-    );
+    }
+  );
 
   // GET ALL SHOPS (Admin only)
   app.route("/shop").get(adminRoleAuth, async (req, res, next) => {
