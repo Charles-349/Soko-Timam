@@ -290,3 +290,31 @@ export const getUserWithReviewsController = async (req: Request, res: Response) 
     return res.status(500).json({ message: error.message });
   }
 };
+
+// Get user by Email
+export const getUserByEmailController = async (req: Request, res: Response) => {
+  try {
+    const email = req.params.email;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    const user = await getUserByEmailService(email);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({
+      message: "User retrieved successfully",
+      user,
+    });
+  } catch (error: any) {
+    console.error("Error fetching user by email:", error);
+    return res.status(500).json({
+      message: error.message || "Failed to retrieve user by email",
+    });
+  }
+};
+

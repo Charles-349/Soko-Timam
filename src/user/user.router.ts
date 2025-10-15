@@ -11,7 +11,8 @@ import {
   getUserWithOrdersController,
   getUserWithCartController,
   getUserWithWishlistController,
-  getUserWithReviewsController
+  getUserWithReviewsController,
+  getUserByEmailController
 } from "./user.controller";
 import { Express } from "express";
 
@@ -51,6 +52,16 @@ const user = (app: Express) => {
       next(error);
     }
   });
+
+//get user by email
+app.route("/user/email/:email").get(async (req, res, next) => {
+  try {
+    await getUserByEmailController(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
 
   // Get All Users (Admin only)
   app.route("/user").get(adminRoleAuth, async (req, res, next) => {
