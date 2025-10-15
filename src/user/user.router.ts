@@ -1,8 +1,6 @@
 import { adminRoleAuth } from "../middleware/bearAuth";
 import { 
   createUserController,
-  verifyUserController,
-  resendVerificationCodeController,
   userLoginController,
   getUsersController,
   getUserByIdController,
@@ -21,24 +19,6 @@ const user = (app: Express) => {
   app.route("/user").post(async (req, res, next) => {
     try {
       await createUserController(req, res);
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  // Verify User
-  app.route("/user/verify").post(async (req, res, next) => {
-    try {
-      await verifyUserController(req, res);
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  // Resend Verification Code
-  app.route("/user/resend-verification").post(async (req, res, next) => {
-    try {
-      await resendVerificationCodeController(req, res);
     } catch (error) {
       next(error);
     }

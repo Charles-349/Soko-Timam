@@ -15,29 +15,6 @@ export const getUserByEmailService = async (email: string) => {
   });
 };
 
-// Verify user account
-export const verifyUserService = async (email: string) => {
-  await db
-    .update(users)
-    .set({ isVerified: true, verificationCode: null })
-    .where(sql`${users.email} = ${email}`);
-};
-
-// Update verification code
-export const updateVerificationCodeService = async (
-  email: string,
-  verificationCode: string,
-  expirationTime: Date
-) => {
-  await db
-    .update(users)
-    .set({
-      verificationCode,
-      verificationCodeExpiresAt: expirationTime,
-    })
-    .where(sql`${users.email} = ${email}`);
-};
-
 // Login user
 export const userLoginService = async (email: string) => {
   return await db.query.users.findFirst({
@@ -49,7 +26,6 @@ export const userLoginService = async (email: string) => {
       password: true,
       phone: true,
       role: true,
-      isVerified: true,
     },
     where: sql`${users.email} = ${email}`,
   });

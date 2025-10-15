@@ -21,9 +21,6 @@ export const users = pgTable("users", {
   image_url: varchar("image_url", { length: 255 }).default(
     "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y"
   ),
-  isVerified: boolean("is_verified").default(false),
-  verificationCode: varchar("verification_code", { length: 10 }),
-  verificationCodeExpiresAt: timestamp("verification_code_expires_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

@@ -13,8 +13,6 @@ import {
   getUsersService,
   userLoginService,
   getUserByEmailService,
-  verifyUserService,
-  updateVerificationCodeService,
   getUserWithOrdersService,
   getUserWithCartService,
   getUserWithWishlistService,
@@ -23,30 +21,89 @@ import {
 import { sendEmail } from "../mailer/mailer";
 
 // Create User
+// export const createUserController = async (req: Request, res: Response) => {
+//   try {
+//     const user = req.body;
+//     const password = user.password;
+
+//     if (!password || password.length < 6) {
+//       return res
+//         .status(400)
+//         .json({ message: "Password must be at least 6 characters long" });
+//     }
+
+//     const hashedPassword = await bcrypt.hash(password, 10);
+//     user.password = hashedPassword;
+
+//     const verificationCode = Math.floor(
+//       100000 + Math.random() * 900000
+//     ).toString();
+//     const expirationTime = new Date(Date.now() + 60 * 60 * 1000);
+//     user.verificationCode = verificationCode;
+//     user.verificationCodeExpiresAt = expirationTime;
+//     user.isVerified = false;
+
+//     await createUserService(user);
+
+//     const [createdUser] = await db
+//       .select()
+//       .from(users)
+//       .where(eq(users.email, user.email))
+//       .execute();
+
+//     if (!createdUser) {
+//       return res
+//         .status(500)
+//         .json({ message: "User was not created properly." });
+//     }
+
+//     try {
+//       await sendEmail(
+//         createdUser.email,
+//         "Verify your account",
+//         `Hello ${createdUser.firstname}, your verification code is: ${verificationCode}.`,
+//         `<div>
+//           <h2>Hello ${createdUser.firstname},</h2>
+//           <p>Your verification code is <strong>${verificationCode}</strong>.</p>
+//           <p>Please use this code to verify your account.</p>
+//         </div>`
+//       );
+//     } catch (emailError) {
+//       console.error("Failed to send verification email:", emailError);
+//     }
+
+//     return res.status(201).json({
+//       message:
+//         "User created successfully. Please check your email for the verification code.",
+//       user: {
+//         id: createdUser.id,
+//         email: createdUser.email,
+//       },
+//     });
+//   } catch (error: any) {
+//     return res.status(500).json({ message: error.message });
+//   }
+// };
+
+
 export const createUserController = async (req: Request, res: Response) => {
   try {
     const user = req.body;
-    const password = user.password;
 
-    if (!password || password.length < 6) {
+    // Validate password
+    if (!user.password || user.password.length < 6) {
       return res
         .status(400)
         .json({ message: "Password must be at least 6 characters long" });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    user.password = hashedPassword;
+    // Hash password
+    user.password = await bcrypt.hash(user.password, 10);
 
-    const verificationCode = Math.floor(
-      100000 + Math.random() * 900000
-    ).toString();
-    const expirationTime = new Date(Date.now() + 60 * 60 * 1000);
-    user.verificationCode = verificationCode;
-    user.verificationCodeExpiresAt = expirationTime;
-    user.isVerified = false;
-
+    // Create user
     await createUserService(user);
 
+    // Retrieve created user
     const [createdUser] = await db
       .select()
       .from(users)
@@ -54,98 +111,21 @@ export const createUserController = async (req: Request, res: Response) => {
       .execute();
 
     if (!createdUser) {
-      return res
-        .status(500)
-        .json({ message: "User was not created properly." });
-    }
-
-    try {
-      await sendEmail(
-        createdUser.email,
-        "Verify your account",
-        `Hello ${createdUser.firstname}, your verification code is: ${verificationCode}.`,
-        `<div>
-          <h2>Hello ${createdUser.firstname},</h2>
-          <p>Your verification code is <strong>${verificationCode}</strong>.</p>
-          <p>Please use this code to verify your account.</p>
-        </div>`
-      );
-    } catch (emailError) {
-      console.error("Failed to send verification email:", emailError);
+      return res.status(500).json({ message: "User was not created properly." });
     }
 
     return res.status(201).json({
-      message:
-        "User created successfully. Please check your email for the verification code.",
+      message: "User created successfully.",
       user: {
         id: createdUser.id,
+        firstname: createdUser.firstname,
+        lastname: createdUser.lastname,
         email: createdUser.email,
+        role: createdUser.role,
       },
     });
   } catch (error: any) {
-    return res.status(500).json({ message: error.message });
-  }
-};
-
-// Verify User
-export const verifyUserController = async (req: Request, res: Response) => {
-  const { email, code } = req.body;
-  try {
-    const user = await getUserByEmailService(email);
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    if (
-      !user.verificationCodeExpiresAt ||
-      new Date() > new Date(user.verificationCodeExpiresAt)
-    ) {
-      return res
-        .status(400)
-        .json({ message: "Verification code has expired." });
-    }
-
-    if (user.verificationCode === code) {
-      await verifyUserService(email);
-      return res.status(200).json({ message: "User verified successfully" });
-    }
-    return res.status(400).json({ message: "Invalid verification code" });
-  } catch (error: any) {
-    return res.status(500).json({ error: error.message });
-  }
-};
-
-// Resend Verification Code
-export const resendVerificationCodeController = async (
-  req: Request,
-  res: Response
-) => {
-  const { email } = req.body;
-  try {
-    const user = await getUserByEmailService(email);
-    if (!user) return res.status(404).json({ message: "User not found" });
-    if (user.isVerified)
-      return res.status(400).json({ message: "User already verified" });
-
-    const verificationCode = Math.floor(
-      100000 + Math.random() * 900000
-    ).toString();
-    const expirationTime = new Date(Date.now() + 60 * 60 * 1000);
-
-    await updateVerificationCodeService(email, verificationCode, expirationTime);
-
-    await sendEmail(
-      email,
-      "New Verification Code",
-      `Hello ${user.firstname}, here is your new code: ${verificationCode}`,
-      `<div>
-        <h2>Hello ${user.firstname},</h2>
-        <p>Your new code is <strong>${verificationCode}</strong>.</p>
-      </div>`
-    );
-
-    return res
-      .status(200)
-      .json({ message: "New verification code sent successfully" });
-  } catch (error: any) {
+    console.error("Error creating user:", error);
     return res.status(500).json({ message: error.message });
   }
 };
