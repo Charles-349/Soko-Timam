@@ -4,7 +4,7 @@ import { adminRoleAuth, customerRoleAuth, SellerRoleAuth } from "../middleware/b
 
 const bank = (app: Express) => {
   // Create Bank Account
-  app.route("/bank/account").post(customerRoleAuth, async (req, res, next) => {
+  app.route("/bank/account").post( async (req, res, next) => {
     try {
       await createBankAccount(req, res);
     } catch (error) {
@@ -13,7 +13,7 @@ const bank = (app: Express) => {
   });
 
    //Get all bank accounts for logged-in seller
-  app.route("/bank/accounts/seller").get(SellerRoleAuth, async (req, res, next) => {
+  app.route("/bank/accounts/seller").get(async (req, res, next) => {
     try {
       await getSellerBankAccounts(req, res);
     } catch (error) {
