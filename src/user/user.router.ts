@@ -62,7 +62,7 @@ app.route("/user/email/:email").get(async (req, res, next) => {
   });
 
   // Update User by ID
-  app.route("/user/:id").put(async (req, res, next) => {
+  app.route("/user/:id").put(adminRoleAuth,async (req, res, next) => {
     try {
       await updateUserController(req, res);
     } catch (error) {
