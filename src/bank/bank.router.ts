@@ -12,10 +12,19 @@ const bank = (app: Express) => {
     }
   });
 
-   //Get all bank accounts for logged-in seller
-  app.route("/bank/accounts/seller").get(async (req, res, next) => {
+   //Get all bank accounts by sellerid
+  app.route("/bank/accounts/seller/:sellerId").get(async (req, res, next) => {
     try {
       await getSellerBankAccounts(req, res);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+    //Get Bank Accounts by Seller Username (Admin only)
+  app.get("/bank/accounts/seller/username/:username", adminRoleAuth, async (req, res, next) => {
+    try {
+      await getBankAccountsBySellerUsername(req, res);
     } catch (error) {
       next(error);
     }

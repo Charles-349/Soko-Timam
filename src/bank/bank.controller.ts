@@ -265,7 +265,7 @@ export const createBankAccount = async (req: Request, res: Response) => {
 };
 
 // Get All Bank Accounts
-export const getAllBankAccounts = async (_req: Request, res: Response) => {
+export const getAllBankAccounts = async (req: Request, res: Response) => {
   try {
     const banks = await getAllBankAccountsService();
     return res.status(200).json(banks);
@@ -275,7 +275,7 @@ export const getAllBankAccounts = async (_req: Request, res: Response) => {
   }
 };
 
-// Get All Bank Accounts for a Seller (sellerId from frontend)
+// Get All Bank Accounts for a Seller 
 export const getSellerBankAccounts = async (req: Request, res: Response) => {
   try {
     const { sellerId } = req.params;
