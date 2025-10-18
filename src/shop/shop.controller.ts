@@ -16,6 +16,7 @@ import { ICreateShopInput } from "../shop/shop.service";
 import db from "../Drizzle/db";
 import { notifications, sellers, shops } from "../Drizzle/schema";
 import { eq } from "drizzle-orm";
+import { sendEmail } from "../mailer/mailer";
 
 // CREATE SHOP
 // export const createShop = async (req: Request, res: Response) => {
@@ -205,43 +206,55 @@ export const getShopsBySellerController = async (req: Request, res: Response) =>
 // };
 
 
-// ✅ Update Shop Controller with auto notification
 export const updateShopController = async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
     if (!id) return res.status(400).json({ message: "Invalid shop ID" });
 
-    // Update the shop
+    // Update shop
     const [updatedShop] = await db
       .update(shops)
       .set(req.body)
       .where(eq(shops.id, id))
       .returning();
 
-    if (!updatedShop)
+    if (!updatedShop) {
       return res.status(404).json({ message: "Shop not found" });
+    }
 
-    // ✅ Send notification if status is changed to active or suspended
+    //Send notification and email if status changed
     if (req.body.status === "active" || req.body.status === "suspended") {
-      // Find seller
+      // Find the seller
       const [seller] = await db
         .select()
         .from(sellers)
         .where(eq(sellers.id, updatedShop.sellerId));
 
       if (seller) {
-        const message =
-          req.body.status === "active"
-            ? `🎉 Your shop "${updatedShop.name}" has been approved and activated. Customers can now see your products.`
-            : `⚠️ Your shop "${updatedShop.name}" has been suspended. Please contact support for more details.`;
+        const isActivated = req.body.status === "active";
+        const subject = isActivated
+          ? `Your shop "${updatedShop.name}" is now active 🎉`
+          : `Your shop "${updatedShop.name}" has been suspended ⚠️`;
 
-        // Create notification for the seller
+        const message = isActivated
+          ? `🎉 Great news! Your shop "${updatedShop.name}" has been approved and activated on Soko Timam. Customers can now view and buy your products.`
+          : `⚠️ Your shop "${updatedShop.name}" has been suspended. Please contact support if you believe this was a mistake.`;
+
+        // Create DB notification
         await db.insert(notifications).values({
-          userId: seller.userId, // or sellerId if you’ve refactored notifications
+          userId: seller.userId,
           message,
           type: "shop_status",
           isRead: false,
         });
+
+        // Send Email
+        await sendEmail(
+          seller.email,
+          subject,
+          message,
+          `<p>${message}</p><br/><p>Regards,<br/>Soko Timam Team</p>`
+        );
       }
     }
 
@@ -254,6 +267,7 @@ export const updateShopController = async (req: Request, res: Response) => {
     return res.status(500).json({ message: error.message });
   }
 };
+
 
 // DELETE
 export const deleteShopController = async (req: Request, res: Response) => {
