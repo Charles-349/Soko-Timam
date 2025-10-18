@@ -17,6 +17,7 @@ import coupon from './coupons/coupon.router';
 import {v2 as cloudinary} from 'cloudinary';
 import seller from './seller/seller.router';
 import bank from './bank/bank.router';
+import mail from './mail/mail.router';
 
 const initializeApp = ()=>{
 const app = express();
@@ -47,6 +48,7 @@ flashsales(app);
 coupon(app);
 seller(app);
 bank(app);
+mail(app);
 
 
 

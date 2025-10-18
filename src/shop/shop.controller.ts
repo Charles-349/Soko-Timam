@@ -14,7 +14,7 @@ import {
 } from "../shop/shop.service";
 import { ICreateShopInput } from "../shop/shop.service";
 import db from "../Drizzle/db";
-import { sellers, shops } from "../Drizzle/schema";
+import { notifications, sellers, shops } from "../Drizzle/schema";
 import { eq } from "drizzle-orm";
 
 // CREATE SHOP
@@ -186,21 +186,72 @@ export const getShopsBySellerController = async (req: Request, res: Response) =>
 };
 
 // UPDATE
+// export const updateShopController = async (req: Request, res: Response) => {
+//   try {
+//     const id = Number(req.params.id);
+//     if (!id) return res.status(400).json({ message: "Invalid shop ID" });
+
+//     const updatedShop = await updateShopService(id, req.body);
+//     if (!updatedShop.length)
+//       return res.status(404).json({ message: "Shop not found" });
+
+//     res.status(200).json({
+//       message: "Shop updated successfully",
+//       shop: updatedShop[0],
+//     });
+//   } catch (error: any) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+
+
+// ✅ Update Shop Controller with auto notification
 export const updateShopController = async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
     if (!id) return res.status(400).json({ message: "Invalid shop ID" });
 
-    const updatedShop = await updateShopService(id, req.body);
-    if (!updatedShop.length)
+    // Update the shop
+    const [updatedShop] = await db
+      .update(shops)
+      .set(req.body)
+      .where(eq(shops.id, id))
+      .returning();
+
+    if (!updatedShop)
       return res.status(404).json({ message: "Shop not found" });
 
-    res.status(200).json({
+    // ✅ Send notification if status is changed to active or suspended
+    if (req.body.status === "active" || req.body.status === "suspended") {
+      // Find seller
+      const [seller] = await db
+        .select()
+        .from(sellers)
+        .where(eq(sellers.id, updatedShop.sellerId));
+
+      if (seller) {
+        const message =
+          req.body.status === "active"
+            ? `🎉 Your shop "${updatedShop.name}" has been approved and activated. Customers can now see your products.`
+            : `⚠️ Your shop "${updatedShop.name}" has been suspended. Please contact support for more details.`;
+
+        // Create notification for the seller
+        await db.insert(notifications).values({
+          userId: seller.userId, // or sellerId if you’ve refactored notifications
+          message,
+          type: "shop_status",
+          isRead: false,
+        });
+      }
+    }
+
+    return res.status(200).json({
       message: "Shop updated successfully",
-      shop: updatedShop[0],
+      shop: updatedShop,
     });
   } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    console.error("Error updating shop:", error);
+    return res.status(500).json({ message: error.message });
   }
 };
 
