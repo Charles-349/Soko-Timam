@@ -208,8 +208,14 @@ export const getShopsBySellerController = async (req: Request, res: Response) =>
 
 export const updateShopController = async (req: Request, res: Response) => {
   try {
+    console.log("🟡 Incoming update request for shop:", req.params.id);
+    console.log("🟢 Request body:", req.body);
+
     const id = Number(req.params.id);
-    if (!id) return res.status(400).json({ message: "Invalid shop ID" });
+    if (!id) {
+      console.log("❌ Invalid shop ID");
+      return res.status(400).json({ message: "Invalid shop ID" });
+    }
 
     // Update shop
     const [updatedShop] = await db
@@ -218,17 +224,24 @@ export const updateShopController = async (req: Request, res: Response) => {
       .where(eq(shops.id, id))
       .returning();
 
+    console.log("🟠 Updated shop record:", updatedShop);
+
     if (!updatedShop) {
+      console.log("❌ Shop not found");
       return res.status(404).json({ message: "Shop not found" });
     }
 
-    //Send notification and email if status changed
+    // Send notification and email if status changed
     if (req.body.status === "active" || req.body.status === "suspended") {
+      console.log("🔵 Status change detected:", req.body.status);
+
       // Find the seller
       const [seller] = await db
         .select()
         .from(sellers)
         .where(eq(sellers.id, updatedShop.sellerId));
+
+      console.log("🟣 Fetched seller:", seller);
 
       if (seller) {
         const isActivated = req.body.status === "active";
@@ -241,6 +254,8 @@ export const updateShopController = async (req: Request, res: Response) => {
           : `⚠️ Your shop "${updatedShop.name}" has been suspended. Please contact support if you believe this was a mistake.`;
 
         // Create DB notification
+        console.log("📩 Creating notification for seller:", seller.id);
+
         await db.insert(notifications).values({
           userId: seller.userId,
           message,
@@ -249,21 +264,32 @@ export const updateShopController = async (req: Request, res: Response) => {
         });
 
         // Send Email
-        await sendEmail(
-          seller.email,
-          subject,
-          message,
-          `<p>${message}</p><br/><p>Regards,<br/>Soko Timam Team</p>`
-        );
+        try {
+          console.log("📧 Sending email to:", seller.email);
+          const result = await sendEmail(
+            seller.email,
+            subject,
+            message,
+            `<p>${message}</p><br/><p>Regards,<br/>Soko Timam Team</p>`
+          );
+          console.log("✅ Email result:", result);
+        } catch (emailErr) {
+          console.error("❌ Email failed:", emailErr);
+        }
+      } else {
+        console.log("⚠️ No seller found for this shop");
       }
+    } else {
+      console.log("ℹ️ Status not changed to active/suspended, no email sent.");
     }
 
+    console.log("✅ Shop update complete");
     return res.status(200).json({
       message: "Shop updated successfully",
       shop: updatedShop,
     });
   } catch (error: any) {
-    console.error("Error updating shop:", error);
+    console.error("💥 Error updating shop:", error);
     return res.status(500).json({ message: error.message });
   }
 };
