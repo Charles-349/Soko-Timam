@@ -36,3 +36,12 @@ export const registerSeller = async (userId: number, nationalId: string) => {
 
   return newSeller;
 };
+
+//get seller details by user id
+export const getSellerByUserId = async (userId: number) => {
+  const seller = await db.query.sellers.findFirst({
+    where: eq(sellers.userId, userId),
+  });
+
+  return seller;
+}

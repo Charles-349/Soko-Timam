@@ -1,6 +1,6 @@
 
 import { Express } from "express";
-import { createSeller } from "./seller.controller";
+import { createSeller, getSellerByUserId } from "./seller.controller";
 
 const seller = (app: Express) => {
   // Register Seller 
@@ -11,6 +11,15 @@ const seller = (app: Express) => {
       next(error);
     }
   });
+
+  //get seller details by user id
+  app.route("/seller/user/:userId").get(async (req, res, next) => {
+    try {
+      await getSellerByUserId(req, res);
+    } catch (error) {
+      next(error);
+    }
+  }); 
 };
 
 export default seller;
