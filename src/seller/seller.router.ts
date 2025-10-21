@@ -24,7 +24,6 @@ const seller = (app: Express) => {
   //get all products for a seller by seller id
   app.route("/seller/:sellerId/products").get(async (req, res, next) => {
     try {
-      // Assuming getProductsBySellerIdController is defined in seller.controller.ts
       await getProductsBySellerId(req, res);
     } catch (error) {
       next(error);
