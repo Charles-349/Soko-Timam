@@ -14,6 +14,7 @@ import {
   getCategoryWithRelationsService,
   getCategoriesByShopIdService,
   getCategoriesBySellerIdService,
+  getCategoriesBySellerAndShopIdService,
 } from "./category.service";
 import db from "../Drizzle/db";
 import { eq, isNull } from "drizzle-orm";
@@ -215,6 +216,31 @@ export const getCategoriesBySellerIdController = async (req: Request, res: Respo
   } catch (error: any) {
     return res.status(500).json({
       message: error.message || "Failed to retrieve categories by seller ID",
+    });
+  }
+};
+
+//get categories for a specific seller in a specific shop
+export const getCategoriesBySellerAndShopIdController = async (req: Request, res: Response) => {
+  try {
+    const sellerId = parseInt(req.params.sellerId);
+    const shopId = parseInt(req.params.shopId);
+    if (!sellerId || !shopId) {
+      return res.status(400).json({ message: "Invalid seller ID or shop ID" });
+    }
+
+    const categories = await getCategoriesBySellerAndShopIdService(sellerId, shopId);
+    if (!categories.length) {
+      return res.status(404).json({ message: "No categories found for this seller in the specified shop" });
+    }
+
+    return res.status(200).json({
+      message: "Categories retrieved successfully for seller in shop",
+      categories,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      message: error.message || "Failed to retrieve categories by seller and shop ID",
     });
   }
 };

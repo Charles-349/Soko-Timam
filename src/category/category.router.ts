@@ -10,6 +10,7 @@ import {
   getCategoryWithProductsController,
   getCategoriesBySellerIdController,
   getCategoriesByShopIdController,
+  getCategoriesBySellerAndShopIdController,
 } from "./category.controller";
 import { Express } from "express";
 
@@ -85,6 +86,14 @@ const category = (app: Express) => {
       next(error);
     }
   });
+//get categories for a specific seller in a specific shop
+app.route("/seller/:sellerId/shop/:shopId/categories").get(async (req, res, next) => {
+  try {
+    await getCategoriesBySellerAndShopIdController(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
 
 };
 export default category;

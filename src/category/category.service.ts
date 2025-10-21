@@ -127,3 +127,25 @@ export const getCategoriesBySellerIdService = async (sellerId: number) => {
 
   return sellerCategories;
 };
+
+//get categories for a specific seller in a specific shop
+export const getCategoriesBySellerAndShopIdService = async (
+  sellerId: number,
+  shopId: number
+) => {
+  //Verify the shop belongs to the seller
+  const shop = await db.query.shops.findFirst({
+    where: eq(shops.id, shopId),
+  });
+
+  if (!shop || shop.sellerId !== sellerId) {
+    return [];
+  }
+
+  //Fetch categories for the specified shop
+  const categoriesInShop = await db.query.categories.findMany({
+    where: eq(categories.shopId, shopId),
+  });
+
+  return categoriesInShop;
+};
