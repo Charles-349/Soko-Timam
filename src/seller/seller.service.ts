@@ -45,3 +45,12 @@ export const getSellerByUserId = async (userId: number) => {
 
   return seller;
 }
+
+//get all products for a seller by seller id
+export const getProductsBySellerId = async (sellerId: number) => {
+  const products = await db.query.products.findMany({
+    where: eq(sellers.id, sellerId),
+  });
+
+  return products;
+};                      
