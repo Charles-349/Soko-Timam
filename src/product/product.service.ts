@@ -18,8 +18,6 @@ export interface ICreateProductInput {
   description?: string;
   price: number;
   stock?: number;
-  sku?: string;
-  status?: string;
   imageFiles?: Express.Multer.File[]; // multiple files
 }
 

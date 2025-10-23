@@ -52,8 +52,6 @@ export const createProduct = async (req: Request, res: Response) => {
       description,
       price: Number(price),
       stock: stock ? Number(stock) : 0,
-      sku,
-      status,
       imageFiles: files?.images,
     };
 
@@ -89,8 +87,8 @@ export const getProductsController = async (req: Request, res: Response) => {
       sortBy: sortBy as
         | "createdAt"
         | "price"
-        | "rating"
-        | "salesCount"
+        // | "rating"
+        // | "salesCount"
         | undefined,
       order: order as "asc" | "desc" | undefined,
     });
