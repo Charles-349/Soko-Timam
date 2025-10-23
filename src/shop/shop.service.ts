@@ -80,6 +80,7 @@ export const getShopsBySellerService = (sellerId: number) => {
   return db.query.shops.findMany({
     where: eq(shops.sellerId, sellerId),
     with: {
+      seller:true,
       products: true,
       orderItems: true,
     },
