@@ -112,6 +112,21 @@ import db from "../Drizzle/db";
 import { TICart, carts, cartItems, products } from "../Drizzle/schema";
 
 //Create or Reuse Cart (ensures only one unpaid cart per user)
+// export const createCartService = async (cart: TICart) => {
+//   // Check if the user already has an unpaid cart
+//   const existingCart = await db.query.carts.findFirst({
+//     where: and(eq(carts.userId, cart.userId), eq(carts.checkoutStatus, "unpaid")),
+//   });
+
+//   if (existingCart) {
+//     return existingCart; // Return the same unpaid cart
+//   }
+
+//   // Otherwise create a new cart
+//   const [newCart] = await db.insert(carts).values(cart).returning();
+//   return newCart;
+// };
+
 export const createCartService = async (cart: TICart) => {
   // Check if the user already has an unpaid cart
   const existingCart = await db.query.carts.findFirst({
@@ -119,12 +134,12 @@ export const createCartService = async (cart: TICart) => {
   });
 
   if (existingCart) {
-    return existingCart; // Return the same unpaid cart
+    return { cart: existingCart, isNew: false }; // Reused existing unpaid cart
   }
 
   // Otherwise create a new cart
   const [newCart] = await db.insert(carts).values(cart).returning();
-  return newCart;
+  return { cart: newCart, isNew: true };
 };
 
 //Get all Carts

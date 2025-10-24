@@ -13,14 +13,35 @@ import {
 } from "./cart.service";
 
 // Create Cart
+// export const createCartController = async (req: Request, res: Response) => {
+//   try {
+//     await createCartService(req.body);
+//     return res.status(201).json({ message: "Cart created successfully" });
+//   } catch (error: any) {
+//     return res.status(500).json({ message: error.message });
+//   }
+// };
+
 export const createCartController = async (req: Request, res: Response) => {
   try {
-    await createCartService(req.body);
-    return res.status(201).json({ message: "Cart created successfully" });
+    const { cart, isNew } = await createCartService(req.body);
+
+    if (isNew) {
+      return res.status(201).json({
+        message: "New cart created successfully.",
+        cart,
+      });
+    } else {
+      return res.status(200).json({
+        message: "User already has an unpaid cart. Reusing existing cart.",
+        cart,
+      });
+    }
   } catch (error: any) {
     return res.status(500).json({ message: error.message });
   }
 };
+
 
 // Get All Carts
 export const getCartsController = async (req: Request, res: Response) => {
