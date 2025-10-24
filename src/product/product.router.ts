@@ -50,8 +50,8 @@ const product = (app: Express) => {
     }
   });
 
-  // Update Product (Admin only)
-  app.route("/product/:id").put(adminRoleAuth, async (req, res, next) => {
+  // Update Product
+  app.route("/product/:id").put( async (req, res, next) => {
     try {
       await updateProductController(req, res);
     } catch (error) {
@@ -59,8 +59,8 @@ const product = (app: Express) => {
     }
   });
 
-  // Delete Product (Admin only)
-  app.route("/product/:id").delete(adminRoleAuth, async (req, res, next) => {
+  // Delete Product 
+  app.route("/product/:id").delete(async (req, res, next) => {
     try {
       await deleteProductController(req, res);
     } catch (error) {

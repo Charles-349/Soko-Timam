@@ -1,5 +1,5 @@
 import { Express } from "express";
-import { createBankAccount, deleteBankAccount, getAllBankAccounts, getBankAccountById, getBankAccountsBySellerUsername, getSellerBankAccounts, updateBankAccount } from "./bank.controller";
+import { createBankAccount, deleteBankAccount, getAllBankAccounts, getBankAccountById, getBankAccountsBySellerUsername, getBankDetailsByShopId, getSellerBankAccounts, updateBankAccount } from "./bank.controller";
 import { adminRoleAuth, customerRoleAuth, SellerRoleAuth } from "../middleware/bearAuth";
 
 const bank = (app: Express) => {
@@ -70,6 +70,14 @@ const bank = (app: Express) => {
     app.route("/bank/accounts/seller/username/:username").get(adminRoleAuth, async (req, res, next) => {
     try {
       await getBankAccountsBySellerUsername(req, res);
+    } catch (error) {
+      next(error);
+    }
+  });
+  //get bank details by shopId
+  app.route("/bank/details/shop/:shopId").get(async (req, res, next) => {
+    try {
+      await getBankDetailsByShopId(req, res);
     } catch (error) {
       next(error);
     }

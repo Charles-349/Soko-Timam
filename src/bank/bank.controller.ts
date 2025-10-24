@@ -216,6 +216,7 @@ import {
   getBankAccountByIdService,
   getBankAccountsBySellerIdService,
   getBankAccountsBySellerUsernameService,
+  getBankDetailsByShopIdService,
   ICreateBankInput,
   IUpdateBankAccountInput,
   updateBankAccountService,
@@ -363,5 +364,22 @@ export const getBankAccountsBySellerUsername = async (req: Request, res: Respons
       message: "Failed to fetch bank accounts by seller username",
       error: error.message,
     });
+  }
+};
+
+//Controller: Get Bank Details by Shop ID
+export const getBankDetailsByShopId = async (req: Request, res: Response) => {
+  try {
+    const shopId = Number(req.params.shopId);
+
+    if (isNaN(shopId)) {
+      return res.status(400).json({ message: "Invalid shop ID" });
+    }
+
+    const bankDetails = await getBankDetailsByShopIdService(shopId);
+    return res.status(200).json({ message: "Bank details fetched successfully", data: bankDetails });
+  } catch (error: any) {
+    console.error("Error fetching bank details by shop ID:", error);
+    return res.status(404).json({ message: error.message || "Failed to fetch bank details" });
   }
 };

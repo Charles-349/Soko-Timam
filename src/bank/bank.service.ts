@@ -1,6 +1,6 @@
 import { eq, sql } from "drizzle-orm";
 import db from "../Drizzle/db";
-import { bankAccounts, sellers, users } from "../Drizzle/schema";
+import { bankAccounts, sellers, shops, users } from "../Drizzle/schema";
 
 export interface ICreateBankInput {
   sellerId: number; 
@@ -101,4 +101,28 @@ export const getBankAccountsBySellerUsernameService = async (username: string) =
     );
 
   return results;
+};
+
+
+//Get Bank Details by Shop ID
+export const getBankDetailsByShopIdService = async (shopId: number) => {
+  // Step 1: Find shop
+  const shop = await db.query.shops.findFirst({
+    where: eq(shops.id, shopId),
+  });
+
+  if (!shop) {
+    throw new Error("Shop not found");
+  }
+
+  //Find bank account for seller of that shop
+  const bankDetails = await db.query.bankAccounts.findMany({
+    where: eq(bankAccounts.sellerId, shop.sellerId),
+  });
+
+  if (bankDetails.length === 0) {
+    throw new Error("No bank details found for this shop");
+  }
+
+  return bankDetails;
 };
