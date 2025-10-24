@@ -126,7 +126,7 @@ app.route("/user/email/:email").get(async (req, res, next) => {
     }
   });
 
-  // resert password
+  // reset password
   app.route("/user/reset-password").get(async (req, res, next) => {
     try {
       await resetPassword(req, res);
