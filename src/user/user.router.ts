@@ -10,7 +10,9 @@ import {
   getUserWithCartController,
   getUserWithWishlistController,
   getUserWithReviewsController,
-  getUserByEmailController
+  getUserByEmailController,
+  forgotPassword,
+  resetPassword
 } from "./user.controller";
 import { Express } from "express";
 
@@ -110,6 +112,24 @@ app.route("/user/email/:email").get(async (req, res, next) => {
   app.route("/user/:id/reviews").get(async (req, res, next) => {
     try {
       await getUserWithReviewsController(req, res);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+//forgot password
+   app.route("/user/forgot-password").get(async (req, res, next) => {
+    try {
+      await forgotPassword(req, res);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // resert password
+  app.route("/user/reset-password").get(async (req, res, next) => {
+    try {
+      await resetPassword(req, res);
     } catch (error) {
       next(error);
     }

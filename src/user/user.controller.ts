@@ -17,6 +17,8 @@ import {
   getUserWithCartService,
   getUserWithWishlistService,
   getUserWithReviewsService,
+  resetPasswordService,
+  forgotPasswordService,
 } from "./user.service";
 import { sendEmail } from "../mailer/mailer";
 // Create user
@@ -146,9 +148,6 @@ export const deleteUserController = async (req: Request, res: Response) => {
     return res.status(500).json({ message: error.message });
   }
 };
-
-
-
 // User with Orders
 export const getUserWithOrdersController = async (req: Request, res: Response) => {
   try {
@@ -229,6 +228,34 @@ export const getUserByEmailController = async (req: Request, res: Response) => {
     return res.status(500).json({
       message: error.message || "Failed to retrieve user by email",
     });
+  }
+};
+
+//forgot password controller
+export const forgotPassword = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: "Email is required" });
+
+    const result = await forgotPasswordService(email);
+    return res.status(200).json({ message: result });
+  } catch (error: any) {
+    console.error("Forgot Password Error:", error);
+    return res.status(400).json({ message: error.message || "Error sending reset email" });
+  }
+};
+
+export const resetPassword = async (req: Request, res: Response) => {
+  try {
+    const { token, newPassword } = req.body;
+    if (!token || !newPassword)
+      return res.status(400).json({ message: "Token and new password are required" });
+
+    const result = await resetPasswordService(token, newPassword);
+    return res.status(200).json({ message: result });
+  } catch (error: any) {
+    console.error("Reset Password Error:", error);
+    return res.status(400).json({ message: error.message || "Error resetting password" });
   }
 };
 

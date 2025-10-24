@@ -71,6 +71,13 @@
       "when": 1761283329230,
       "tag": "0009_puzzling_iron_monger",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1761299057552,
+      "tag": "0010_complete_captain_marvel",
+      "breakpoints": true
     }
   ]
 }
