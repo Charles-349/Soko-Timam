@@ -367,7 +367,7 @@ export const getBankAccountsBySellerUsername = async (req: Request, res: Respons
   }
 };
 
-//Controller: Get Bank Details by Shop ID
+//Get Bank Details by Shop ID
 export const getBankDetailsByShopId = async (req: Request, res: Response) => {
   try {
     const shopId = Number(req.params.shopId);

@@ -106,7 +106,7 @@ export const getBankAccountsBySellerUsernameService = async (username: string) =
 
 //Get Bank Details by Shop ID
 export const getBankDetailsByShopIdService = async (shopId: number) => {
-  // Step 1: Find shop
+  //Find shop
   const shop = await db.query.shops.findFirst({
     where: eq(shops.id, shopId),
   });

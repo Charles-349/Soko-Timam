@@ -242,7 +242,7 @@ export const getCategoryWithProductsService = async (id: number) => {
   });
 };
 
-// ✅ Get Category with All Relations (parent, children, products)
+// Get Category with All Relations (parent, children, products)
 export const getCategoryWithRelationsService = async (id: number) => {
   return await db.query.categories.findFirst({
     where: eq(categories.id, id),

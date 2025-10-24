@@ -118,7 +118,7 @@ app.route("/user/email/:email").get(async (req, res, next) => {
   });
 
 //forgot password
-   app.route("/user/forgot-password").get(async (req, res, next) => {
+   app.route("/user/forgot-password").post(async (req, res, next) => {
     try {
       await forgotPassword(req, res);
     } catch (error) {
@@ -127,7 +127,7 @@ app.route("/user/email/:email").get(async (req, res, next) => {
   });
 
   // reset password
-  app.route("/user/reset-password").get(async (req, res, next) => {
+  app.route("/user/reset-password").post(async (req, res, next) => {
     try {
       await resetPassword(req, res);
     } catch (error) {
