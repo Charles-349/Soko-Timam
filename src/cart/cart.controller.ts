@@ -69,15 +69,31 @@ export const deleteCartController = async (req: Request, res: Response) => {
 };
 
 // Add Item to Cart
+// export const addCartItemController = async (req: Request, res: Response) => {
+//   try {
+//     const { cartId, productId, quantity } = req.body;
+//     await addCartItemService(cartId, productId, quantity);
+//     return res.status(201).json({ message: "Item added to cart successfully" });
+//   } catch (error: any) {
+//     return res.status(500).json({ message: error.message });
+//   }
+// };
+
+// Add Item to Cart
 export const addCartItemController = async (req: Request, res: Response) => {
   try {
-    const { cartId, productId, quantity } = req.body;
-    await addCartItemService(cartId, productId, quantity);
-    return res.status(201).json({ message: "Item added to cart successfully" });
+    const { userId, productId, quantity } = req.body;
+    if (!userId || !productId) {
+      return res.status(400).json({ message: "userId and productId are required" });
+    }
+
+    const result = await addCartItemService(userId, productId, quantity || 1);
+    return res.status(201).json({ message: result });
   } catch (error: any) {
     return res.status(500).json({ message: error.message });
   }
 };
+
 
 // Update Cart Item
 export const updateCartItemController = async (req: Request, res: Response) => {
@@ -118,11 +134,28 @@ export const getCartWithItemsController = async (req: Request, res: Response) =>
 };
 
 // Get All Carts with Items
+// export const getCartsWithItemsController = async (req: Request, res: Response) => {
+//   try {
+//     const carts = await getCartsWithItemsService();
+//     return res.status(200).json({ message: "Carts with items retrieved successfully", carts });
+//   } catch (error: any) {
+//     return res.status(500).json({ message: error.message });
+//   }
+// };
 export const getCartsWithItemsController = async (req: Request, res: Response) => {
   try {
-    const carts = await getCartsWithItemsService();
-    return res.status(200).json({ message: "Carts with items retrieved successfully", carts });
+    const cartId = Number(req.params.cartId);
+
+    if (isNaN(cartId)) {
+      return res.status(400).json({ message: "Invalid cart ID" });
+    }
+
+    const cart = await getCartWithItemsService(cartId);
+    if (!cart) return res.status(404).json({ message: "Cart not found" });
+
+    return res.status(200).json(cart);
   } catch (error: any) {
     return res.status(500).json({ message: error.message });
   }
 };
+

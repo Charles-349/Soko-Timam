@@ -1,0 +1,1 @@
+ALTER TABLE "carts" ADD COLUMN "checkout_status" varchar(20) DEFAULT 'unpaid' NOT NULL;

@@ -85,11 +85,7 @@ export const products = pgTable("products", {
   description: text("description"),
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   stock: integer("stock").notNull().default(0),
-  // sku: varchar("sku", { length: 100 }),
-  // status: varchar("status", { length: 20 }).default("active"),
-  ImageUrl: text("image_url"),
-  // rating: decimal("rating", { precision: 2, scale: 1 }).default("0"),
-  // salesCount: integer("sales_count").default(0),                                                                                                                                                                                                                                                           
+  ImageUrl: text("image_url"),                                                                                                                                                                                                                                                         
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow().notNull()
 
@@ -113,6 +109,9 @@ export const productAttributes = pgTable("product_attributes", {
 export const carts = pgTable("carts", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id).notNull(),
+  checkoutStatus: varchar("checkout_status", { length: 20 })
+  .notNull()
+  .default("unpaid"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
