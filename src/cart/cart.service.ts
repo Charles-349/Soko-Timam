@@ -3,22 +3,6 @@ import { eq, and } from "drizzle-orm";
 import db from "../Drizzle/db";
 import { TICart, carts, cartItems, products } from "../Drizzle/schema";
 
-// export const createCartService = async (cart: TICart) => {
-//   // Check if the user already has an unpaid cart
-//   const existingCart = await db.query.carts.findFirst({
-//     where: and(eq(carts.userId, cart.userId), eq(carts.checkoutStatus, "unpaid")),
-//   });
-
-//   if (existingCart) {
-//     return { cart: existingCart, isNew: false }; // Reused existing unpaid cart
-//   }
-
-//   // Otherwise create a new cart
-//   const [newCart] = await db.insert(carts).values(cart).returning();
-//   return { cart: newCart, isNew: true };
-// };
-
-
 export const createOrAddToCartService = async (
   userId: number,
   items: { productId: number; quantity: number }[]
@@ -91,51 +75,6 @@ export const deleteCartService = async (id: number) => {
   if (deletedCart.length === 0) return null;
   return "Cart deleted successfully";
 };
-
-//Add Item to Cart
-// export const addCartItemService = async (
-//   userId: number,
-//   productId: number,
-//   quantity: number
-// ) => {
-//   //Check if user has an unpaid cart
-//   let cart = await db.query.carts.findFirst({
-//     where: and(eq(carts.userId, userId), eq(carts.checkoutStatus, "unpaid")),
-//   });
-
-//   //If no unpaid cart, create one
-//   if (!cart) {
-//     const [newCart] = await db
-//       .insert(carts)
-//       .values({ userId, checkoutStatus: "unpaid" })
-//       .returning();
-//     cart = newCart;
-//   }
-
-//   //Check if the item already exists in that cart
-//   const existingItem = await db.query.cartItems.findFirst({
-//     where: and(eq(cartItems.cartId, cart.id), eq(cartItems.productId, productId)),
-//   });
-
-//   if (existingItem) {
-//     //If exists, update the quantity
-//     await db
-//       .update(cartItems)
-//       .set({ quantity: existingItem.quantity + quantity })
-//       .where(eq(cartItems.id, existingItem.id));
-//     return "Cart item quantity updated successfully";
-//   }
-
-//   //Otherwise add new item
-//   await db.insert(cartItems).values({
-//     cartId: cart.id,
-//     productId,
-//     quantity,
-//   });
-
-//   return "Item added to cart successfully";
-// };
-
 // Update Cart Item Quantity
 export const updateCartItemService = async (itemId: number, quantity: number) => {
   const updatedItem = await db

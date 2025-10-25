@@ -10,28 +10,6 @@ import {
   getCartsWithItemsService,
   createOrAddToCartService,
 } from "./cart.service";
-
-// export const createCartController = async (req: Request, res: Response) => {
-//   try {
-//     const { cart, isNew } = await createCartService(req.body);
-
-//     if (isNew) {
-//       return res.status(201).json({
-//         message: "New cart created successfully.",
-//         cart,
-//       });
-//     } else {
-//       return res.status(200).json({
-//         message: "User already has an unpaid cart. Reusing existing cart.",
-//         cart,
-//       });
-//     }
-//   } catch (error: any) {
-//     return res.status(500).json({ message: error.message });
-//   }
-// };
-
-
 export const createOrAddToCartController = async (req: Request, res: Response) => {
   try {
     const { userId, items } = req.body;
@@ -97,21 +75,6 @@ export const deleteCartController = async (req: Request, res: Response) => {
   }
 };
 
-// Add Item to Cart
-// export const addCartItemController = async (req: Request, res: Response) => {
-//   try {
-//     const { userId, productId, quantity } = req.body;
-//     if (!userId || !productId) {
-//       return res.status(400).json({ message: "userId and productId are required" });
-//     }
-
-//     const result = await addCartItemService(userId, productId, quantity || 1);
-//     return res.status(201).json({ message: result });
-//   } catch (error: any) {
-//     return res.status(500).json({ message: error.message });
-//   }
-// };
-
 
 // Update Cart Item
 export const updateCartItemController = async (req: Request, res: Response) => {
@@ -150,16 +113,6 @@ export const getCartWithItemsController = async (req: Request, res: Response) =>
     return res.status(500).json({ message: error.message });
   }
 };
-
-// Get All Carts with Items
-// export const getCartsWithItemsController = async (req: Request, res: Response) => {
-//   try {
-//     const carts = await getCartsWithItemsService();
-//     return res.status(200).json({ message: "Carts with items retrieved successfully", carts });
-//   } catch (error: any) {
-//     return res.status(500).json({ message: error.message });
-//   }
-// };
 export const getCartsWithItemsController = async (req: Request, res: Response) => {
   try {
     const cartId = Number(req.params.cartId);

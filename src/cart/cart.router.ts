@@ -13,14 +13,6 @@ import {
 import { Express } from "express";
 
 const cart = (app: Express) => {
-  // Create Cart
-  // app.route("/cart").post(async (req, res, next) => {
-  //   try {
-  //     await createCartController(req, res);
-  //   } catch (error) {
-  //     next(error);
-  //   }
-  // });
 
   //createOrAddToCartController
   app.route("/cart").post(async (req, res, next) => {
@@ -66,16 +58,6 @@ const cart = (app: Express) => {
       next(error);
     }
   });
-
-  // Add Item to Cart
-  // app.route("/cart/items").post(async (req, res, next) => {
-  //   try {
-  //     await addCartItemController(req, res);
-  //   } catch (error) {
-  //     next(error);
-  //   }
-  // });
-
   // Update Cart Item
   app.route("/cart/items/:itemId").put(async (req, res, next) => {
     try {
