@@ -1,23 +1,31 @@
 import { adminRoleAuth } from "../middleware/bearAuth";
 import {
-  createCartController,
   getCartsController,
   getCartByIdController,
   updateCartController,
   deleteCartController,
-  addCartItemController,
   updateCartItemController,
   removeCartItemController,
   getCartWithItemsController,
   getCartsWithItemsController,
+  createOrAddToCartController,
 } from "./cart.controller";
 import { Express } from "express";
 
 const cart = (app: Express) => {
   // Create Cart
+  // app.route("/cart").post(async (req, res, next) => {
+  //   try {
+  //     await createCartController(req, res);
+  //   } catch (error) {
+  //     next(error);
+  //   }
+  // });
+
+  //createOrAddToCartController
   app.route("/cart").post(async (req, res, next) => {
     try {
-      await createCartController(req, res);
+      await createOrAddToCartController(req, res);
     } catch (error) {
       next(error);
     }
@@ -60,13 +68,13 @@ const cart = (app: Express) => {
   });
 
   // Add Item to Cart
-  app.route("/cart/items").post(async (req, res, next) => {
-    try {
-      await addCartItemController(req, res);
-    } catch (error) {
-      next(error);
-    }
-  });
+  // app.route("/cart/items").post(async (req, res, next) => {
+  //   try {
+  //     await addCartItemController(req, res);
+  //   } catch (error) {
+  //     next(error);
+  //   }
+  // });
 
   // Update Cart Item
   app.route("/cart/items/:itemId").put(async (req, res, next) => {
