@@ -96,13 +96,14 @@ const cart = (app: Express) => {
   });
 
   //get cart with items by user id
-   app.route("/cart/with/items/:id").get(async (req, res, next) => {
+   app.route("/cart/with/items/:userId").get(async (req, res, next) => {
     try {
       await getCartWithItemsByUserController(req, res);
     } catch (error) {
       next(error);
     }
   });
+
 };
 
 export default cart;
