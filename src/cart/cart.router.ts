@@ -9,6 +9,7 @@ import {
   getCartWithItemsController,
   getCartsWithItemsController,
   createOrAddToCartController,
+  getCartWithItemsByUserController,
 } from "./cart.controller";
 import { Express } from "express";
 
@@ -23,7 +24,7 @@ const cart = (app: Express) => {
     }
   });
 
-  // Get All Carts (Admin only)
+  // Get All Carts 
   app.route("/cart").get( async (req, res, next) => {
     try {
       await getCartsController(req, res);
@@ -89,6 +90,15 @@ const cart = (app: Express) => {
   app.route("/cart/with/items").get(async (req, res, next) => {
     try {
       await getCartsWithItemsController(req, res);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  //get cart with items by user id
+   app.route("/cart/with/items/:id").get(async (req, res, next) => {
+    try {
+      await getCartWithItemsByUserController(req, res);
     } catch (error) {
       next(error);
     }

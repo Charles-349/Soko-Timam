@@ -113,4 +113,15 @@ export const getCartsWithItemsService = async () => {
   });
 };
 
+//get cart with items by user id
+export const getCartWithItemsByUserService = async (userId: number) => {
+  return await db.query.carts.findFirst({
+    where: and(eq(carts.userId, userId), eq(carts.checkoutStatus, "unpaid")),
+    with: {
+      items: { with: { product: true } },
+    },
+  });
+};
+
+
 

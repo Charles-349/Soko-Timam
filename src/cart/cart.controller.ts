@@ -9,6 +9,7 @@ import {
   getCartWithItemsService,
   getCartsWithItemsService,
   createOrAddToCartService,
+  getCartWithItemsByUserService,
 } from "./cart.service";
 export const createOrAddToCartController = async (req: Request, res: Response) => {
   try {
@@ -125,6 +126,17 @@ export const getCartsWithItemsController = async (req: Request, res: Response) =
     if (!cart) return res.status(404).json({ message: "Cart not found" });
 
     return res.status(200).json(cart);
+  } catch (error: any) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+//get cart with items by user id
+export const getCartWithItemsByUserController = async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    const cart = await getCartWithItemsByUserService(userId);
+    if (!cart) return res.status(404).json({ message: "Cart not found" });
+    return res.status(200).json({ message: "Cart with items retrieved successfully", cart });
   } catch (error: any) {
     return res.status(500).json({ message: error.message });
   }
