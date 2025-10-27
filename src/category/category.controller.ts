@@ -49,6 +49,28 @@ export const getCategoriesController = async (_req: Request, res: Response) => {
   }
 };
 
+//get category by name
+export const getCategoryByNameController = async (req: Request, res: Response) => {
+  try {
+    const name = req.params.name;
+
+    if (!name) {
+      return res.status(400).json({ message: "Category name is required" });
+    }
+
+    const category = await getCategoryByNameService(name);
+    if (!category) {
+      return res.status(404).json({ message: "Category not found" });
+    }
+
+    return res.status(200).json({
+      message: "Category retrieved successfully",
+      category,
+    });
+  } catch (error: any) {
+    return res.status(500).json({ message: error.message });
+  }
+};
 // READ ONE
 export const getCategoryByIdController = async (req: Request, res: Response) => {
   try {

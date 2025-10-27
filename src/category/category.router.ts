@@ -7,6 +7,9 @@ import {
   updateCategoryController,
   deleteCategoryController,
   getCategoryWithProductsController,
+  getCategoryWithParentController,
+  getCategoryWithChildrenController,
+  getCategoryByNameController,
 } from "./category.controller";
 import { adminRoleAuth } from "../middleware/bearAuth";
 
@@ -61,6 +64,30 @@ const category = (app: Express) => {
   app.get("/category/:id/products", async (req, res, next) => {
     try {
       await getCategoryWithProductsController(req, res);
+    } catch (error) {
+      next(error);
+    }
+  });
+//Category with Parent
+    app.get("/category/:id/parent", async (req, res, next) => {
+    try {
+      await getCategoryWithParentController(req, res);
+    } catch (error) {
+      next(error);
+    }
+  });
+//Category with Children
+    app.get("/category/:id/children", async (req, res, next) => {
+    try {
+      await getCategoryWithChildrenController(req, res);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+    app.get("/category/name", async (req, res, next) => {
+    try {
+      await getCategoryByNameController(req, res);
     } catch (error) {
       next(error);
     }
