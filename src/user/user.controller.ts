@@ -4,7 +4,8 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { eq } from "drizzle-orm";
 import db from "../Drizzle/db";
-import { users } from "../Drizzle/schema";
+import { passwordResetTokens, users } from "../Drizzle/schema";
+import crypto from "crypto";
 import {
   createUserService,
   deleteUserService,
@@ -232,30 +233,56 @@ export const getUserByEmailController = async (req: Request, res: Response) => {
 };
 
 //forgot password controller
+// export const forgotPassword = async (req: Request, res: Response) => {
+//   try {
+//     const { email } = req.body;
+//     if (!email) return res.status(400).json({ message: "Email is required" });
+
+//     const result = await forgotPasswordService(email);
+//     return res.status(200).json({ message: result });
+//   } catch (error: any) {
+//     console.error("Forgot Password Error:", error);
+//     return res.status(400).json({ message: error.message || "Error sending reset email" });
+//   }
+// };
+
 export const forgotPassword = async (req: Request, res: Response) => {
   try {
     const { email } = req.body;
     if (!email) return res.status(400).json({ message: "Email is required" });
 
     const result = await forgotPasswordService(email);
+
     return res.status(200).json({ message: result });
   } catch (error: any) {
     console.error("Forgot Password Error:", error);
-    return res.status(400).json({ message: error.message || "Error sending reset email" });
+    return res.status(400).json({
+      message: error.message || "Error sending reset email",
+    });
   }
 };
+
+// export const resetPassword = async (req: Request, res: Response) => {
+//   try {
+//     const { token, newPassword } = req.body;
+//     if (!token || !newPassword)
+//       return res.status(400).json({ message: "Token and new password are required" });
+
+//     const result = await resetPasswordService(token, newPassword);
+//     return res.status(200).json({ message: result });
+//   } catch (error: any) {
+//     console.error("Reset Password Error:", error);
+//     return res.status(400).json({ message: error.message || "Error resetting password" });
+//   }
+// };
 
 export const resetPassword = async (req: Request, res: Response) => {
   try {
     const { token, newPassword } = req.body;
-    if (!token || !newPassword)
-      return res.status(400).json({ message: "Token and new password are required" });
-
     const result = await resetPasswordService(token, newPassword);
-    return res.status(200).json({ message: result });
+    return res.status(200).json(result);
   } catch (error: any) {
     console.error("Reset Password Error:", error);
-    return res.status(400).json({ message: error.message || "Error resetting password" });
+    return res.status(400).json({ message: error.message });
   }
 };
-

@@ -129,63 +129,99 @@ export const getUserWithRelationsService = async (id: number) => {
 
 //Forgot Password
 export const forgotPasswordService = async (email: string) => {
-  const user = await db.query.users.findFirst({
-    where: eq(users.email, email),
-  });
+  //Check if user exists
+  const [user] = await db.select().from(users).where(eq(users.email, email));
+  if (!user) throw new Error("No account found with that email");
 
-  if (!user) throw new Error("User not found");
-
-  // Delete any existing tokens for that user
+  //Delete existing tokens for this user
   await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, user.id));
 
-  // Create new token
-  const token = crypto.randomBytes(32).toString("hex");
+  //Generate secure token and expiry
+  const resetToken = crypto.randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + 1000 * 60 * 15); // 15 minutes
 
+  //Save token in passwordResetTokens table
   await db.insert(passwordResetTokens).values({
     userId: user.id,
-    token,
+    token: resetToken,
     expiresAt,
   });
 
-  const resetLink = `https://your-frontend-domain.com/reset-password?token=${token}`;
+  //Create frontend reset link
+  const resetLink = `https://yourfrontend.com/reset-password?token=${resetToken}`;
 
-  await sendEmail(
-    email,
-    "Reset your password",
-    `Use the link below to reset your password:\n\n${resetLink}`,
-    `
-      <p>Hi ${user.firstname || "there"},</p>
-      <p>You requested to reset your password. Click the link below to set a new one:</p>
-      <a href="${resetLink}" target="_blank">${resetLink}</a>
-      <p>This link will expire in <b>15 minutes</b>.</p>
-    `
-  );
+  //Prepare email content
+  const subject = "🔑 Reset your Soko Timam password";
+  const message = `
+    Hello ${user.firstname},
+
+    You requested to reset your password. Click the link below to set a new one:
+    ${resetLink}
+
+    This link will expire in 15 minutes.
+  `;
+
+  const html = `
+    <p>Hi ${user.firstname || "User"},</p>
+    <p>You requested to reset your password for your Soko Timam account.</p>
+    <p>Click the button below to reset it:</p>
+    <p><a href="${resetLink}" style="background:#007bff;color:white;padding:10px 20px;border-radius:5px;text-decoration:none;">Reset Password</a></p>
+    <p>This link expires in 15 minutes.</p>
+    <p>If you didn't request this, please ignore this email.</p>
+    <br/>
+    <p>Regards,<br/>Soko Timam Team</p>
+  `;
+
+  //Send email
+  const emailResult = await sendEmail(email, subject, message, html);
+  if (!emailResult.success) throw new Error(emailResult.message);
 
   return "Password reset email sent successfully";
 };
-
 //Reset Password
 export const resetPasswordService = async (token: string, newPassword: string) => {
-  const tokenRecord = await db.query.passwordResetTokens.findFirst({
-    where: eq(passwordResetTokens.token, token),
-  });
+  //Validate inputs
+  if (!token || !newPassword) {
+    throw new Error("Token and new password are required");
+  }
 
-  if (!tokenRecord) throw new Error("Invalid or expired token");
-  if (tokenRecord.expiresAt < new Date()) throw new Error("Reset token expired");
+  //Find token record
+  const [tokenRecord] = await db
+    .select()
+    .from(passwordResetTokens)
+    .where(eq(passwordResetTokens.token, token));
 
-  const user = await db.query.users.findFirst({
-    where: eq(users.id, tokenRecord.userId),
-  });
+  if (!tokenRecord) {
+    throw new Error("Invalid or expired token");
+  }
 
-  if (!user) throw new Error("User not found");
+  //Check expiration
+  if (new Date(tokenRecord.expiresAt) < new Date()) {
+    await db
+      .delete(passwordResetTokens)
+      .where(eq(passwordResetTokens.id, tokenRecord.id));
+    throw new Error("Reset token expired");
+  }
 
+  //Find the user
+  const [user] = await db.select().from(users).where(eq(users.id, tokenRecord.userId));
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  //Hash new password
   const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-  await db.update(users).set({ password: hashedPassword }).where(eq(users.id, user.id));
+  //Update password in DB
+  await db
+    .update(users)
+    .set({ password: hashedPassword })
+    .where(eq(users.id, user.id));
 
-  // Delete used token
-  await db.delete(passwordResetTokens).where(eq(passwordResetTokens.id, tokenRecord.id));
+  // Delete token after use
+  await db
+    .delete(passwordResetTokens)
+    .where(eq(passwordResetTokens.id, tokenRecord.id));
 
-  return "Password reset successful";
+  return { success: true, message: "Password reset successful" };
 };
