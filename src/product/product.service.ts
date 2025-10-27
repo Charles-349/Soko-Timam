@@ -257,3 +257,19 @@ export const getProductWithOrdersService = async (id: number) => {
     },
   });
 };
+
+//get product by category id
+export const getProductsByCategoryIdService = async (categoryId: number) => {
+  try {
+    const productsByCategory = await db
+      .select()
+      .from(products)
+      .where(eq(products.categoryId, categoryId));
+
+    return productsByCategory as TSProduct[];
+  } catch (err) {
+    throw new Error(
+      "Failed to fetch products by category: " + (err as Error).message
+    );
+  }
+};

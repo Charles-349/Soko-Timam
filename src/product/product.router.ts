@@ -9,7 +9,8 @@ import {
   getProductWithReviewsController,
   getProductWithWishlistController,
   getProductWithCartController,
-  getProductWithOrdersController
+  getProductWithOrdersController,
+  getProductsByCategoryIdController
 } from "./product.controller";
 import { Express } from "express";
 import multer from "multer";
@@ -108,6 +109,15 @@ const product = (app: Express) => {
   app.route("/product/:id/orders").get(async (req, res, next) => {
     try {
       await getProductWithOrdersController(req, res);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Get Products by Category ID
+  app.route("/products/category/:categoryId").get(async (req, res, next) => {
+    try {
+      await getProductsByCategoryIdController(req, res);
     } catch (error) {
       next(error);
     }

@@ -10,6 +10,7 @@ import {
   getProductWithWishlistService,
   getProductWithCartService,
   getProductWithOrdersService,
+  getProductsByCategoryIdService,
 } from "./product.service";
 import type { ICreateProductInput } from "./product.service";
 import Jwt from "jsonwebtoken";
@@ -313,6 +314,30 @@ export const getProductWithOrdersController = async (
   } catch (error: any) {
     return res.status(500).json({
       message: error.message || "Failed to fetch product with orders",
+      error: error.stack,
+    });
+  }
+};
+
+//get product by category id
+export const getProductsByCategoryIdController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const categoryId = toInt(req.params.categoryId);
+    if (!categoryId) {
+      return res.status(400).json({ message: "Invalid category ID" });
+    }
+
+    const products = await getProductsByCategoryIdService(categoryId);
+    return res.status(200).json({
+      message: "Products retrieved successfully",
+      products,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      message: error.message || "Failed to fetch products by category",
       error: error.stack,
     });
   }
