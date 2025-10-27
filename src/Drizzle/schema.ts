@@ -79,7 +79,6 @@ export const bankAccounts = pgTable("bank_accounts", {
 //CATEGORIES 
 export const categories = pgTable("categories", {
   id: serial("id").primaryKey(),
-  shopId: integer("shop_id").references(() => shops.id),
   name: varchar("name", { length: 255 }).notNull(),
   parentId: integer("parent_id"), 
   createdAt: timestamp("created_at").defaultNow(),
@@ -145,6 +144,7 @@ export const orders = pgTable("orders", {
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
   paymentStatus: PaymentStatusEnum("payment_status").default("unpaid"),
   shippingAddress: text("shipping_address").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
