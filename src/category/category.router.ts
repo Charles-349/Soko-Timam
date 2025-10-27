@@ -111,11 +111,12 @@ import {
   getCategoriesBySellerIdController,
   getCategoriesBySellerAndShopIdController,
 } from "./category.controller";
+import { adminRoleAuth } from "../middleware/bearAuth";
 
 
 const category = (app: Express) => {
   // Create Category 
-  app.post("/category", async (req, res, next) => {
+  app.post("/category", adminRoleAuth, async (req, res, next) => {
     try {
       await createCategoryController(req, res);
     } catch (error) {
