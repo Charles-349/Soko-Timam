@@ -85,7 +85,7 @@ const category = (app: Express) => {
     }
   });
 
-    app.get("/category/name", async (req, res, next) => {
+    app.get("/category/name/:name", async (req, res, next) => {
     try {
       await getCategoryByNameController(req, res);
     } catch (error) {
