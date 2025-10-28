@@ -9,8 +9,8 @@ import {
 import { adminRoleAuth, customerRoleAuth } from "../middleware/bearAuth";
 
 const order = (app: Express) => {
-  //Create or Update Order (Customer)
-  app.route("/order").post(customerRoleAuth, async (req, res, next) => {
+  //Create or Update Order 
+  app.route("/order").post(async (req, res, next) => {
     try {
       await createOrderController(req, res);
     } catch (error) {
@@ -19,7 +19,7 @@ const order = (app: Express) => {
   });
 
   //Get All Orders 
-  app.route("/order").get(adminRoleAuth, async (req, res, next) => {
+  app.route("/order").get(async (req, res, next) => {
     try {
       await getAllOrdersController(req, res);
     } catch (error) {
@@ -37,7 +37,7 @@ const order = (app: Express) => {
   });
 
   //Cancel Unpaid Order (Customer)
-  app.route("/order/:id/cancel").put(customerRoleAuth, async (req, res, next) => {
+  app.route("/order/:id/cancel").put(async (req, res, next) => {
     try {
       await cancelOrderController(req, res);
     } catch (error) {
