@@ -10,6 +10,8 @@ import {
   getCategoryWithParentController,
   getCategoryWithChildrenController,
   getCategoryByNameController,
+  getallChildCategoriesController,
+  getallParentCategoriesController,
 } from "./category.controller";
 import { adminRoleAuth } from "../middleware/bearAuth";
 
@@ -88,6 +90,24 @@ const category = (app: Express) => {
     app.get("/category/name/:name", async (req, res, next) => {
     try {
       await getCategoryByNameController(req, res);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  //get all parents categories
+  app.get("/categories/parents", async (req, res, next) => {
+    try {
+      await getallParentCategoriesController(req, res);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  //get all children categories
+  app.get("/categories/children", async (req, res, next) => {
+    try {
+      await getallChildCategoriesController(req, res);
     } catch (error) {
       next(error);
     }

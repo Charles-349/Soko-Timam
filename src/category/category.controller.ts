@@ -11,6 +11,8 @@ import {
   getCategoryWithChildrenService,
   getCategoryWithProductsService,
   getCategoryWithRelationsService,
+  getallParentCategoriesService,
+  getallChildCategoriesService,
 } from "./category.service";
 
 // CREATE
@@ -212,5 +214,33 @@ export const getCategoryWithRelationsController = async (req: Request, res: Resp
     return res.status(500).json({ message: error.message });
   }
 };
+
+//get all parent categories
+export const getallParentCategoriesController = async (_req: Request, res: Response) => {
+  try {
+    const categories = await getallParentCategoriesService();
+    const parentCategories = categories.filter(category => !category.parentId);
+    return res.status(200).json({
+      message: "Parent categories retrieved successfully",
+      categories: parentCategories,
+    });
+  } catch (error: any) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+//get all child categories
+export const getallChildCategoriesController = async (_req: Request, res: Response) => {
+  try {
+    const categories = await getallChildCategoriesService();
+    const childCategories = categories.filter(category => category.parentId); 
+    return res.status(200).json({
+      message: "Child categories retrieved successfully",
+      categories: childCategories,
+    });
+  } catch (error: any) {
+    return res.status(500).json({ message: error.message });
+  }
+};                                                            
 
 

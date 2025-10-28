@@ -95,3 +95,19 @@ export const getCategoryWithRelationsService = async (id: number) => {
     },
   });
 };
+
+//get all parent categories
+export const getallParentCategoriesService = async () => {
+  return await db.query.categories.findMany({
+    where: sql`${categories.parentId} IS NULL`,
+    orderBy: (categories, { asc }) => [asc(categories.id)],
+  });
+};
+
+//get all child categories
+export const getallChildCategoriesService = async () => {
+  return await db.query.categories.findMany({
+    where: sql`${categories.parentId} IS NOT NULL`,
+    orderBy: (categories, { asc }) => [asc(categories.id)],
+  });
+};
