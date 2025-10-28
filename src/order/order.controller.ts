@@ -1,0 +1,126 @@
+import { Request, Response } from "express";
+import {
+  createOrUpdateOrderService,
+  getAllOrdersService,
+  getOrderByIdService,
+  cancelOrderService,
+  markOrderAsPaidService,
+} from "./order.service";
+
+//Create or Update Order
+export const createOrderController = async (req: Request, res: Response) => {
+  try {
+    const { userId, items, shippingAddress } = req.body;
+
+    if (!userId || !items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({
+        message: "User ID and at least one item are required",
+      });
+    }
+
+    const data = await createOrUpdateOrderService(userId, items, shippingAddress);
+
+    return res.status(200).json({
+      message: "Order created or updated successfully",
+      data,
+    });
+  } catch (error: any) {
+    console.error("Create/Update Order Error:", error);
+    return res.status(500).json({
+      message: error.message || "Failed to create or update order",
+    });
+  }
+};
+
+//Get All Orders
+export const getAllOrdersController = async (_req: Request, res: Response) => {
+  try {
+    const orders = await getAllOrdersService();
+    return res.status(200).json({
+      message: "Orders retrieved successfully",
+      data: orders,
+    });
+  } catch (error: any) {
+    console.error("Get All Orders Error:", error);
+    return res.status(500).json({
+      message: error.message || "Failed to retrieve orders",
+    });
+  }
+};
+
+//Get Order by ID
+export const getOrderByIdController = async (req: Request, res: Response) => {
+  try {
+    const orderId = parseInt(req.params.id);
+
+    if (isNaN(orderId)) {
+      return res.status(400).json({ message: "Invalid order ID" });
+    }
+
+    const order = await getOrderByIdService(orderId);
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    return res.status(200).json({
+      message: "Order retrieved successfully",
+      data: order,
+    });
+  } catch (error: any) {
+    console.error("Get Order By ID Error:", error);
+    return res.status(500).json({
+      message: error.message || "Failed to retrieve order",
+    });
+  }
+};
+
+//Cancel Unpaid Order
+export const cancelOrderController = async (req: Request, res: Response) => {
+  try {
+    const orderId = parseInt(req.params.id);
+    const userId = parseInt(req.body.userId);
+
+    if (isNaN(orderId) || isNaN(userId)) {
+      return res.status(400).json({
+        message: "Invalid orderId or userId",
+      });
+    }
+
+    const result = await cancelOrderService(orderId, userId);
+
+    return res.status(200).json({
+      message: result.message || "Order cancelled successfully",
+    });
+  } catch (error: any) {
+    console.error("Cancel Order Error:", error);
+    return res.status(500).json({
+      message: error.message || "Failed to cancel order",
+    });
+  }
+};
+
+//Mark Order as Paid
+export const markOrderPaidController = async (req: Request, res: Response) => {
+  try {
+    const { orderId, transactionRef } = req.body;
+
+    if (!orderId || !transactionRef) {
+      return res.status(400).json({
+        message: "Order ID and transaction reference are required",
+      });
+    }
+
+    const result = await markOrderAsPaidService(Number(orderId), transactionRef);
+
+    return res.status(200).json({
+      message: result.message || "Order marked as paid successfully",
+      data: result.payment,
+    });
+  } catch (error: any) {
+    console.error("Mark Order Paid Error:", error);
+    return res.status(500).json({
+      message: error.message || "Failed to mark order as paid",
+    });
+  }
+};
