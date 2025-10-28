@@ -18,6 +18,8 @@ import {v2 as cloudinary} from 'cloudinary';
 import seller from './seller/seller.router';
 import bank from './bank/bank.router';
 import mail from './mail/mail.router';
+import payment from './payment/payment.router';
+import order from './order/order.router';
 
 const initializeApp = ()=>{
 const app = express();
@@ -49,6 +51,8 @@ coupon(app);
 seller(app);
 bank(app);
 mail(app);
+payment(app);
+order(app);
 
 
 
