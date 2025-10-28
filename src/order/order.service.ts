@@ -178,3 +178,26 @@ export const markOrderAsPaidService = async (orderId: number, transactionRef: st
 
   return { message: "Order marked as paid", payment };
 };
+
+//Get Orders by User ID
+export const getOrdersByUserIdService = async (userId: number) => {
+  const userOrders = await db.query.orders.findMany({
+    where: eq(orders.userId, userId),
+    with: {
+      items: {
+        with: {
+          product: true,
+        },
+      },
+      payments: true,
+      shipping: true,
+    },
+  });
+
+  if (!userOrders || userOrders.length === 0) {
+    throw new Error("No orders found for this user");
+  }
+
+  return userOrders;
+};
+
