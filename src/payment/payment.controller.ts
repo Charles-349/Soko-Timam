@@ -76,7 +76,7 @@
 // };
 import { Request, Response, RequestHandler } from "express";
 import { initiateStkPush, handleMpesaCallback, getPaymentStatus } from "./payment.service";
-import { io } from "../index";
+import { getIo } from "../socket";
 
 // STK Push Controller
 export const stkPushController: RequestHandler = async (req, res) => {
@@ -114,51 +114,57 @@ export const mpesaCallbackController: RequestHandler = async (req, res) => {
   try {
     const orderIdParam = req.query.orderId;
     const orderId = Number(orderIdParam);
-
+ 
     if (isNaN(orderId)) {
-      res.status(400).json({ message: "Invalid or missing orderId in callback URL" });
+      res.status(400).json({ message: 'Invalid or missing orderId in callback URL' });
       return;
     }
-
+ 
     // Process the callback (updates DB)
     const result = await handleMpesaCallback(orderId, req.body);
-
+ 
     // Detect payment outcome
     const stkCallback = req.body?.Body?.stkCallback;
     const resultCode = stkCallback?.ResultCode;
-    const resultDesc = stkCallback?.ResultDesc || "Unknown error";
-
-    let status = "pending";
-    let message = "";
-
+    const resultDesc = stkCallback?.ResultDesc || 'Unknown error';
+ 
+    let status = 'pending';
+    let message = '';
+ 
     if (resultCode === 0) {
-      status = "paid";
-      message = "Payment confirmed successfully";
+      status = 'paid';
+      message = 'Payment confirmed successfully';
     } else if (resultCode === 1032) {
-      status = "cancelled";
-      message = "Payment cancelled by user";
+      status = 'cancelled';
+      message = 'Payment cancelled by user';
     } else if ([1, 1001, 2001, 2006, 4001].includes(resultCode)) {
-      status = "failed";
-      message = "Payment failed or insufficient funds";
+      status = 'failed';
+      message = 'Payment failed or insufficient funds';
     } else {
-      status = "failed";
+      status = 'failed';
       message = resultDesc;
     }
-
-    //Emit real-time update to frontend
-    io.emit("payment_update", {
-      orderId,
-      status,
-      message,
-    });
-
-    res.status(200).json({ message: "Callback processed successfully" });
+ 
+    // Emit real-time update to frontend to the specific room for this order
+    try {
+      const io = getIo();
+      const room = `order_${orderId}`;
+      io.to(room).emit('payment_update', {
+        orderId,
+        status,
+        message,
+      });
+    } catch (emitErr) {
+      console.error('Socket emit error:', (emitErr as Error).message);
+      // continue — the callback should still return success to the payer
+    }
+ 
+    res.status(200).json({ message: 'Callback processed successfully' });
   } catch (error) {
-    console.error("Callback Error:", (error as Error).message);
-    res.status(500).json({ message: "Failed to handle callback" });
+    console.error('Callback Error:', (error as Error).message);
+    res.status(500).json({ message: 'Failed to handle callback' });
   }
 };
-
 // Get Payment Status Controller
 export const getPaymentStatusController: RequestHandler = async (req, res) => {
   try {
