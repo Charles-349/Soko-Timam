@@ -1,23 +1,127 @@
-import { Request, Response, RequestHandler } from "express";
-import {
-  initiateStkPush,
-  handleMpesaCallback,
-  getPaymentStatus,
-} from "./payment.service";
+// import { Request, Response, RequestHandler } from "express";
+// import {
+//   initiateStkPush,
+//   handleMpesaCallback,
+//   getPaymentStatus,
+// } from "./payment.service";
 
-//STK Push Controller
-export const stkPushController: RequestHandler = async (req: Request, res: Response): Promise<void> => {
-  console.log("stkPushController called!");
+// //STK Push Controller
+// export const stkPushController: RequestHandler = async (req: Request, res: Response): Promise<void> => {
+//   console.log("stkPushController called!");
+//   try {
+//     const { phoneNumber, amount, orderId } = req.body;
+
+//     if (!phoneNumber || !amount || !orderId) {
+//       console.log("Missing field. Returning 400");
+//       res.status(400).json({ success: false, message: "Missing required fields (phoneNumber, amount, orderId)" });
+//       return;
+//     }
+
+//     const data = await initiateStkPush({
+//       phoneNumber,
+//       amount: Number(amount),
+//       orderId: Number(orderId),
+//     });
+
+//     res.status(200).json({
+//       success: true,
+//       message: "STK Push initiated successfully",
+//       data,
+//     });
+//   } catch (error) {
+//     console.error("STK Push Error:", (error as Error).message);
+//     res.status(500).json({ success: false, message: "STK push failed" });
+//   }
+// };
+
+// //Safaricom Callback Controller
+// export const mpesaCallbackController: RequestHandler = async (req: Request, res: Response): Promise<void> => {
+//   try {
+//     const orderIdParam = req.query.orderId;
+//     const orderId = Number(orderIdParam);
+
+//     if (isNaN(orderId)) {
+//       res.status(400).json({ message: "Invalid or missing orderId in callback URL" });
+//       return;
+//     }
+
+//     await handleMpesaCallback(orderId, req.body);
+//     res.status(200).json({ message: "Callback processed successfully" });
+//   } catch (error) {
+//     console.error("Callback Error:", (error as Error).message);
+//     res.status(500).json({ message: "Failed to handle callback" });
+//   }
+// };
+
+// //Get Payment Status Controller
+// export const getPaymentStatusController: RequestHandler = async (req: Request, res: Response): Promise<void> => {
+//   try {
+//     const { orderId } = req.params;
+
+//     if (!orderId || isNaN(Number(orderId))) {
+//       res.status(400).json({ success: false, message: "Invalid or missing orderId" });
+//       return;
+//     }
+
+//     const payment = await getPaymentStatus(Number(orderId));
+
+//     res.status(200).json({
+//       success: true,
+//       data: payment,
+//     });
+//   } catch (error) {
+//     console.error("Get Payment Status Error:", (error as Error).message);
+//     res.status(500).json({ success: false, message: "Failed to get payment status" });
+//   }
+// };
+
+
+
+import { Request, Response, RequestHandler } from "express";
+import { initiateStkPush, getPaymentStatus } from "./payment.service";
+
+//Combined STK Push + Callback Controller
+export const stkPushAndCallbackController: RequestHandler = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  console.log("stkPushAndCallbackController called!");
+
+  //Detect if this is a Safaricom callback
+  if (req.query.orderId && req.body?.Body?.stkCallback) {
+    try {
+      const orderIdParam = req.query.orderId;
+      const orderId = Number(orderIdParam);
+
+      if (isNaN(orderId)) {
+        res.status(400).json({ message: "Invalid or missing orderId in callback URL" });
+        return;
+      }
+
+      await initiateStkPush.handleCallback(orderId, req.body);
+      res.status(200).json({ message: "Callback processed successfully" });
+      return;
+    } catch (error) {
+      console.error("Callback Error:", (error as Error).message);
+      res.status(500).json({ message: "Failed to handle callback" });
+      return;
+    }
+  }
+
+  //Otherwise, initiate STK Push
   try {
     const { phoneNumber, amount, orderId } = req.body;
 
     if (!phoneNumber || !amount || !orderId) {
       console.log("Missing field. Returning 400");
-      res.status(400).json({ success: false, message: "Missing required fields (phoneNumber, amount, orderId)" });
+      res.status(400).json({
+        success: false,
+        message: "Missing required fields (phoneNumber, amount, orderId)",
+      });
       return;
     }
 
-    const data = await initiateStkPush({
+    const data = await initiateStkPush.initiate({
       phoneNumber,
       amount: Number(amount),
       orderId: Number(orderId),
@@ -34,27 +138,11 @@ export const stkPushController: RequestHandler = async (req: Request, res: Respo
   }
 };
 
-//Safaricom Callback Controller
-export const mpesaCallbackController: RequestHandler = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const orderIdParam = req.query.orderId;
-    const orderId = Number(orderIdParam);
-
-    if (isNaN(orderId)) {
-      res.status(400).json({ message: "Invalid or missing orderId in callback URL" });
-      return;
-    }
-
-    await handleMpesaCallback(orderId, req.body);
-    res.status(200).json({ message: "Callback processed successfully" });
-  } catch (error) {
-    console.error("Callback Error:", (error as Error).message);
-    res.status(500).json({ message: "Failed to handle callback" });
-  }
-};
-
 //Get Payment Status Controller
-export const getPaymentStatusController: RequestHandler = async (req: Request, res: Response): Promise<void> => {
+export const getPaymentStatusController: RequestHandler = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { orderId } = req.params;
 
