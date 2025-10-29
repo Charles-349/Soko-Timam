@@ -3,16 +3,13 @@ import { Server as SocketIOServer, Socket } from 'socket.io';
  
 let io: SocketIOServer | null = null;
  
-/**
- * Initialize Socket.IO and attach to the HTTP server.
- * Call this once in your server entry file.
- */
+//Initialize Socket.IO and attach to the HTTP server
 export function initSocket(server: HTTPServer) {
   if (io) return io;
  
   io = new SocketIOServer(server, {
     cors: {
-      origin: '*', // or restrict to your frontend origin
+      origin: '*', 
       methods: ['GET', 'POST'],
     },
   });
@@ -37,9 +34,7 @@ export function initSocket(server: HTTPServer) {
   return io;
 }
  
-/**
- * Get the initialized io instance. Throws if not initialized.
- */
+//Get the initialized io instance. Throws if not initialized.
 export function getIo() {
   if (!io) throw new Error('Socket.io not initialized. Call initSocket(server) first.');
   return io;

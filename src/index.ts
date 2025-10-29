@@ -103,7 +103,7 @@ import { v2 as cloudinary } from 'cloudinary';
 const app = express();
 const server = http.createServer(app);
  
-// Initialize Socket.io via initSocket which will attach to the HTTP server
+// Initializing Socket.io via initSocket which will attach to the HTTP server
 initSocket(server);
  
 // Middleware
@@ -152,6 +152,6 @@ app.get('/', (req, res) => {
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
  
-// Export app and server (and don’t export io directly from here)
+// Export app and server 
 export { app, server };
 export default app;
