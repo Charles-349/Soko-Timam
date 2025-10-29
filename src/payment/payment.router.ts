@@ -1,14 +1,14 @@
 import { Express } from "express";
 import {
   getPaymentStatusController,
-  stkPushAndCallbackController,
+  mpesaController,
 } from "./payment.controller";
 
 const payment = (app: Express) => {
   //Initiate STK Push (Customer initiates payment)
   app.route("/payment/stkpush").post(async (req, res, next) => {
     try {
-      await stkPushAndCallbackController(req, res, next);
+      await mpesaController.stkPush(req, res);
     } catch (error) {
       next(error);
     }
@@ -30,7 +30,7 @@ const payment = (app: Express) => {
     } catch (error) {
       next(error);
     }
-  });
+  });                                                                                                               
 };
 
 export default payment;
