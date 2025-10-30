@@ -125,7 +125,7 @@ export const carts = pgTable("carts", {
 
 export const cartItems = pgTable("cart_items", {
   id: serial("id").primaryKey(),
-  cartId: integer("cart_id").references(() => carts.id).notNull(),
+  cartId: integer("cart_id").references(() => carts.id, { onDelete: "cascade" }).notNull(),
   productId: integer("product_id").references(() => products.id).notNull(),
   quantity: integer("quantity").notNull().default(1),
 });
@@ -139,7 +139,7 @@ export const wishlists = pgTable("wishlists", {
 // ORDERS
 export const orders = pgTable("orders", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id).notNull(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   status: OrderStatusEnum("order_status").default("pending"), // pending, paid, shipped, completed, cancelled
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
   paymentStatus: PaymentStatusEnum("payment_status").default("unpaid"),
