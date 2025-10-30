@@ -1,7 +1,7 @@
 import axios from "axios";
 import { eq } from "drizzle-orm";
 import db from "../Drizzle/db";
-import { payments, orders } from "../Drizzle/schema";
+import { payments, orders, cartItems, carts } from "../Drizzle/schema";
 import { normalizePhoneNumber } from "../utils/normalizePhoneNumber";
 import { getAccessToken, generatePassword } from "../utils/helper";
 
@@ -73,6 +73,14 @@ export const handleMpesaCallback = async (orderId: number, callbackBody: any) =>
   const resultCode = stkCallback.ResultCode;
   const resultDesc = stkCallback.ResultDesc;
 
+    const order = await db.query.orders.findFirst({
+    where: eq(orders.id, orderId),
+  });
+
+  if (!order) {
+    console.error(`Order ${orderId} not found`);
+    return;
+  }
   // Payment failed or cancelled
   if (resultCode !== 0) {
     await db
@@ -83,10 +91,11 @@ export const handleMpesaCallback = async (orderId: number, callbackBody: any) =>
         transactionRef: resultDesc,
       })
       .where(eq(payments.orderId, orderId));
-
-    console.log(`Payment for Order ${orderId} failed: ${resultDesc}`);
-    return;
+       await db.delete(carts).where(eq(carts.userId, order.userId)); // delete user's cart
+       console.log(`Payment for Order ${orderId} failed: ${resultDesc}`);
+       return;
   }
+  
 
   // Payment success
   const mpesaReceipt = stkCallback.CallbackMetadata?.Item.find(
@@ -116,8 +125,10 @@ export const handleMpesaCallback = async (orderId: number, callbackBody: any) =>
       updatedAt: new Date(),
     })
     .where(eq(orders.id, orderId));
-
-  console.log(`Payment success: Order ${orderId} marked as paid`);
+     //Delete user's unpaid cart (after successful payment)
+     await db.delete(carts).where(eq(carts.userId, order.userId));
+     console.log(`Payment success: Order ${orderId} marked as paid`);
+   
 };
 
 //Get Payment Status
