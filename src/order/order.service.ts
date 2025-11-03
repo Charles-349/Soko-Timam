@@ -1,6 +1,6 @@
 import db from "../Drizzle/db"; 
-import { eq, and } from "drizzle-orm";
-import { orders, orderItems, products, payments } from "../Drizzle/schema";
+import { eq, and, inArray } from "drizzle-orm";
+import { orders, orderItems, products, payments, shops } from "../Drizzle/schema";
 import type { TIOrder, TIOrderItem } from "../Drizzle/schema";
 
 //Helper: Calculate total order amount
@@ -202,21 +202,52 @@ export const getOrdersByUserIdService = async (userId: number) => {
 };
 
 //get orders by seller id
+
 export const getOrdersBySellerIdService = async (sellerId: number) => {
+  // Get all order items belonging to the seller’s shop(s)
+  const sellerOrderItems = await db
+    .select({
+      orderId: orderItems.orderId,
+      orderItemId: orderItems.id,
+      productId: orderItems.productId,
+      quantity: orderItems.quantity,
+      price: orderItems.price,
+      productName: products.name,
+      shopId: products.shopId,
+      shopName: shops.name,
+    })
+    .from(orderItems)
+    .innerJoin(products, eq(orderItems.productId, products.id))
+    .innerJoin(shops, eq(products.shopId, shops.id))
+    .where(eq(shops.sellerId, sellerId));
+
+  if (sellerOrderItems.length === 0) return [];
+
+  //Extract all order IDs from the seller’s order items
+  const orderIds = [...new Set(sellerOrderItems.map(item => item.orderId))];
+
+  //Fetch those orders with details
   const sellerOrders = await db
     .select({
-      orderId: orders.id,
+      id: orders.id,
       userId: orders.userId,
-      paymentStatus: orders.paymentStatus,
       status: orders.status,
       totalAmount: orders.totalAmount,
+      paymentStatus: orders.paymentStatus,
+      shippingAddress: orders.shippingAddress,
       createdAt: orders.createdAt,
-      items: orderItems,
+      updatedAt: orders.updatedAt,
     })
     .from(orders)
-    .innerJoin(orderItems, eq(orders.id, orderItems.orderId))
-    .innerJoin(products, eq(orderItems.productId, products.id))
-    .where(eq(products.shopId, sellerId));  
-  return sellerOrders;
+    .where(inArray(orders.id, orderIds));
+
+  //Combine order info with its related items
+  const combined = sellerOrders.map(order => ({
+    ...order,
+    items: sellerOrderItems.filter(item => item.orderId === order.id),
+  }));
+
+  return combined;
 };
+
 
