@@ -1,35 +1,52 @@
 import db from "../Drizzle/db";
 import { flashSales } from "../Drizzle/schema";
 import { lt, gt, and } from "drizzle-orm";
-import { getIo } from "../socket"; 
+import { getIo } from "../socket";
 
 export const updateFlashSaleStatuses = async () => {
+  // Get current local time
   const now = new Date();
-  const io = getIo(); 
 
-  // Get all flash sales before updating to detect status changes
+  // Normalize to system timezone (not UTC)
+  const localNow = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    now.getHours(),
+    now.getMinutes(),
+    now.getSeconds()
+  );
+
+  const io = getIo();
+
+  console.log(`[FlashSaleScheduler] Checking flash sales at:
+  - Local time: ${localNow.toString()}
+  - UTC time: ${now.toISOString()}
+  `);
+
+  // Fetch all sales before updates for comparison
   const allSales = await db.select().from(flashSales);
 
-  // Update statuses based on current time
+  // Update statuses according to system time
   await db
     .update(flashSales)
     .set({ flash_sale_status: "active" })
-    .where(and(lt(flashSales.startTime, now), gt(flashSales.endTime, now)));
+    .where(and(lt(flashSales.startTime, localNow), gt(flashSales.endTime, localNow)));
 
   await db
     .update(flashSales)
     .set({ flash_sale_status: "upcoming" })
-    .where(gt(flashSales.startTime, now));
+    .where(gt(flashSales.startTime, localNow));
 
   await db
     .update(flashSales)
     .set({ flash_sale_status: "ended" })
-    .where(lt(flashSales.endTime, now));
+    .where(lt(flashSales.endTime, localNow));
 
-  // Fetch updated records
+  // Fetch updated data
   const updatedSales = await db.select().from(flashSales);
 
-  // Compare and emit only when status changes
+  // Emit only for changed statuses
   allSales.forEach((sale) => {
     const updated = updatedSales.find((u) => u.id === sale.id);
     if (!updated) return;
@@ -45,5 +62,5 @@ export const updateFlashSaleStatuses = async () => {
     }
   });
 
-  console.log(`[FlashSaleScheduler] Statuses updated at ${now.toISOString()}`);
+  console.log(`[FlashSaleScheduler] Status update completed at ${localNow.toString()}`);
 };
