@@ -15,7 +15,7 @@ import {
 } from "./flashsales.controller";
 
 const flashsales = (app: Express) => {
-  // Create Flash Sale (Admin only)
+  // Create Flash Sale 
   app.route("/flashsales").post(async (req, res, next) => {
     try {
       await createFlashSaleController(req, res);
@@ -33,16 +33,7 @@ const flashsales = (app: Express) => {
     }
   });
 
-  // Get Flash Sale by ID
-  app.route("/flashsales/:id").get(async (req, res, next) => {
-    try {
-      await getFlashSaleByIdController(req, res);
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  // Get Active Flash Sales
+   // Get Active Flash Sales
   app.route("/flashsales/active").get(async (req, res, next) => {
     try {
       await getActiveFlashSalesController(req, res);
@@ -68,6 +59,16 @@ const flashsales = (app: Express) => {
       next(error);
     }
   });
+
+  // Get Flash Sale by ID
+  app.route("/flashsales/:id").get(async (req, res, next) => {
+    try {
+      await getFlashSaleByIdController(req, res);
+    } catch (error) {
+      next(error);
+    }
+  });
+
 
   // Update Flash Sale by ID
   app.route("/flashsales/:id").put(async (req, res, next) => {
