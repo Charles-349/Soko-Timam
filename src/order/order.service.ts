@@ -202,31 +202,42 @@ export const getOrdersByUserIdService = async (userId: number) => {
 };
 
 //get orders by seller id
-
 export const getOrdersBySellerIdService = async (sellerId: number) => {
-  // Get all order items belonging to the seller’s shop(s)
+  // 1️⃣ Find all shops owned by the seller
+  const sellerShops = await db
+    .select({ id: shops.id, name: shops.name })
+    .from(shops)
+    .where(eq(shops.sellerId, sellerId));
+
+  if (sellerShops.length === 0) {
+    console.log("⚠️ No shops found for this seller");
+    return [];
+  }
+
+  const shopIds = sellerShops.map((shop) => shop.id);
+
+  // 2️⃣ Find all order items belonging to those shops
   const sellerOrderItems = await db
     .select({
       orderId: orderItems.orderId,
       orderItemId: orderItems.id,
       productId: orderItems.productId,
+      shopId: orderItems.shopId,
       quantity: orderItems.quantity,
       price: orderItems.price,
-      productName: products.name,
-      shopId: products.shopId,
-      shopName: shops.name,
     })
     .from(orderItems)
-    .innerJoin(products, eq(orderItems.productId, products.id))
-    .innerJoin(shops, eq(products.shopId, shops.id))
-    .where(eq(shops.sellerId, sellerId));
+    .where(inArray(orderItems.shopId, shopIds));
 
-  if (sellerOrderItems.length === 0) return [];
+  if (sellerOrderItems.length === 0) {
+    console.log("⚠️ No order items found for these shops");
+    return [];
+  }
 
-  //Extract all order IDs from the seller’s order items
-  const orderIds = [...new Set(sellerOrderItems.map(item => item.orderId))];
+  // 3️⃣ Extract unique order IDs
+  const orderIds = [...new Set(sellerOrderItems.map((item) => item.orderId))];
 
-  //Fetch those orders with details
+  // 4️⃣ Fetch all orders related to those items
   const sellerOrders = await db
     .select({
       id: orders.id,
@@ -241,13 +252,11 @@ export const getOrdersBySellerIdService = async (sellerId: number) => {
     .from(orders)
     .where(inArray(orders.id, orderIds));
 
-  //Combine order info with its related items
-  const combined = sellerOrders.map(order => ({
+  // 5️⃣ Combine orders with their order items
+  const combined = sellerOrders.map((order) => ({
     ...order,
-    items: sellerOrderItems.filter(item => item.orderId === order.id),
+    items: sellerOrderItems.filter((item) => item.orderId === order.id),
   }));
 
   return combined;
 };
-
-
