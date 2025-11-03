@@ -154,6 +154,7 @@ export const getUpcomingFlashSalesServiceV2 = async () => {
   const upcomingSales = await db
     .select({
       id: flashSales.id,
+      productId: flashSales.productId,
       discountPercent: flashSales.discountPercent,
       discountPrice: flashSales.discountPrice,
       stockLimit: flashSales.stockLimit,
@@ -168,15 +169,15 @@ export const getUpcomingFlashSalesServiceV2 = async () => {
         description: products.description,
         price: products.price,
         stock: products.stock,
-        imageUrl: products.ImageUrl,
+        imageUrl: products.ImageUrl, 
       },
     })
     .from(flashSales)
-    .innerJoin(products, eq(products.id, flashSales.productId))
+    .leftJoin(products, eq(products.id, flashSales.productId)) 
     .where(
       and(
-        eq(flashSales.flash_sale_status, "upcoming"),
-        gt(flashSales.startTime, now)
+        gt(flashSales.startTime, now), 
+        eq(flashSales.flash_sale_status, "upcoming") 
       )
     )
     .orderBy(flashSales.startTime);
