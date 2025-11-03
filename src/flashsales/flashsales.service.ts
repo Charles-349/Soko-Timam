@@ -146,3 +146,40 @@ export const updateFlashSaleStatusesService = async () => {
     .set({ flash_sale_status: "ended" })
     .where(and(eq(flashSales.flash_sale_status, "active"), lt(flashSales.endTime, now)));
 };
+
+//get upcoming flashsales
+export const getUpcomingFlashSalesServiceV2 = async () => {
+  const now = new Date();
+
+  const upcomingSales = await db
+    .select({
+      id: flashSales.id,
+      discountPercent: flashSales.discountPercent,
+      discountPrice: flashSales.discountPrice,
+      stockLimit: flashSales.stockLimit,
+      soldCount: flashSales.soldCount,
+      startTime: flashSales.startTime,
+      endTime: flashSales.endTime,
+      status: flashSales.flash_sale_status,
+      createdAt: flashSales.createdAt,
+      product: {
+        id: products.id,
+        name: products.name,
+        description: products.description,
+        price: products.price,
+        stock: products.stock,
+        imageUrl: products.ImageUrl,
+      },
+    })
+    .from(flashSales)
+    .innerJoin(products, eq(products.id, flashSales.productId))
+    .where(
+      and(
+        eq(flashSales.flash_sale_status, "upcoming"),
+        gt(flashSales.startTime, now)
+      )
+    )
+    .orderBy(flashSales.startTime);
+
+  return upcomingSales;
+};

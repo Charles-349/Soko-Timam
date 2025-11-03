@@ -5,17 +5,18 @@ import {
   getFlashSalesController,
   getFlashSaleByIdController,
   getActiveFlashSalesController,
-  getUpcomingFlashSalesController,
+  // getUpcomingFlashSalesController,
   getEndedFlashSalesController,
   updateFlashSaleController,
   deleteFlashSaleController,
   getFlashSaleWithProductController,
   updateFlashSaleStatusesController,
+  getUpcomingFlashSalesControllerV2,
 } from "./flashsales.controller";
 
 const flashsales = (app: Express) => {
   // Create Flash Sale (Admin only)
-  app.route("/flashsales").post(adminRoleAuth, async (req, res, next) => {
+  app.route("/flashsales").post(async (req, res, next) => {
     try {
       await createFlashSaleController(req, res);
     } catch (error) {
@@ -53,7 +54,7 @@ const flashsales = (app: Express) => {
   // Get Upcoming Flash Sales
   app.route("/flashsales/upcoming").get(async (req, res, next) => {
     try {
-      await getUpcomingFlashSalesController(req, res);
+      await getUpcomingFlashSalesControllerV2(req, res);
     } catch (error) {
       next(error);
     }
@@ -68,8 +69,8 @@ const flashsales = (app: Express) => {
     }
   });
 
-  // Update Flash Sale by ID (Admin only)
-  app.route("/flashsales/:id").put(adminRoleAuth, async (req, res, next) => {
+  // Update Flash Sale by ID
+  app.route("/flashsales/:id").put(async (req, res, next) => {
     try {
       await updateFlashSaleController(req, res);
     } catch (error) {
@@ -77,8 +78,8 @@ const flashsales = (app: Express) => {
     }
   });
 
-  // Delete Flash Sale by ID (Admin only)
-  app.route("/flashsales/:id").delete(adminRoleAuth, async (req, res, next) => {
+  // Delete Flash Sale by ID
+  app.route("/flashsales/:id").delete(async (req, res, next) => {
     try {
       await deleteFlashSaleController(req, res);
     } catch (error) {
@@ -95,8 +96,8 @@ const flashsales = (app: Express) => {
     }
   });
 
-  // Update Flash Sale Statuses (Admin only)
-  app.route("/flashsales/update-statuses").put(adminRoleAuth, async (req, res, next) => {
+  // Update Flash Sale Statuses
+  app.route("/flashsales/update-statuses").put(async (req, res, next) => {
     try {
       await updateFlashSaleStatusesController(req, res);
     } catch (error) {

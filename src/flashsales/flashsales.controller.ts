@@ -10,6 +10,7 @@ import {
   deleteFlashSaleService,
   getFlashSaleWithProductService,
   updateFlashSaleStatusesService,
+  getUpcomingFlashSalesServiceV2,
 } from "./flashsales.service";
 
 // Create Flash Sale
@@ -66,17 +67,17 @@ export const getActiveFlashSalesController = async (req, res) => {
 
 
 // Get Upcoming Flash Sales
-export const getUpcomingFlashSalesController = async (req: Request, res: Response) => {
-  try {
-    const upcomingSales = await getUpcomingFlashSalesService();
-    return res.status(200).json({
-      message: "Upcoming flash sales retrieved successfully",
-      data: upcomingSales,
-    });
-  } catch (error: any) {
-    return res.status(500).json({ message: error.message });
-  }
-};
+// export const getUpcomingFlashSalesController = async (req: Request, res: Response) => {
+//   try {
+//     const upcomingSales = await getUpcomingFlashSalesService();
+//     return res.status(200).json({
+//       message: "Upcoming flash sales retrieved successfully",
+//       data: upcomingSales,
+//     });
+//   } catch (error: any) {
+//     return res.status(500).json({ message: error.message });
+//   }
+// };
 
 // Get Ended Flash Sales
 export const getEndedFlashSalesController = async (req: Request, res: Response) => {
@@ -149,6 +150,22 @@ export const updateFlashSaleStatusesController = async (
     return res
       .status(200)
       .json({ message: "Flash sale statuses updated successfully" });
+  } catch (error: any) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+//get upcoming flashsales
+export const getUpcomingFlashSalesControllerV2 = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const upcomingSales = await getUpcomingFlashSalesServiceV2 ();
+    return res.status(200).json({
+      message: "Upcoming flash sales retrieved successfully",
+      data: upcomingSales,
+    });
   } catch (error: any) {
     return res.status(500).json({ message: error.message });
   }

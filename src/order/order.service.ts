@@ -203,20 +203,20 @@ export const getOrdersByUserIdService = async (userId: number) => {
 
 //get orders by seller id
 export const getOrdersBySellerIdService = async (sellerId: number) => {
-  // 1️⃣ Find all shops owned by the seller
+  // Find all shops owned by the seller
   const sellerShops = await db
     .select({ id: shops.id, name: shops.name })
     .from(shops)
     .where(eq(shops.sellerId, sellerId));
 
   if (sellerShops.length === 0) {
-    console.log("⚠️ No shops found for this seller");
+    console.log(" No shops found for this seller");
     return [];
   }
 
   const shopIds = sellerShops.map((shop) => shop.id);
 
-  // 2️⃣ Find all order items belonging to those shops
+  // Find all order items belonging to those shops
   const sellerOrderItems = await db
     .select({
       orderId: orderItems.orderId,
@@ -230,14 +230,14 @@ export const getOrdersBySellerIdService = async (sellerId: number) => {
     .where(inArray(orderItems.shopId, shopIds));
 
   if (sellerOrderItems.length === 0) {
-    console.log("⚠️ No order items found for these shops");
+    console.log(" No order items found for these shops");
     return [];
   }
 
-  // 3️⃣ Extract unique order IDs
+  //Extract unique order IDs
   const orderIds = [...new Set(sellerOrderItems.map((item) => item.orderId))];
 
-  // 4️⃣ Fetch all orders related to those items
+  //Fetch all orders related to those items
   const sellerOrders = await db
     .select({
       id: orders.id,
@@ -252,7 +252,7 @@ export const getOrdersBySellerIdService = async (sellerId: number) => {
     .from(orders)
     .where(inArray(orders.id, orderIds));
 
-  // 5️⃣ Combine orders with their order items
+  //Combine orders with their order items
   const combined = sellerOrders.map((order) => ({
     ...order,
     items: sellerOrderItems.filter((item) => item.orderId === order.id),
