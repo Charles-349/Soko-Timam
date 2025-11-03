@@ -78,7 +78,10 @@
 import express from 'express';
 import http from 'http';
 import cors from 'cors';
+import cron from 'node-cron';
 import { initSocket } from './socket'; 
+import { updateFlashSaleStatuses } from './utils/flashsale.schedular'; 
+
 import user from './user/user.router';
 import product from './product/product.router';
 import shop from './shop/shop.router';
@@ -150,8 +153,18 @@ app.get('/', (req, res) => {
  
 // Start server
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
- 
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+
+  //Schedule Flash Sale Status Updates
+  console.log('Starting Flash Sale Scheduler...');
+  cron.schedule('* * * * *', async () => {
+    await updateFlashSaleStatuses();
+  });
+
+  //initial run when server starts
+  updateFlashSaleStatuses();
+});
 // Export app and server 
 export { app, server };
 export default app;
