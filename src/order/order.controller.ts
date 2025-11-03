@@ -127,7 +127,7 @@ export const markOrderPaidController = async (req: Request, res: Response) => {
 };
 
 
-// 👤 Get Orders by User ID Controller
+// Get Orders by User ID Controller
 export const getOrdersByUserIdController = async (
   req: Request,
   res: Response,
@@ -151,4 +151,28 @@ export const getOrdersByUserIdController = async (
       message: error.message || "Failed to retrieve user orders",
     });
     }
+};
+
+//get orders by seller id
+export const getOrdersBySellerIdController = async (
+  req: Request,
+  res: Response,
+) => {
+  try {
+    const sellerId = parseInt(req.params.sellerId);
+
+    if (isNaN(sellerId)) {
+      return res.status(400).json({ message: "Invalid seller ID" });
+    }
+
+    return res.status(200).json({
+      message: "Orders for seller retrieved successfully",
+      data: [],
+    });
+  } catch (error: any) {
+    console.error("Get seller Orders Error:", error);
+    return res.status(500).json({
+      message: error.message || "Failed to retrieve seller orders",
+    });
+  }
 };

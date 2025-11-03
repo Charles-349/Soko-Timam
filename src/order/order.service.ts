@@ -201,3 +201,22 @@ export const getOrdersByUserIdService = async (userId: number) => {
   return userOrders;
 };
 
+//get orders by seller id
+export const getOrdersBySellerIdService = async (sellerId: number) => {
+  const sellerOrders = await db
+    .select({
+      orderId: orders.id,
+      userId: orders.userId,
+      paymentStatus: orders.paymentStatus,
+      status: orders.status,
+      totalAmount: orders.totalAmount,
+      createdAt: orders.createdAt,
+      items: orderItems,
+    })
+    .from(orders)
+    .innerJoin(orderItems, eq(orders.id, orderItems.orderId))
+    .innerJoin(products, eq(orderItems.productId, products.id))
+    .where(eq(products.shopId, sellerId));  
+  return sellerOrders;
+};
+
