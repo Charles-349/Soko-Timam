@@ -148,8 +148,48 @@ export const updateFlashSaleStatusesService = async () => {
 };
 
 //get upcoming flashsales
+// export const getUpcomingFlashSalesServiceV2 = async () => {
+//   const now = new Date();
+
+//   const upcomingSales = await db
+//     .select({
+//       id: flashSales.id,
+//       productId: flashSales.productId,
+//       discountPercent: flashSales.discountPercent,
+//       discountPrice: flashSales.discountPrice,
+//       stockLimit: flashSales.stockLimit,
+//       soldCount: flashSales.soldCount,
+//       startTime: flashSales.startTime,
+//       endTime: flashSales.endTime,
+//       status: flashSales.flash_sale_status,
+//       createdAt: flashSales.createdAt,
+//       product: {
+//         id: products.id,
+//         name: products.name,
+//         description: products.description,
+//         price: products.price,
+//         stock: products.stock,
+//         imageUrl: products.ImageUrl, 
+//       },
+//     })
+//     .from(flashSales)
+//     .leftJoin(products, eq(products.id, flashSales.productId)) 
+//     .where(
+//       and(
+//         gt(flashSales.startTime, now), 
+//         eq(flashSales.flash_sale_status, "upcoming") 
+//       )
+//     )
+//     .orderBy(flashSales.startTime);
+
+//   return upcomingSales;
+// };
+
 export const getUpcomingFlashSalesServiceV2 = async () => {
   const now = new Date();
+
+  // Optional: helpful for debugging
+  console.log("Fetching upcoming flash sales after:", now);
 
   const upcomingSales = await db
     .select({
@@ -173,14 +213,17 @@ export const getUpcomingFlashSalesServiceV2 = async () => {
       },
     })
     .from(flashSales)
-    .leftJoin(products, eq(products.id, flashSales.productId)) 
+    .leftJoin(products, eq(products.id, flashSales.productId))
     .where(
       and(
-        gt(flashSales.startTime, now), 
-        eq(flashSales.flash_sale_status, "upcoming") 
+        gt(flashSales.startTime, now), // must start in the future
+        eq(flashSales.flash_sale_status, "upcoming") // must be marked upcoming
       )
     )
     .orderBy(flashSales.startTime);
 
+  console.log("Upcoming sales found:", upcomingSales.length);
+
   return upcomingSales;
 };
+
