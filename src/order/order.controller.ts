@@ -6,6 +6,7 @@ import {
   cancelOrderService,
   markOrderAsPaidService,
   getOrdersByUserIdService,
+  getOrdersBySellerIdService,
 } from "./order.service";
 
 //Create or Update Order
@@ -165,9 +166,11 @@ export const getOrdersBySellerIdController = async (
       return res.status(400).json({ message: "Invalid seller ID" });
     }
 
+    const orders = await getOrdersBySellerIdService(sellerId);
+
     return res.status(200).json({
       message: "Orders for seller retrieved successfully",
-      data: [],
+      data: orders,
     });
   } catch (error: any) {
     console.error("Get seller Orders Error:", error);
