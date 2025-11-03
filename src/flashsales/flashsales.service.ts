@@ -73,15 +73,15 @@ export const getActiveFlashSalesService = async () => {
 };
 
 // Get Upcoming Flash Sales
-export const getUpcomingFlashSalesService = async () => {
-  const now = new Date();
-  return await db.query.flashSales.findMany({
-    where: and(eq(flashSales.flash_sale_status, "upcoming"), gt(flashSales.startTime, now)),
-    with: {
-      product: true,
-    },
-  });
-};
+// export const getUpcomingFlashSalesService = async () => {
+//   const now = new Date();
+//   return await db.query.flashSales.findMany({
+//     where: and(eq(flashSales.flash_sale_status, "upcoming"), gt(flashSales.startTime, now)),
+//     with: {
+//       product: true,
+//     },
+//   });
+// };
 
 // Get Ended Flash Sales
 export const getEndedFlashSalesService = async () => {
