@@ -1,19 +1,233 @@
+// import { eq, sql, and, gt, lt } from "drizzle-orm";
+// import db from "../Drizzle/db";
+// import { flashSales, products, shops, TIFlashSale } from "../Drizzle/schema";
+
+// // Create Flash Sale
+// export const createFlashSaleService = async (flashSale: any) => {
+//   const data = {
+//     ...flashSale,
+//     startTime: new Date(flashSale.startTime),
+//     endTime: new Date(flashSale.endTime),
+//   };
+
+//   await db.insert(flashSales).values(data);
+//   return "Flash sale created successfully";
+// };
+
+
+// // Get All Flash Sales
+// export const getFlashSalesService = async () => {
+//   return await db.query.flashSales.findMany({
+//     with: {
+//       product: true,
+//     },
+//   });
+// };
+
+// // Get Flash Sale by ID
+// export const getFlashSaleByIdService = async (id: number) => {
+//   return await db.query.flashSales.findFirst({
+//     where: eq(flashSales.id, id),
+//     with: {
+//       product: true,
+//     },
+//   });
+// };
+
+// // Get Active Flash Sales
+// export const getActiveFlashSalesService = async () => {
+//   const now = new Date();
+
+//   const activeSales = await db
+//     .select({
+//       id: flashSales.id,
+//       discountPercent: flashSales.discountPercent,
+//       discountPrice: flashSales.discountPrice,
+//       stockLimit: flashSales.stockLimit,
+//       soldCount: flashSales.soldCount,
+//       startTime: flashSales.startTime,
+//       endTime: flashSales.endTime,
+//       status: flashSales.flash_sale_status,
+//       createdAt: flashSales.createdAt,
+//       product: {
+//         id: products.id,
+//         name: products.name,
+//         description: products.description,
+//         price: products.price,
+//         stock: products.stock,
+//         imageUrl: products.ImageUrl,
+//       },
+//     })
+//     .from(flashSales)
+//     .innerJoin(products, eq(products.id, flashSales.productId))
+//     .where(
+//       and(
+//         eq(flashSales.flash_sale_status, "active"),
+//         lt(flashSales.startTime, now),
+//         gt(flashSales.endTime, now)
+//       )
+//     )
+//     .orderBy(flashSales.startTime);
+
+//   return activeSales;
+// };
+
+// // Get Ended Flash Sales
+// export const getEndedFlashSalesService = async () => {
+//   const now = new Date();
+//   return await db.query.flashSales.findMany({
+//     where: and(eq(flashSales.flash_sale_status, "ended"), lt(flashSales.endTime, now)),
+//     with: {
+//       product: true,
+//     },
+//   });
+// };
+
+// // Update Flash Sale
+// export const updateFlashSaleService = async (
+//   id: number,
+//   flashSale: Partial<TIFlashSale>
+// ) => {
+//   const updatedFlashSale = await db
+//     .update(flashSales)
+//     .set(flashSale)
+//     .where(eq(flashSales.id, id))
+//     .returning();
+
+//   if (updatedFlashSale.length === 0) return null;
+//   return "Flash sale updated successfully";
+// };
+
+// // Delete Flash Sale
+// export const deleteFlashSaleService = async (id: number) => {
+//   const deletedFlashSale = await db
+//     .delete(flashSales)
+//     .where(eq(flashSales.id, id))
+//     .returning();
+
+//   if (deletedFlashSale.length === 0) return null;
+//   return "Flash sale deleted successfully";
+// };
+
+// // Flash Sale with Product Details
+// export const getFlashSaleWithProductService = async (id: number) => {
+//   return await db.query.flashSales.findFirst({
+//     where: eq(flashSales.id, id),
+//     with: {
+//       product: true,
+//     },
+//   });
+// };
+
+// // Automatically Update Flash Sale Status 
+// export const updateFlashSaleStatusesService = async () => {
+//   const now = new Date();
+
+//   // Activate sales that should now be active
+//   await db
+//     .update(flashSales)
+//     .set({flash_sale_status: "active" })
+//     .where(and(eq(flashSales.flash_sale_status, "upcoming"), lt(flashSales.startTime, now)));
+
+//   // End sales that have expired
+//   await db
+//     .update(flashSales)
+//     .set({ flash_sale_status: "ended" })
+//     .where(and(eq(flashSales.flash_sale_status, "active"), lt(flashSales.endTime, now)));
+// };
+
+// export const getUpcomingFlashSalesServiceV2 = async () => {
+//   const now = new Date();
+
+//   console.log("Fetching upcoming flash sales after:", now);
+
+//   const upcomingSales = await db
+//     .select({
+//       id: flashSales.id,
+//       productId: flashSales.productId,
+//       discountPercent: flashSales.discountPercent,
+//       discountPrice: flashSales.discountPrice,
+//       stockLimit: flashSales.stockLimit,
+//       soldCount: flashSales.soldCount,
+//       startTime: flashSales.startTime,
+//       endTime: flashSales.endTime,
+//       status: flashSales.flash_sale_status,
+//       createdAt: flashSales.createdAt,
+//       product: {
+//         id: products.id,
+//         name: products.name,
+//         description: products.description,
+//         price: products.price,
+//         stock: products.stock,
+//         imageUrl: products.ImageUrl, 
+//       },
+//     })
+//     .from(flashSales)
+//     .leftJoin(products, eq(products.id, flashSales.productId))
+//     .where(
+//       and(
+//         gt(flashSales.startTime, now), // must start in the future
+//         eq(flashSales.flash_sale_status, "upcoming") // must be marked upcoming
+//       )
+//     )
+//     .orderBy(flashSales.startTime);
+
+//   console.log("Upcoming sales found:", upcomingSales.length);
+
+//   return upcomingSales;
+// };
+
+// // Get Flash Sales by Seller
+// export const getFlashSalesBySellerService = async (sellerId: number) => {
+//   return await db
+//     .select({
+//       id: flashSales.id,
+//       discountPercent: flashSales.discountPercent,
+//       discountPrice: flashSales.discountPrice,
+//       stockLimit: flashSales.stockLimit,
+//       soldCount: flashSales.soldCount,
+//       startTime: flashSales.startTime,
+//       endTime: flashSales.endTime,
+//       status: flashSales.flash_sale_status,
+//       createdAt: flashSales.createdAt,
+//       product: {
+//         id: products.id,
+//         name: products.name,
+//         price: products.price,
+//         stock: products.stock,
+//         imageUrl: products.ImageUrl,
+//       },
+//     })
+//     .from(flashSales)
+//     .innerJoin(products, eq(flashSales.productId, products.id))
+//     .innerJoin(shops, eq(products.shopId, shops.id))
+//     .where(eq(shops.sellerId, sellerId))
+//     .orderBy(flashSales.startTime);
+// };
+
+
 import { eq, sql, and, gt, lt } from "drizzle-orm";
 import db from "../Drizzle/db";
 import { flashSales, products, shops, TIFlashSale } from "../Drizzle/schema";
+
+// Helper to adjust to local (EAT) timezone before saving or comparing
+const toLocalTime = (date: string | Date) => {
+  const d = new Date(date);
+  // Converting UTC to EAT (+3 hours)
+  return new Date(d.getTime() + 3 * 60 * 60 * 1000);
+};
 
 // Create Flash Sale
 export const createFlashSaleService = async (flashSale: any) => {
   const data = {
     ...flashSale,
-    startTime: new Date(flashSale.startTime),
-    endTime: new Date(flashSale.endTime),
+    startTime: toLocalTime(flashSale.startTime),
+    endTime: toLocalTime(flashSale.endTime),
   };
 
   await db.insert(flashSales).values(data);
   return "Flash sale created successfully";
 };
-
 
 // Get All Flash Sales
 export const getFlashSalesService = async () => {
@@ -36,7 +250,7 @@ export const getFlashSaleByIdService = async (id: number) => {
 
 // Get Active Flash Sales
 export const getActiveFlashSalesService = async () => {
-  const now = new Date();
+  const now = toLocalTime(new Date());
 
   const activeSales = await db
     .select({
@@ -74,7 +288,7 @@ export const getActiveFlashSalesService = async () => {
 
 // Get Ended Flash Sales
 export const getEndedFlashSalesService = async () => {
-  const now = new Date();
+  const now = toLocalTime(new Date());
   return await db.query.flashSales.findMany({
     where: and(eq(flashSales.flash_sale_status, "ended"), lt(flashSales.endTime, now)),
     with: {
@@ -88,13 +302,19 @@ export const updateFlashSaleService = async (
   id: number,
   flashSale: Partial<TIFlashSale>
 ) => {
-  const updatedFlashSale = await db
+  const updatedFlashSale = {
+    ...flashSale,
+    startTime: flashSale.startTime ? toLocalTime(flashSale.startTime) : undefined,
+    endTime: flashSale.endTime ? toLocalTime(flashSale.endTime) : undefined,
+  };
+
+  const result = await db
     .update(flashSales)
-    .set(flashSale)
+    .set(updatedFlashSale)
     .where(eq(flashSales.id, id))
     .returning();
 
-  if (updatedFlashSale.length === 0) return null;
+  if (result.length === 0) return null;
   return "Flash sale updated successfully";
 };
 
@@ -119,14 +339,14 @@ export const getFlashSaleWithProductService = async (id: number) => {
   });
 };
 
-// Automatically Update Flash Sale Status 
+// Automatically Update Flash Sale Status
 export const updateFlashSaleStatusesService = async () => {
-  const now = new Date();
+  const now = toLocalTime(new Date());
 
   // Activate sales that should now be active
   await db
     .update(flashSales)
-    .set({flash_sale_status: "active" })
+    .set({ flash_sale_status: "active" })
     .where(and(eq(flashSales.flash_sale_status, "upcoming"), lt(flashSales.startTime, now)));
 
   // End sales that have expired
@@ -136,8 +356,9 @@ export const updateFlashSaleStatusesService = async () => {
     .where(and(eq(flashSales.flash_sale_status, "active"), lt(flashSales.endTime, now)));
 };
 
+// Get Upcoming Flash Sales (V2)
 export const getUpcomingFlashSalesServiceV2 = async () => {
-  const now = new Date();
+  const now = toLocalTime(new Date());
 
   console.log("Fetching upcoming flash sales after:", now);
 
@@ -159,7 +380,7 @@ export const getUpcomingFlashSalesServiceV2 = async () => {
         description: products.description,
         price: products.price,
         stock: products.stock,
-        imageUrl: products.ImageUrl, 
+        imageUrl: products.ImageUrl,
       },
     })
     .from(flashSales)
@@ -204,5 +425,3 @@ export const getFlashSalesBySellerService = async (sellerId: number) => {
     .where(eq(shops.sellerId, sellerId))
     .orderBy(flashSales.startTime);
 };
-
-
