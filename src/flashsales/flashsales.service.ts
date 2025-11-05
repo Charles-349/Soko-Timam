@@ -189,7 +189,12 @@ export const updateFlashSaleStatusesService = async () => {
 //Delete ended flash sales and restore product visibility
   const endedSales = await db
     .delete(flashSales)
-    .where(lt(flashSales.endTime, now))
+    .where(
+      and(
+        eq(flashSales.flash_sale_status, "ended"),
+        lt(flashSales.endTime, now)
+      )
+    )
     .returning({ productId: flashSales.productId });
 
   // Restore products to normal listing
