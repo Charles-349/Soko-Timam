@@ -213,15 +213,52 @@ import { flashSales, products, shops, TIFlashSale } from "../Drizzle/schema";
 const toDate = (date: string | Date) => new Date(date);
 
 //Create Flash Sale
+// export const createFlashSaleService = async (flashSale: any) => {
+//   const data = {
+//     ...flashSale,
+//     startTime: toDate(flashSale.startTime),
+//     endTime: toDate(flashSale.endTime),
+//   };
+
+//   await db.insert(flashSales).values(data);
+//   return "Flash sale created successfully";
+// };
+
 export const createFlashSaleService = async (flashSale: any) => {
+  //Get product price
+  const product = await db.query.products.findFirst({
+    where: eq(products.id, flashSale.productId),
+  });
+
+  if (!product) {
+    throw new Error("Product not found");
+  }
+
+  //Calculate discountPercent automatically
+  const originalPrice = Number(product.price);
+  const discountedPrice = Number(flashSale.discountPrice);
+
+  if (discountedPrice >= originalPrice) {
+    throw new Error("Discounted price must be lower than the product price");
+  }
+
+  const discountPercent = Math.round(((originalPrice - discountedPrice) / originalPrice) * 100);
+
+  //Prepare data for insertion
   const data = {
     ...flashSale,
+    discountPercent,
     startTime: toDate(flashSale.startTime),
     endTime: toDate(flashSale.endTime),
   };
 
+  // Save to DB
   await db.insert(flashSales).values(data);
-  return "Flash sale created successfully";
+
+  return {
+    message: "Flash sale created successfully",
+    discountPercent,
+  };
 };
 
 //Get All Flash Sales
