@@ -1,5 +1,5 @@
 
-import { eq, sql, and, like, desc, asc, count ,isNull, or, gt,} from "drizzle-orm";
+import { eq, sql, and, like, desc, asc, count ,isNull, or, gt, lt,} from "drizzle-orm";
 import db from "../Drizzle/db";
 import {
   products,
@@ -189,7 +189,7 @@ export const getAllProductsService = async (params?: {
       baseCondition,
       or(
         isNull(flashSales.productId), // not in flash sale
-        gt(flashSales.endTime, now)   // flash sale already ended (time passed)
+        lt(flashSales.endTime, now)  // flash sale already ended (time passed)
       )
     );
 
