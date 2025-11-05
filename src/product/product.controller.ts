@@ -74,10 +74,49 @@ export const createProduct = async (req: Request, res: Response) => {
 
 
 // Get All Products (with filters & pagination)
+// export const getProductsController = async (req: Request, res: Response) => {
+//   try {
+//     const { search, categoryId, shopId, limit, offset, sortBy, order } =
+//       req.query;
+
+//     const result = await getAllProductsService({
+//       search: search as string,
+//       categoryId: toInt(categoryId),
+//       shopId: toInt(shopId),
+//       limit: toInt(limit, 20),
+//       offset: toInt(offset, 0),
+//       sortBy: sortBy as
+//         | "createdAt"
+//         | "price"
+//         // | "rating"
+//         // | "salesCount"
+//         | undefined,
+//       order: order as "asc" | "desc" | undefined,
+//     });
+
+//     return res.status(200).json({
+//       message: "Products retrieved successfully",
+//       ...result, // { total, limit, offset, products }
+//     });
+//   } catch (error: any) {
+//     return res.status(500).json({
+//       message: error.message || "Failed to fetch products",
+//       error: error.stack,
+//     });
+//   }
+// };
+
 export const getProductsController = async (req: Request, res: Response) => {
   try {
-    const { search, categoryId, shopId, limit, offset, sortBy, order } =
-      req.query;
+    const {
+      search,
+      categoryId,
+      shopId,
+      limit,
+      offset,
+      sortBy,
+      order,
+    } = req.query;
 
     const result = await getAllProductsService({
       search: search as string,
@@ -88,15 +127,18 @@ export const getProductsController = async (req: Request, res: Response) => {
       sortBy: sortBy as
         | "createdAt"
         | "price"
-        // | "rating"
-        // | "salesCount"
+        | "rating"
+        | "salesCount"
         | undefined,
       order: order as "asc" | "desc" | undefined,
     });
 
     return res.status(200).json({
       message: "Products retrieved successfully",
-      ...result, // { total, limit, offset, products }
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+      products: result.products,
     });
   } catch (error: any) {
     return res.status(500).json({
@@ -105,7 +147,6 @@ export const getProductsController = async (req: Request, res: Response) => {
     });
   }
 };
-
 // Get Product by ID
 export const getProductByIdController = async (req: Request, res: Response) => {
   try {

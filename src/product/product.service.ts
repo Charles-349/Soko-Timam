@@ -1,11 +1,12 @@
 
-import { eq, sql, and, like, desc, asc, count } from "drizzle-orm";
+import { eq, sql, and, like, desc, asc, count ,isNull, or, gt,} from "drizzle-orm";
 import db from "../Drizzle/db";
 import {
   products,
   type TIProduct,
   type TSProduct,
   productImages,
+  flashSales,
 } from "../Drizzle/schema";
 import type { Express } from "express";
 import { uploadToCloudinary } from "../utils/upload";
@@ -79,6 +80,75 @@ export const getProductByIdService = async (id: number) => {
 };
 
 // Get all products with optional filters + pagination
+// export const getAllProductsService = async (params?: {
+//   search?: string;
+//   categoryId?: number;
+//   shopId?: number;
+//   limit?: number;
+//   offset?: number;
+//   sortBy?: "createdAt" | "price" | "rating" | "salesCount";
+//   order?: "asc" | "desc";
+// }) => {
+//   try {
+//     const {
+//       search,
+//       categoryId,
+//       shopId,
+//       limit = 20,
+//       offset = 0,
+//       sortBy = "createdAt",
+//       order = "desc",
+//     } = params || {};
+
+//     const whereClauses: (ReturnType<typeof eq> | ReturnType<typeof like>)[] = [];
+
+//     if (search) {
+//       whereClauses.push(like(products.name, `%${search}%`));
+//     }
+//     if (categoryId) {
+//       whereClauses.push(eq(products.categoryId, categoryId));
+//     }
+//     if (shopId) {
+//       whereClauses.push(eq(products.shopId, shopId));
+//     }
+
+//     const condition = whereClauses.length ? and(...whereClauses) : undefined;
+
+//     // Map sort keys explicitly to prevent SQL injection
+//     const sortColumn = {
+//       createdAt: products.createdAt,
+//       price: products.price,
+//       // rating: products.rating,
+//       // salesCount: products.salesCount,
+//     }[sortBy];
+
+//     const orderBy = order === "asc" ? asc(sortColumn) : desc(sortColumn);
+
+//     // Fetch total count for pagination
+//     const [{ total }] = await db
+//       .select({ total: count() })
+//       .from(products)
+//       .where(condition || sql`true`);
+
+//     // Fetch paginated results
+//     const result = await db.query.products.findMany({
+//       where: condition,
+//       orderBy,
+//       limit,
+//       offset,
+//     });
+
+//     return {
+//       total,
+//       limit,
+//       offset,
+//       products: result as TSProduct[],
+//     };
+//   } catch (err) {
+//     throw new Error("Failed to fetch products: " + (err as Error).message);
+//   }
+// };
+
 export const getAllProductsService = async (params?: {
   search?: string;
   categoryId?: number;
@@ -99,6 +169,7 @@ export const getAllProductsService = async (params?: {
       order = "desc",
     } = params || {};
 
+    const now = new Date();
     const whereClauses: (ReturnType<typeof eq> | ReturnType<typeof like>)[] = [];
 
     if (search) {
@@ -111,9 +182,18 @@ export const getAllProductsService = async (params?: {
       whereClauses.push(eq(products.shopId, shopId));
     }
 
-    const condition = whereClauses.length ? and(...whereClauses) : undefined;
+    const baseCondition = whereClauses.length ? and(...whereClauses) : sql`true`;
 
-    // Map sort keys explicitly to prevent SQL injection
+    //Exclude products that are in active or upcoming flash sales
+    const filteredCondition = and(
+      baseCondition,
+      or(
+        isNull(flashSales.productId), // not in flash sale
+        gt(flashSales.endTime, now)   // flash sale already ended (time passed)
+      )
+    );
+
+    // Map sort keys explicitly
     const sortColumn = {
       createdAt: products.createdAt,
       price: products.price,
@@ -123,25 +203,36 @@ export const getAllProductsService = async (params?: {
 
     const orderBy = order === "asc" ? asc(sortColumn) : desc(sortColumn);
 
-    // Fetch total count for pagination
+    // Fetch total count (excluding flash sale products)
     const [{ total }] = await db
       .select({ total: count() })
       .from(products)
-      .where(condition || sql`true`);
+      .leftJoin(flashSales, eq(products.id, flashSales.productId))
+      .where(filteredCondition);
 
-    // Fetch paginated results
-    const result = await db.query.products.findMany({
-      where: condition,
-      orderBy,
-      limit,
-      offset,
-    });
+    // Fetch paginated products (excluding flash sale ones)
+    const result = await db
+      .select({
+        id: products.id,
+        name: products.name,
+        description: products.description,
+        price: products.price,
+        stock: products.stock,
+        imageUrl: products.ImageUrl,
+        createdAt: products.createdAt,
+      })
+      .from(products)
+      .leftJoin(flashSales, eq(products.id, flashSales.productId))
+      .where(filteredCondition)
+      .orderBy(orderBy)
+      .limit(limit)
+      .offset(offset);
 
     return {
       total,
       limit,
       offset,
-      products: result as TSProduct[],
+      products: result as unknown as TSProduct[],
     };
   } catch (err) {
     throw new Error("Failed to fetch products: " + (err as Error).message);
