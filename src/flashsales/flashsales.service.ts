@@ -2,6 +2,7 @@
 import { eq, and, gt, lt } from "drizzle-orm";
 import db from "../Drizzle/db";
 import { flashSales, products, shops, TIFlashSale } from "../Drizzle/schema";
+import { sql } from "drizzle-orm";
 
 //convert date strings safely to Date objects 
 const toDate = (date: string | Date) => new Date(date);
@@ -207,17 +208,16 @@ export const getFlashSaleWithProductService = async (id: number) => {
 // };
 
 export const updateFlashSaleStatusesService = async () => {
- const nowUTC = new Date();
+  const nowSQL = sql`NOW()`; 
 
-
-  //Activate sales that should now be active
+  //Activate flash sales that should now be active
   await db
     .update(flashSales)
     .set({ flash_sale_status: "active" })
     .where(
       and(
         eq(flashSales.flash_sale_status, "upcoming"),
-        lt(flashSales.startTime, nowUTC)
+        lt(flashSales.startTime, nowSQL)
       )
     );
 
@@ -228,14 +228,14 @@ export const updateFlashSaleStatusesService = async () => {
     .where(
       and(
         eq(flashSales.flash_sale_status, "active"),
-        lt(flashSales.endTime, nowUTC)
+        lt(flashSales.endTime, nowSQL)
       )
     );
 
-  //Delete flash sales that have ended (no need to filter by status)
+  //Delete expired sales (no need to filter by status)
   const endedSales = await db
     .delete(flashSales)
-    .where(lt(flashSales.endTime, nowUTC))
+    .where(lt(flashSales.endTime, nowSQL))
     .returning({ productId: flashSales.productId });
 
   // Restore products to normal listing
@@ -246,7 +246,6 @@ export const updateFlashSaleStatusesService = async () => {
       .where(eq(products.id, sale.productId));
   }
 };
-
 
 //Get Upcoming Flash Sales 
 export const getUpcomingFlashSalesService = async () => {
