@@ -386,6 +386,16 @@ export const updateFlashSaleStatusesService = async () => {
     .update(flashSales)
     .set({ flash_sale_status: "ended" })
     .where(and(eq(flashSales.flash_sale_status, "active"), lt(flashSales.endTime, now)));
+
+      //Delete sales that have ended 
+  await db
+    .delete(flashSales)
+    .where(
+      and(
+        eq(flashSales.flash_sale_status, "ended"),
+        lt(flashSales.endTime, now)
+      )
+    );
 };
 
 //Get Upcoming Flash Sales 
