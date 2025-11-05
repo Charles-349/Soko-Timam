@@ -108,7 +108,7 @@ const flashsales = (app: Express) => {
   });
 
   //get flashsale by seller id
-  app.route("/flashsales/seller/:sellerId").put(async (req, res, next) => {
+  app.route("/flashsales/seller/:sellerId").get(async (req, res, next) => {
     try {
       await getFlashSalesBySellerController(req, res);
     } catch (error) {
