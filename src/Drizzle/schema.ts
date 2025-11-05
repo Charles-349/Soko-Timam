@@ -217,10 +217,11 @@ export const flashSales = pgTable("flash_sales", {
   discountPrice: decimal("discount_price", { precision: 10, scale: 2 }),
   stockLimit: integer("stock_limit").default(0),
   soldCount: integer("sold_count").default(0),
-  startTime: timestamp("start_time").notNull(),
-  endTime: timestamp("end_time").notNull(),
+  startTime: timestamp("start_time", { withTimezone: true }).notNull(),
+  endTime: timestamp("end_time", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   flash_sale_status: FlashSalesStatusEnum("flash_sale_status").default("upcoming"), // upcoming, active, ended
-  createdAt: timestamp("created_at").defaultNow(),
+  
 });
 
 // NOTIFICATIONS
