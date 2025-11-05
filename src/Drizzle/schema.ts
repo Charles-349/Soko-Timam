@@ -93,7 +93,8 @@ export const products = pgTable("products", {
   description: text("description"),
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   stock: integer("stock").notNull().default(0),
-  ImageUrl: text("image_url"),                                                                                                                                                                                                                                                         
+  ImageUrl: text("image_url"),    
+  onFlashSale: boolean("on_flash_sale").default(false),                                                                                                                                                                                                                                                     
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow().notNull()
 

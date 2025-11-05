@@ -1,0 +1,1 @@
+ALTER TABLE "products" ADD COLUMN "on_flash_sale" boolean DEFAULT false;
