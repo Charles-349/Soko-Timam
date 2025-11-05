@@ -9,7 +9,7 @@ import {
   deleteFlashSaleService,
   getFlashSaleWithProductService,
   updateFlashSaleStatusesService,
-  getUpcomingFlashSalesServiceV2,
+  getUpcomingFlashSalesService,
   getFlashSalesBySellerService,
 } from "./flashsales.service";
 
@@ -142,12 +142,12 @@ export const updateFlashSaleStatusesController = async (
 };
 
 //get upcoming flashsales
-export const getUpcomingFlashSalesControllerV2 = async (
+export const getUpcomingFlashSalesController = async (
   req: Request,
   res: Response
 ) => {
   try {
-    const upcomingSales = await getUpcomingFlashSalesServiceV2 ();
+    const upcomingSales = await getUpcomingFlashSalesService ();
     return res.status(200).json({
       message: "Upcoming flash sales retrieved successfully",
       data: upcomingSales,

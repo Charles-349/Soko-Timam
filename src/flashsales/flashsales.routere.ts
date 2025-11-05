@@ -5,13 +5,12 @@ import {
   getFlashSalesController,
   getFlashSaleByIdController,
   getActiveFlashSalesController,
-  // getUpcomingFlashSalesController,
   getEndedFlashSalesController,
   updateFlashSaleController,
   deleteFlashSaleController,
   getFlashSaleWithProductController,
   updateFlashSaleStatusesController,
-  getUpcomingFlashSalesControllerV2,
+  getUpcomingFlashSalesController,
   getFlashSalesBySellerController,
 } from "./flashsales.controller";
 
@@ -46,7 +45,7 @@ const flashsales = (app: Express) => {
   // Get Upcoming Flash Sales
   app.route("/flashsales/upcoming").get(async (req, res, next) => {
     try {
-      await getUpcomingFlashSalesControllerV2(req, res);
+      await getUpcomingFlashSalesController(req, res);
     } catch (error) {
       next(error);
     }

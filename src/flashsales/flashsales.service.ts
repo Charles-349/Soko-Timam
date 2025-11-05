@@ -205,31 +205,26 @@
 //     .orderBy(flashSales.startTime);
 // };
 
-
-import { eq, sql, and, gt, lt } from "drizzle-orm";
+import { eq, and, gt, lt } from "drizzle-orm";
 import db from "../Drizzle/db";
 import { flashSales, products, shops, TIFlashSale } from "../Drizzle/schema";
 
-// Helper to adjust to local (EAT) timezone before saving or comparing
-const toLocalTime = (date: string | Date) => {
-  const d = new Date(date);
-  // Converting UTC to EAT (+3 hours)
-  return new Date(d.getTime() + 3 * 60 * 60 * 1000);
-};
+//convert date strings safely to Date objects 
+const toDate = (date: string | Date) => new Date(date);
 
-// Create Flash Sale
+//Create Flash Sale
 export const createFlashSaleService = async (flashSale: any) => {
   const data = {
     ...flashSale,
-    startTime: toLocalTime(flashSale.startTime),
-    endTime: toLocalTime(flashSale.endTime),
+    startTime: toDate(flashSale.startTime),
+    endTime: toDate(flashSale.endTime),
   };
 
   await db.insert(flashSales).values(data);
   return "Flash sale created successfully";
 };
 
-// Get All Flash Sales
+//Get All Flash Sales
 export const getFlashSalesService = async () => {
   return await db.query.flashSales.findMany({
     with: {
@@ -238,7 +233,7 @@ export const getFlashSalesService = async () => {
   });
 };
 
-// Get Flash Sale by ID
+//Get Flash Sale by ID
 export const getFlashSaleByIdService = async (id: number) => {
   return await db.query.flashSales.findFirst({
     where: eq(flashSales.id, id),
@@ -248,9 +243,9 @@ export const getFlashSaleByIdService = async (id: number) => {
   });
 };
 
-// Get Active Flash Sales
+//Get Active Flash Sales
 export const getActiveFlashSalesService = async () => {
-  const now = toLocalTime(new Date());
+  const now = new Date();
 
   const activeSales = await db
     .select({
@@ -286,9 +281,9 @@ export const getActiveFlashSalesService = async () => {
   return activeSales;
 };
 
-// Get Ended Flash Sales
+//Get Ended Flash Sales
 export const getEndedFlashSalesService = async () => {
-  const now = toLocalTime(new Date());
+  const now = new Date();
   return await db.query.flashSales.findMany({
     where: and(eq(flashSales.flash_sale_status, "ended"), lt(flashSales.endTime, now)),
     with: {
@@ -297,15 +292,15 @@ export const getEndedFlashSalesService = async () => {
   });
 };
 
-// Update Flash Sale
+//Update Flash Sale
 export const updateFlashSaleService = async (
   id: number,
   flashSale: Partial<TIFlashSale>
 ) => {
   const updatedFlashSale = {
     ...flashSale,
-    startTime: flashSale.startTime ? toLocalTime(flashSale.startTime) : undefined,
-    endTime: flashSale.endTime ? toLocalTime(flashSale.endTime) : undefined,
+    startTime: flashSale.startTime ? toDate(flashSale.startTime) : undefined,
+    endTime: flashSale.endTime ? toDate(flashSale.endTime) : undefined,
   };
 
   const result = await db
@@ -318,7 +313,7 @@ export const updateFlashSaleService = async (
   return "Flash sale updated successfully";
 };
 
-// Delete Flash Sale
+//Delete Flash Sale
 export const deleteFlashSaleService = async (id: number) => {
   const deletedFlashSale = await db
     .delete(flashSales)
@@ -329,7 +324,7 @@ export const deleteFlashSaleService = async (id: number) => {
   return "Flash sale deleted successfully";
 };
 
-// Flash Sale with Product Details
+//Flash Sale with Product Details
 export const getFlashSaleWithProductService = async (id: number) => {
   return await db.query.flashSales.findFirst({
     where: eq(flashSales.id, id),
@@ -339,9 +334,9 @@ export const getFlashSaleWithProductService = async (id: number) => {
   });
 };
 
-// Automatically Update Flash Sale Status
+//Automatically Update Flash Sale Status
 export const updateFlashSaleStatusesService = async () => {
-  const now = toLocalTime(new Date());
+  const now = new Date();
 
   // Activate sales that should now be active
   await db
@@ -356,9 +351,9 @@ export const updateFlashSaleStatusesService = async () => {
     .where(and(eq(flashSales.flash_sale_status, "active"), lt(flashSales.endTime, now)));
 };
 
-// Get Upcoming Flash Sales (V2)
-export const getUpcomingFlashSalesServiceV2 = async () => {
-  const now = toLocalTime(new Date());
+//Get Upcoming Flash Sales 
+export const getUpcomingFlashSalesService = async () => {
+  const now = new Date();
 
   console.log("Fetching upcoming flash sales after:", now);
 
@@ -398,7 +393,7 @@ export const getUpcomingFlashSalesServiceV2 = async () => {
   return upcomingSales;
 };
 
-// Get Flash Sales by Seller
+//Get Flash Sales by Seller
 export const getFlashSalesBySellerService = async (sellerId: number) => {
   return await db
     .select({
