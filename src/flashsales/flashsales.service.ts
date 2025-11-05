@@ -389,13 +389,8 @@ export const updateFlashSaleStatusesService = async () => {
 
       //Delete sales that have ended 
   await db
-    .delete(flashSales)
-    .where(
-      and(
-        eq(flashSales.flash_sale_status, "ended"),
-        lt(flashSales.endTime, now)
-      )
-    );
+     .delete(flashSales)
+    .where(lt(flashSales.endTime, now));
 };
 
 //Get Upcoming Flash Sales 
