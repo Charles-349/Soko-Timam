@@ -171,30 +171,71 @@ export const getFlashSaleWithProductService = async (id: number) => {
 };
 
 //Automatically Update Flash Sale Status
-export const updateFlashSaleStatusesService = async () => {
-  const now = new Date();
+// export const updateFlashSaleStatusesService = async () => {
+//   const now = new Date();
 
-  // Activate sales that should now be active
+//   // Activate sales that should now be active
+//   await db
+//     .update(flashSales)
+//     .set({ flash_sale_status: "active" })
+//     .where(and(eq(flashSales.flash_sale_status, "upcoming"), lt(flashSales.startTime, now)));
+
+//   // End sales that have expired
+//   await db
+//     .update(flashSales)
+//     .set({ flash_sale_status: "ended" })
+//     .where(and(eq(flashSales.flash_sale_status, "active"), lt(flashSales.endTime, now)));
+
+// //Delete ended flash sales and restore product visibility
+//   const endedSales = await db
+//     .delete(flashSales)
+//     .where(
+//       and(
+//         eq(flashSales.flash_sale_status, "ended"),
+//         lt(flashSales.endTime, now)
+//       )
+//     )
+//     .returning({ productId: flashSales.productId });
+
+//   // Restore products to normal listing
+//   for (const sale of endedSales) {
+//     await db
+//       .update(products)
+//       .set({ onFlashSale: false })
+//       .where(eq(products.id, sale.productId));
+//   }
+// };
+
+export const updateFlashSaleStatusesService = async () => {
+ const nowUTC = new Date();
+
+
+  //Activate sales that should now be active
   await db
     .update(flashSales)
     .set({ flash_sale_status: "active" })
-    .where(and(eq(flashSales.flash_sale_status, "upcoming"), lt(flashSales.startTime, now)));
+    .where(
+      and(
+        eq(flashSales.flash_sale_status, "upcoming"),
+        lt(flashSales.startTime, nowUTC)
+      )
+    );
 
-  // End sales that have expired
+  //End sales that have expired
   await db
     .update(flashSales)
     .set({ flash_sale_status: "ended" })
-    .where(and(eq(flashSales.flash_sale_status, "active"), lt(flashSales.endTime, now)));
-
-//Delete ended flash sales and restore product visibility
-  const endedSales = await db
-    .delete(flashSales)
     .where(
       and(
-        eq(flashSales.flash_sale_status, "ended"),
-        lt(flashSales.endTime, now)
+        eq(flashSales.flash_sale_status, "active"),
+        lt(flashSales.endTime, nowUTC)
       )
-    )
+    );
+
+  //Delete flash sales that have ended (no need to filter by status)
+  const endedSales = await db
+    .delete(flashSales)
+    .where(lt(flashSales.endTime, nowUTC))
     .returning({ productId: flashSales.productId });
 
   // Restore products to normal listing
@@ -205,6 +246,7 @@ export const updateFlashSaleStatusesService = async () => {
       .where(eq(products.id, sale.productId));
   }
 };
+
 
 //Get Upcoming Flash Sales 
 export const getUpcomingFlashSalesService = async () => {
