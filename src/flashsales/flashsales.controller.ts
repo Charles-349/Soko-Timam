@@ -4,13 +4,13 @@ import {
   getFlashSalesService,
   getFlashSaleByIdService,
   getActiveFlashSalesService,
-  // getUpcomingFlashSalesService,
   getEndedFlashSalesService,
   updateFlashSaleService,
   deleteFlashSaleService,
   getFlashSaleWithProductService,
   updateFlashSaleStatusesService,
   getUpcomingFlashSalesServiceV2,
+  getFlashSalesBySellerService,
 } from "./flashsales.service";
 
 // Create Flash Sale
@@ -64,20 +64,6 @@ export const getActiveFlashSalesController = async (req, res) => {
     return res.status(500).json({ message: error.message });
   }
 };
-
-
-// Get Upcoming Flash Sales
-// export const getUpcomingFlashSalesController = async (req: Request, res: Response) => {
-//   try {
-//     const upcomingSales = await getUpcomingFlashSalesService();
-//     return res.status(200).json({
-//       message: "Upcoming flash sales retrieved successfully",
-//       data: upcomingSales,
-//     });
-//   } catch (error: any) {
-//     return res.status(500).json({ message: error.message });
-//   }
-// };
 
 // Get Ended Flash Sales
 export const getEndedFlashSalesController = async (req: Request, res: Response) => {
@@ -168,5 +154,31 @@ export const getUpcomingFlashSalesControllerV2 = async (
     });
   } catch (error: any) {
     return res.status(500).json({ message: error.message });
+  }
+};
+
+// Get Flash Sales by Seller
+export const getFlashSalesBySellerController = async (req: Request, res: Response) => {
+  try {
+    const sellerId = parseInt(req.params.sellerId);
+
+    if (isNaN(sellerId)) {
+      return res.status(400).json({ message: "Invalid seller ID" });
+    }
+
+    const flashSales = await getFlashSalesBySellerService(sellerId);
+
+    if (!flashSales || flashSales.length === 0) {
+      return res.status(404).json({ message: "No flash sales found for this seller" });
+    }
+
+    return res.status(200).json({
+      message: "Flash sales retrieved successfully",
+      count: flashSales.length,
+      data: flashSales,
+    });
+  } catch (error) {
+    console.error("Error fetching flash sales by seller:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
 };

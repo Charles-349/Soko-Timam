@@ -12,6 +12,7 @@ import {
   getFlashSaleWithProductController,
   updateFlashSaleStatusesController,
   getUpcomingFlashSalesControllerV2,
+  getFlashSalesBySellerController,
 } from "./flashsales.controller";
 
 const flashsales = (app: Express) => {
@@ -101,6 +102,15 @@ const flashsales = (app: Express) => {
   app.route("/flashsales/update-statuses").put(async (req, res, next) => {
     try {
       await updateFlashSaleStatusesController(req, res);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  //get flashsale by seller id
+  app.route("/flashsales/seller/:sellerId").put(async (req, res, next) => {
+    try {
+      await getFlashSalesBySellerController(req, res);
     } catch (error) {
       next(error);
     }

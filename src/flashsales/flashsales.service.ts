@@ -1,6 +1,6 @@
 import { eq, sql, and, gt, lt } from "drizzle-orm";
 import db from "../Drizzle/db";
-import { flashSales, products, TIFlashSale } from "../Drizzle/schema";
+import { flashSales, products, shops, TIFlashSale } from "../Drizzle/schema";
 
 // Create Flash Sale
 export const createFlashSaleService = async (flashSale: any) => {
@@ -72,17 +72,6 @@ export const getActiveFlashSalesService = async () => {
   return activeSales;
 };
 
-// Get Upcoming Flash Sales
-// export const getUpcomingFlashSalesService = async () => {
-//   const now = new Date();
-//   return await db.query.flashSales.findMany({
-//     where: and(eq(flashSales.flash_sale_status, "upcoming"), gt(flashSales.startTime, now)),
-//     with: {
-//       product: true,
-//     },
-//   });
-// };
-
 // Get Ended Flash Sales
 export const getEndedFlashSalesService = async () => {
   const now = new Date();
@@ -147,48 +136,9 @@ export const updateFlashSaleStatusesService = async () => {
     .where(and(eq(flashSales.flash_sale_status, "active"), lt(flashSales.endTime, now)));
 };
 
-//get upcoming flashsales
-// export const getUpcomingFlashSalesServiceV2 = async () => {
-//   const now = new Date();
-
-//   const upcomingSales = await db
-//     .select({
-//       id: flashSales.id,
-//       productId: flashSales.productId,
-//       discountPercent: flashSales.discountPercent,
-//       discountPrice: flashSales.discountPrice,
-//       stockLimit: flashSales.stockLimit,
-//       soldCount: flashSales.soldCount,
-//       startTime: flashSales.startTime,
-//       endTime: flashSales.endTime,
-//       status: flashSales.flash_sale_status,
-//       createdAt: flashSales.createdAt,
-//       product: {
-//         id: products.id,
-//         name: products.name,
-//         description: products.description,
-//         price: products.price,
-//         stock: products.stock,
-//         imageUrl: products.ImageUrl, 
-//       },
-//     })
-//     .from(flashSales)
-//     .leftJoin(products, eq(products.id, flashSales.productId)) 
-//     .where(
-//       and(
-//         gt(flashSales.startTime, now), 
-//         eq(flashSales.flash_sale_status, "upcoming") 
-//       )
-//     )
-//     .orderBy(flashSales.startTime);
-
-//   return upcomingSales;
-// };
-
 export const getUpcomingFlashSalesServiceV2 = async () => {
   const now = new Date();
 
-  // Optional: helpful for debugging
   console.log("Fetching upcoming flash sales after:", now);
 
   const upcomingSales = await db
@@ -226,4 +176,33 @@ export const getUpcomingFlashSalesServiceV2 = async () => {
 
   return upcomingSales;
 };
+
+// Get Flash Sales by Seller
+export const getFlashSalesBySellerService = async (sellerId: number) => {
+  return await db
+    .select({
+      id: flashSales.id,
+      discountPercent: flashSales.discountPercent,
+      discountPrice: flashSales.discountPrice,
+      stockLimit: flashSales.stockLimit,
+      soldCount: flashSales.soldCount,
+      startTime: flashSales.startTime,
+      endTime: flashSales.endTime,
+      status: flashSales.flash_sale_status,
+      createdAt: flashSales.createdAt,
+      product: {
+        id: products.id,
+        name: products.name,
+        price: products.price,
+        stock: products.stock,
+        imageUrl: products.ImageUrl,
+      },
+    })
+    .from(flashSales)
+    .innerJoin(products, eq(flashSales.productId, products.id))
+    .innerJoin(shops, eq(products.shopId, shops.id))
+    .where(eq(shops.sellerId, sellerId))
+    .orderBy(flashSales.startTime);
+};
+
 
