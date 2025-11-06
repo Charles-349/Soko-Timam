@@ -153,17 +153,22 @@ app.get('/', (req, res) => {
  
 // Start server
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
+server.listen(PORT, async() => {
   console.log(`Server running on port ${PORT}`);
 
   //Schedule Flash Sale Status Updates
   console.log('Starting Flash Sale Scheduler...');
-  cron.schedule('* * * * *', async () => {
-    await updateFlashSaleStatuses();
-  });
+   // Initial run when the server starts
+  await updateFlashSaleStatuses();
 
-  //initial run when server starts
-  updateFlashSaleStatuses();
+  // Schedule Flash Sale Status Updates (every 1 minute)
+  cron.schedule("* * * * *", async () => {
+    try {
+      await updateFlashSaleStatuses();
+    } catch (error) {
+      console.error("[FlashSaleScheduler] Error:", error);
+    }
+  });
 });
 // Export app and server 
 export { app, server };
