@@ -208,43 +208,44 @@ export const getFlashSaleWithProductService = async (id: number) => {
 // };
 
 export const updateFlashSaleStatusesService = async () => {
-  const nowSQL = sql`NOW()`; 
+  const now = new Date(); 
 
-  //Activate flash sales that should now be active
-  await db
+  // Activate flash sales that should now be active
+  const activated = await db
     .update(flashSales)
     .set({ flash_sale_status: "active" })
     .where(
       and(
         eq(flashSales.flash_sale_status, "upcoming"),
-        lt(flashSales.startTime, nowSQL)
+        lt(flashSales.startTime, now)
       )
-    );
+    )
+    .returning({ id: flashSales.id });
 
   // Mark as ended flash sales that have expired
-  await db
+  const ended = await db
     .update(flashSales)
     .set({ flash_sale_status: "ended" })
     .where(
       and(
         eq(flashSales.flash_sale_status, "active"),
-        lt(flashSales.endTime, nowSQL)
-      )
-    );
-
-  // Delete flash sales that have ended (expired)
-  const endedSales = await db
-    .delete(flashSales)
-    .where(
-      and(
-        eq(flashSales.flash_sale_status, "ended"),
-        lt(flashSales.endTime, nowSQL)
+        lt(flashSales.endTime, now)
       )
     )
+    .returning({ id: flashSales.id });
+
+  // Delete flash sales that have ended (cleanup)
+  const deleted = await db
+    .delete(flashSales)
+    .where(eq(flashSales.flash_sale_status, "ended"))
     .returning({ productId: flashSales.productId });
 
-  console.log(`Flash sale cleanup complete. Deleted: ${endedSales.length}`);
+  console.log(
+    `Flash sale cleanup complete. Activated: ${activated.length}, Ended: ${ended.length}, Deleted: ${deleted.length}`
+  );
 };
+
+
 
 //Get Upcoming Flash Sales 
 export const getUpcomingFlashSalesService = async () => {
