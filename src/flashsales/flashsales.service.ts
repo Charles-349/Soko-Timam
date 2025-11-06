@@ -208,7 +208,7 @@ export const getFlashSaleWithProductService = async (id: number) => {
 // };
 
 export const updateFlashSaleStatusesService = async () => {
-  const now = new Date(); 
+  const nowSQL = sql`NOW()`; 
 
   // Activate flash sales that should now be active
   const activated = await db
@@ -217,7 +217,7 @@ export const updateFlashSaleStatusesService = async () => {
     .where(
       and(
         eq(flashSales.flash_sale_status, "upcoming"),
-        lt(flashSales.startTime, now)
+        lt(flashSales.startTime, nowSQL)
       )
     )
     .returning({ id: flashSales.id });
@@ -229,21 +229,27 @@ export const updateFlashSaleStatusesService = async () => {
     .where(
       and(
         eq(flashSales.flash_sale_status, "active"),
-        lt(flashSales.endTime, now)
+        lt(flashSales.endTime, nowSQL)
       )
     )
     .returning({ id: flashSales.id });
 
-  // Delete flash sales that have ended (cleanup)
+  // Delete flash sales that have ended
   const deleted = await db
     .delete(flashSales)
-    .where(eq(flashSales.flash_sale_status, "ended"))
+    .where(
+      and(
+        eq(flashSales.flash_sale_status, "ended"),
+        lt(flashSales.endTime, nowSQL)
+      )
+    )
     .returning({ productId: flashSales.productId });
 
   console.log(
     `Flash sale cleanup complete. Activated: ${activated.length}, Ended: ${ended.length}, Deleted: ${deleted.length}`
   );
 };
+
 
 
 
