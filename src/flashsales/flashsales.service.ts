@@ -244,6 +244,13 @@ export const updateFlashSaleStatusesService = async () => {
       )
     )
     .returning({ productId: flashSales.productId });
+    for (const sale of deleted) {
+  await db
+    .update(products)
+    .set({ onFlashSale: false })
+    .where(eq(products.id, sale.productId));
+}
+
 
   console.log(
     `Flash sale cleanup complete. Activated: ${activated.length}, Ended: ${ended.length}, Deleted: ${deleted.length}`
