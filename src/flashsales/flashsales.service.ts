@@ -237,7 +237,8 @@ export const updateFlashSaleStatusesService = async () => {
   //Delete flash sales whose endTime has passed (regardless of status)
   const deleted = await db
     .delete(flashSales)
-    .where(lt(flashSales.endTime, sql`NOW()`))
+    // .where(lt(flashSales.endTime, sql`NOW()`))
+    .where(sql`NOW() - ${flashSales.endTime} > interval '0 second'`)
     .returning({ productId: flashSales.productId });
 
   // Restore products from flash sale
