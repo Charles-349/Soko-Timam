@@ -91,7 +91,15 @@ export const handleMpesaCallback = async (orderId: number, callbackBody: any) =>
         transactionRef: resultDesc,
       })
       .where(eq(payments.orderId, orderId));
-       await db.delete(carts).where(eq(carts.userId, order.userId)); // delete user's cart
+
+      await db
+      .update(orders)
+      .set({
+        status: "cancelled",
+        paymentStatus: "failed",
+        updatedAt: new Date(),
+      })
+      .where(eq(orders.id, orderId));
        console.log(`Payment for Order ${orderId} failed: ${resultDesc}`);
        return;
   }
@@ -127,6 +135,19 @@ export const handleMpesaCallback = async (orderId: number, callbackBody: any) =>
     .where(eq(orders.id, orderId));
      //Delete user's unpaid cart (after successful payment)
      await db.delete(carts).where(eq(carts.userId, order.userId));
+
+       //Create shipping record (full details)
+  // await db.insert(shipping).values({
+  //   orderId: order.id,
+  //   courier: "Pending Assignment", 
+  //   trackingNumber: null,
+  //   status: "preparing",
+  //   recipientName: order.recipientName,     
+  //   recipientPhone: order.recipientPhone,   
+  //   address: order.address,                 
+  //   estimatedDelivery: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // +3 days estimate
+  //   createdAt: new Date(),
+  // });
      console.log(`Payment success: Order ${orderId} marked as paid`);
    
 };
