@@ -7,6 +7,7 @@ import {
   markOrderAsPaidService,
   getOrdersByUserIdService,
   getOrdersBySellerIdService,
+  markOrderAsShippedService,
 } from "./order.service";
 
 //Create or Update Order
@@ -177,5 +178,22 @@ export const getOrdersBySellerIdController = async (
     return res.status(500).json({
       message: error.message || "Failed to retrieve seller orders",
     });
+  }
+};
+
+export const markOrderAsShippedController = async (req: Request, res: Response) => {
+  try {
+    const orderId = Number(req.params.id);
+
+    if (isNaN(orderId)) {
+      return res.status(400).json({ message: "Invalid order ID" });
+    }
+
+    const result = await markOrderAsShippedService(orderId);
+
+    return res.status(200).json(result);
+  } catch (error: any) {
+    console.error("Error marking order as shipped:", error.message || error);
+    return res.status(500).json({ message: error.message || "Something went wrong" });
   }
 };

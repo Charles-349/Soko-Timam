@@ -6,7 +6,7 @@ export const RoleEnum = pgEnum("role", ["admin", "seller", "customer"]);
 export const ShopStatusEnum = pgEnum("status", ["pending", "active", "suspended"]);
 export const OrderStatusEnum = pgEnum("order_status", ["pending", "paid", "shipped", "completed", "cancelled"]);
 export const PaymentStatusEnum = pgEnum("payment_status", ["unpaid", "paid", "failed"]); 
-export const ShippingStatusEnum = pgEnum("shipping_status", ["preparing", "dispatched", "in-transit", "delivered"]); 
+export const ShippingStatusEnum = pgEnum("shipping_status", ["preparing", "dispatched", "delivered"]); 
 export const FlashSalesStatusEnum = pgEnum("flash_sale_status", ["upcoming", "active", "ended"]);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
 
 // USERS

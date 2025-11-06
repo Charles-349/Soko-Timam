@@ -202,66 +202,6 @@ export const getOrdersByUserIdService = async (userId: number) => {
 };
 
 //get orders by seller id
-// export const getOrdersBySellerIdService = async (sellerId: number) => {
-//   // Find all shops owned by the seller
-//   const sellerShops = await db
-//     .select({ id: shops.id, name: shops.name })
-//     .from(shops)
-//     .where(eq(shops.sellerId, sellerId));
-
-//   if (sellerShops.length === 0) {
-//     console.log(" No shops found for this seller");
-//     return [];
-//   }
-
-//   const shopIds = sellerShops.map((shop) => shop.id);
-
-//   // Find all order items belonging to those shops
-//   const sellerOrderItems = await db
-//     .select({
-//       orderId: orderItems.orderId,
-//       orderItemId: orderItems.id,
-//       productId: orderItems.productId,
-//       shopId: orderItems.shopId,
-//       quantity: orderItems.quantity,
-//       price: orderItems.price,
-//     })
-//     .from(orderItems)
-//     .where(inArray(orderItems.shopId, shopIds));
-
-//   if (sellerOrderItems.length === 0) {
-//     console.log(" No order items found for these shops");
-//     return [];
-//   }
-
-//   //Extract unique order IDs
-//   const orderIds = [...new Set(sellerOrderItems.map((item) => item.orderId))];
-
-//   //Fetch all orders related to those items
-//   const sellerOrders = await db
-//     .select({
-//       id: orders.id,
-//       userId: orders.userId,
-//       status: orders.status,
-//       totalAmount: orders.totalAmount,
-//       paymentStatus: orders.paymentStatus,
-//       shippingAddress: orders.shippingAddress,
-//       createdAt: orders.createdAt,
-//       updatedAt: orders.updatedAt,
-//     })
-//     .from(orders)
-//     .where(inArray(orders.id, orderIds));
-
-//   //Combine orders with their order items
-//   const combined = sellerOrders.map((order) => ({
-//     ...order,
-//     items: sellerOrderItems.filter((item) => item.orderId === order.id),
-//   }));
-
-//   return combined;
-// };
-
-
 export const getOrdersBySellerIdService = async (sellerId: number) => {
   // Find all shops owned by the seller
   const sellerShops = await db
@@ -328,12 +268,135 @@ export const getOrdersBySellerIdService = async (sellerId: number) => {
     .from(shipping)
     .where(inArray(shipping.orderId, orderIds));
 
-  //  Combine everything: orders + items + shipping
-  const combined = sellerOrders.map((order) => ({
-    ...order,
-    items: sellerOrderItems.filter((item) => item.orderId === order.id),
-    shipping: shippingDetails.find((ship) => ship.orderId === order.id) || null,
-  }));
+  // Combine everything: orders + items + shipping
+  const combined = sellerOrders.map((order) => {
+    // Ensure shipping status is updated if order.status is shipped
+    const shippingRecord = shippingDetails.find((ship) => ship.orderId === order.id);
+
+    // If order is marked as shipped but no shipping record exists, create a temporary one in response
+    const shippingInfo =
+      shippingRecord ||
+      (order.status === "shipped"
+        ? {
+            orderId: order.id,
+            status: "dispatched",
+            address: order.shippingAddress,
+          }
+        : null);
+
+    return {
+      ...order,
+      items: sellerOrderItems.filter((item) => item.orderId === order.id),
+      shipping: shippingInfo,
+    };
+  });
 
   return combined;
+};
+
+
+// export const getOrdersBySellerIdService = async (sellerId: number) => {
+//   // Find all shops owned by the seller
+//   const sellerShops = await db
+//     .select({ id: shops.id, name: shops.name })
+//     .from(shops)
+//     .where(eq(shops.sellerId, sellerId));
+
+//   if (sellerShops.length === 0) {
+//     console.log("No shops found for this seller");
+//     return [];
+//   }
+
+//   const shopIds = sellerShops.map((shop) => shop.id);
+
+//   // Find all order items belonging to those shops
+//   const sellerOrderItems = await db
+//     .select({
+//       orderId: orderItems.orderId,
+//       orderItemId: orderItems.id,
+//       productId: orderItems.productId,
+//       shopId: orderItems.shopId,
+//       quantity: orderItems.quantity,
+//       price: orderItems.price,
+//     })
+//     .from(orderItems)
+//     .where(inArray(orderItems.shopId, shopIds));
+
+//   if (sellerOrderItems.length === 0) {
+//     console.log("No order items found for these shops");
+//     return [];
+//   }
+
+//   // Extract unique order IDs
+//   const orderIds = [...new Set(sellerOrderItems.map((item) => item.orderId))];
+
+//   //Fetch all orders related to those order IDs
+//   const sellerOrders = await db
+//     .select({
+//       id: orders.id,
+//       userId: orders.userId,
+//       status: orders.status,
+//       totalAmount: orders.totalAmount,
+//       paymentStatus: orders.paymentStatus,
+//       shippingAddress: orders.shippingAddress,
+//       createdAt: orders.createdAt,
+//       updatedAt: orders.updatedAt,
+//     })
+//     .from(orders)
+//     .where(inArray(orders.id, orderIds));
+
+//   // Fetch shipping details for those orders
+//   const shippingDetails = await db
+//     .select({
+//       id: shipping.id,
+//       orderId: shipping.orderId,
+//       courier: shipping.courier,
+//       trackingNumber: shipping.trackingNumber,
+//       status: shipping.status,
+//       recipientName: shipping.recipientName,
+//       recipientPhone: shipping.recipientPhone,
+//       address: shipping.address,
+//       estimatedDelivery: shipping.estimatedDelivery,
+//     })
+//     .from(shipping)
+//     .where(inArray(shipping.orderId, orderIds));
+
+//   //  Combine everything: orders + items + shipping
+//   const combined = sellerOrders.map((order) => ({
+//     ...order,
+//     items: sellerOrderItems.filter((item) => item.orderId === order.id),
+//     shipping: shippingDetails.find((ship) => ship.orderId === order.id) || null,
+//   }));
+
+//   return combined;
+// };
+
+export const markOrderAsShippedService = async (orderId: number) => {
+  // Fetch the order
+  const order = await db.query.orders.findFirst({
+    where: eq(orders.id, orderId),
+  });
+
+  if (!order) throw new Error("Order not found");
+
+  // Update order status to shipped
+  await db.update(orders).set({ status: "shipped", updatedAt: new Date() }).where(eq(orders.id, orderId));
+
+  // Update shipping record if it exists
+  const shippingRecord = await db.query.shipping.findFirst({
+    where: eq(shipping.orderId, orderId),
+  });
+
+  if (shippingRecord) {
+    await db.update(shipping).set({ status: "dispatched" }).where(eq(shipping.id, shippingRecord.id));
+  } else {
+    //create a shipping record if none exists
+    await db.insert(shipping).values({
+      orderId,
+      status: "dispatched",
+      address: order.shippingAddress,
+    });
+  }
+
+  return { message: "Order marked as shipped", orderId };
 };

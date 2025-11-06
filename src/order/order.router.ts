@@ -7,6 +7,7 @@ import {
   markOrderPaidController,
   getOrdersByUserIdController,
   getOrdersBySellerIdController,
+  markOrderAsShippedController,
 } from "./order.controller";
 import { adminRoleAuth, customerRoleAuth } from "../middleware/bearAuth";
 
@@ -69,6 +70,15 @@ const order = (app: Express) => {
     app.route("/order/seller/:sellerId").get(async (req, res, next) => {
     try {
       await getOrdersBySellerIdController(req, res);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+   //Mark Order as Shipped 
+  app.route("/order/:id/ship").put(async (req, res, next) => {
+    try {
+      await markOrderAsShippedController(req, res);
     } catch (error) {
       next(error);
     }
