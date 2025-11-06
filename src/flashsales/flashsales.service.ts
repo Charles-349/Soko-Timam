@@ -221,7 +221,7 @@ export const updateFlashSaleStatusesService = async () => {
       )
     );
 
-  //End sales that have expired
+  // Mark as ended flash sales that have expired
   await db
     .update(flashSales)
     .set({ flash_sale_status: "ended" })
@@ -232,19 +232,18 @@ export const updateFlashSaleStatusesService = async () => {
       )
     );
 
-  //Delete expired sales (no need to filter by status)
+  // Delete flash sales that have ended (expired)
   const endedSales = await db
     .delete(flashSales)
-    .where(lt(flashSales.endTime, nowSQL))
+    .where(
+      and(
+        eq(flashSales.flash_sale_status, "ended"),
+        lt(flashSales.endTime, nowSQL)
+      )
+    )
     .returning({ productId: flashSales.productId });
 
-  // Restore products to normal listing
-  for (const sale of endedSales) {
-    await db
-      .update(products)
-      .set({ onFlashSale: false })
-      .where(eq(products.id, sale.productId));
-  }
+  console.log(`Flash sale cleanup complete. Deleted: ${endedSales.length}`);
 };
 
 //Get Upcoming Flash Sales 
