@@ -1,6 +1,6 @@
 import db from "../Drizzle/db"; 
 import { eq, and, inArray } from "drizzle-orm";
-import { orders, orderItems, products, payments, shops } from "../Drizzle/schema";
+import { orders, orderItems, products, payments, shops, shipping } from "../Drizzle/schema";
 import type { TIOrder, TIOrderItem } from "../Drizzle/schema";
 
 //Helper: Calculate total order amount
@@ -202,6 +202,66 @@ export const getOrdersByUserIdService = async (userId: number) => {
 };
 
 //get orders by seller id
+// export const getOrdersBySellerIdService = async (sellerId: number) => {
+//   // Find all shops owned by the seller
+//   const sellerShops = await db
+//     .select({ id: shops.id, name: shops.name })
+//     .from(shops)
+//     .where(eq(shops.sellerId, sellerId));
+
+//   if (sellerShops.length === 0) {
+//     console.log(" No shops found for this seller");
+//     return [];
+//   }
+
+//   const shopIds = sellerShops.map((shop) => shop.id);
+
+//   // Find all order items belonging to those shops
+//   const sellerOrderItems = await db
+//     .select({
+//       orderId: orderItems.orderId,
+//       orderItemId: orderItems.id,
+//       productId: orderItems.productId,
+//       shopId: orderItems.shopId,
+//       quantity: orderItems.quantity,
+//       price: orderItems.price,
+//     })
+//     .from(orderItems)
+//     .where(inArray(orderItems.shopId, shopIds));
+
+//   if (sellerOrderItems.length === 0) {
+//     console.log(" No order items found for these shops");
+//     return [];
+//   }
+
+//   //Extract unique order IDs
+//   const orderIds = [...new Set(sellerOrderItems.map((item) => item.orderId))];
+
+//   //Fetch all orders related to those items
+//   const sellerOrders = await db
+//     .select({
+//       id: orders.id,
+//       userId: orders.userId,
+//       status: orders.status,
+//       totalAmount: orders.totalAmount,
+//       paymentStatus: orders.paymentStatus,
+//       shippingAddress: orders.shippingAddress,
+//       createdAt: orders.createdAt,
+//       updatedAt: orders.updatedAt,
+//     })
+//     .from(orders)
+//     .where(inArray(orders.id, orderIds));
+
+//   //Combine orders with their order items
+//   const combined = sellerOrders.map((order) => ({
+//     ...order,
+//     items: sellerOrderItems.filter((item) => item.orderId === order.id),
+//   }));
+
+//   return combined;
+// };
+
+
 export const getOrdersBySellerIdService = async (sellerId: number) => {
   // Find all shops owned by the seller
   const sellerShops = await db
@@ -210,7 +270,7 @@ export const getOrdersBySellerIdService = async (sellerId: number) => {
     .where(eq(shops.sellerId, sellerId));
 
   if (sellerShops.length === 0) {
-    console.log(" No shops found for this seller");
+    console.log("No shops found for this seller");
     return [];
   }
 
@@ -230,14 +290,14 @@ export const getOrdersBySellerIdService = async (sellerId: number) => {
     .where(inArray(orderItems.shopId, shopIds));
 
   if (sellerOrderItems.length === 0) {
-    console.log(" No order items found for these shops");
+    console.log("No order items found for these shops");
     return [];
   }
 
-  //Extract unique order IDs
+  // Extract unique order IDs
   const orderIds = [...new Set(sellerOrderItems.map((item) => item.orderId))];
 
-  //Fetch all orders related to those items
+  //Fetch all orders related to those order IDs
   const sellerOrders = await db
     .select({
       id: orders.id,
@@ -252,10 +312,27 @@ export const getOrdersBySellerIdService = async (sellerId: number) => {
     .from(orders)
     .where(inArray(orders.id, orderIds));
 
-  //Combine orders with their order items
+  // Fetch shipping details for those orders
+  const shippingDetails = await db
+    .select({
+      id: shipping.id,
+      orderId: shipping.orderId,
+      courier: shipping.courier,
+      trackingNumber: shipping.trackingNumber,
+      status: shipping.status,
+      recipientName: shipping.recipientName,
+      recipientPhone: shipping.recipientPhone,
+      address: shipping.address,
+      estimatedDelivery: shipping.estimatedDelivery,
+    })
+    .from(shipping)
+    .where(inArray(shipping.orderId, orderIds));
+
+  //  Combine everything: orders + items + shipping
   const combined = sellerOrders.map((order) => ({
     ...order,
     items: sellerOrderItems.filter((item) => item.orderId === order.id),
+    shipping: shippingDetails.find((ship) => ship.orderId === order.id) || null,
   }));
 
   return combined;
