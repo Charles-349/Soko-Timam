@@ -207,136 +207,40 @@ export const getFlashSaleWithProductService = async (id: number) => {
 //   }
 // };
 
-// export const updateFlashSaleStatusesService = async () => {
-//   const nowSQL = sql`NOW()`; 
-
-//   // Activate flash sales that should now be active
-//   const activated = await db
-//     .update(flashSales)
-//     .set({ flash_sale_status: "active" })
-//     .where(
-//       and(
-//         eq(flashSales.flash_sale_status, "upcoming"),
-//         lt(flashSales.startTime, nowSQL)
-//       )
-//     )
-//     .returning({ id: flashSales.id });
-
-//   // Mark as ended flash sales that have expired
-//   const ended = await db
-//     .update(flashSales)
-//     .set({ flash_sale_status: "ended" })
-//     .where(
-//       and(
-//         eq(flashSales.flash_sale_status, "active"),
-//         lt(flashSales.endTime, nowSQL)
-//       )
-//     )
-//     .returning({ id: flashSales.id });
-
-//   // Delete flash sales that have ended
-//   const deleted = await db
-//     .delete(flashSales)
-//     .where(
-//       and(
-//         eq(flashSales.flash_sale_status, "ended"),
-//         lt(flashSales.endTime, nowSQL)
-//       )
-//     )
-//     .returning({ productId: flashSales.productId });
-//     for (const sale of deleted) {
-//   await db
-//     .update(products)
-//     .set({ onFlashSale: false })
-//     .where(eq(products.id, sale.productId));
-// }
 
 //update flashsale statuses and delete ended sales
-// export const updateFlashSaleStatusesService = async () => {
-//   const nowSQL = sql`NOW()`;
-
-//   // Activate flash sales that should now be active
-//   const activated = await db
-//     .update(flashSales)
-//     .set({ flash_sale_status: "active" })
-//     .where(
-//       and(
-//         eq(flashSales.flash_sale_status, "upcoming"),
-//         lt(flashSales.startTime, nowSQL)
-//       )
-//     )
-//     .returning({ id: flashSales.id });
-
-//   // Mark as ended flash sales that have expired
-//   const ended = await db
-//     .update(flashSales)
-//     .set({ flash_sale_status: "ended" })
-//     .where(
-//       and(
-//         eq(flashSales.flash_sale_status, "active"),
-//         lt(flashSales.endTime, nowSQL)
-//       )
-//     )
-//     .returning({ id: flashSales.id });
-
-//   // Delete flash sales that have ended
-//   const deleted = await db
-//     .delete(flashSales)
-//     .where(
-//       and(
-//         eq(flashSales.flash_sale_status, "ended"),
-//         lt(flashSales.endTime, nowSQL)
-//       )
-//     )
-//     .returning({ productId: flashSales.productId });
-
-//   // Restore products to normal listing
-//   for (const sale of deleted) {
-//     await db
-//       .update(products)
-//       .set({ onFlashSale: false })
-//       .where(eq(products.id, sale.productId));
-//   }
-
-
-//   console.log(
-//     `Flash sale cleanup complete. Activated: ${activated.length}, Ended: ${ended.length}, Deleted: ${deleted.length}`
-//   );
-// };
 export const updateFlashSaleStatusesService = async () => {
-  const nowSQL = sql`NOW()`; 
-
-  // Activate flash sales
+  //Activate flash sales whose startTime has passed
   const activated = await db
     .update(flashSales)
     .set({ flash_sale_status: "active" })
     .where(
       and(
         eq(flashSales.flash_sale_status, "upcoming"),
-        lt(flashSales.startTime, nowSQL)
+        lt(flashSales.startTime, sql`NOW()`) 
       )
     )
     .returning({ id: flashSales.id });
 
-  // End flash sales
+  //End flash sales whose endTime has passed
   const ended = await db
     .update(flashSales)
     .set({ flash_sale_status: "ended" })
     .where(
       and(
         eq(flashSales.flash_sale_status, "active"),
-        lt(flashSales.endTime, nowSQL)
+        lt(flashSales.endTime, sql`NOW()`) 
       )
     )
     .returning({ id: flashSales.id });
 
-  // Delete ended flash sales (ignore exact endTime)
+  //Delete flash sales whose endTime has passed (regardless of status)
   const deleted = await db
     .delete(flashSales)
-    .where(eq(flashSales.flash_sale_status, "ended"))
+    .where(lt(flashSales.endTime, sql`NOW()`))
     .returning({ productId: flashSales.productId });
 
-  // Restore product visibility
+  // Restore products from flash sale
   for (const sale of deleted) {
     await db
       .update(products)
@@ -345,9 +249,54 @@ export const updateFlashSaleStatusesService = async () => {
   }
 
   console.log(
-    `Flash sale cleanup complete. Activated: ${activated.length}, Ended: ${ended.length}, Deleted: ${deleted.length}`
+    `Flash sale update: Activated=${activated.length}, Ended=${ended.length}, Deleted=${deleted.length}`
   );
 };
+// export const updateFlashSaleStatusesService = async () => {
+//   const nowSQL = sql`NOW()`; 
+
+//   // Activate flash sales
+//   const activated = await db
+//     .update(flashSales)
+//     .set({ flash_sale_status: "active" })
+//     .where(
+//       and(
+//         eq(flashSales.flash_sale_status, "upcoming"),
+//         lt(flashSales.startTime, nowSQL)
+//       )
+//     )
+//     .returning({ id: flashSales.id });
+
+//   // End flash sales
+//   const ended = await db
+//     .update(flashSales)
+//     .set({ flash_sale_status: "ended" })
+//     .where(
+//       and(
+//         eq(flashSales.flash_sale_status, "active"),
+//         lt(flashSales.endTime, nowSQL)
+//       )
+//     )
+//     .returning({ id: flashSales.id });
+
+//   // Delete ended flash sales (ignore exact endTime)
+//   const deleted = await db
+//     .delete(flashSales)
+//     .where(eq(flashSales.flash_sale_status, "ended"))
+//     .returning({ productId: flashSales.productId });
+
+//   // Restore product visibility
+//   for (const sale of deleted) {
+//     await db
+//       .update(products)
+//       .set({ onFlashSale: false })
+//       .where(eq(products.id, sale.productId));
+//   }
+
+//   console.log(
+//     `Flash sale cleanup complete. Activated: ${activated.length}, Ended: ${ended.length}, Deleted: ${deleted.length}`
+//   );
+// };
 
 
 
