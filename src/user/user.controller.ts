@@ -75,6 +75,13 @@ export const userLoginController = async (req: Request, res: Response) => {
 
     if (!userExist)
       return res.status(404).json({ message: "User not found" });
+       // Handle Google or passwordless accounts
+    if (!userExist.password || userExist.password === "google_oauth") {
+      return res.status(400).json({
+        message:
+          "This account was created with Google. Please log in using Google.",
+      });
+    }
 
     const isMatch = await bcrypt.compare(password, userExist.password);
     if (!isMatch) return res.status(401).json({ message: "Invalid credentials" });
