@@ -81,7 +81,7 @@ import cors from 'cors';
 import cron from 'node-cron';
 import { initSocket } from './socket'; 
 import { updateFlashSaleStatuses } from './utils/flashsale.schedular'; 
-
+import googleRouter from './auth/google.router';
 import user from './user/user.router';
 import product from './product/product.router';
 import shop from './shop/shop.router';
@@ -119,6 +119,7 @@ app.use(
 app.use(express.json());
  
 // Routes
+app.use("/api/auth", googleRouter);
 user(app);
 product(app);
 shop(app);
