@@ -62,7 +62,7 @@ export const getCartByIdService = async (id: number) => {
   return await db.query.carts.findFirst({ where: eq(carts.id, id) });
 };
 
-//Update Cart (e.g., mark as paid)
+//Update Cart 
 export const updateCartService = async (id: number, cart: Partial<TICart>) => {
   const updatedCart = await db.update(carts).set(cart).where(eq(carts.id, id)).returning();
   if (updatedCart.length === 0) return null;
@@ -134,7 +134,7 @@ export const getCartWithItemsByUserService = async (userId: number) => {
               images: true, 
             },
           },
-        },
+        },        
       },
     },
   });

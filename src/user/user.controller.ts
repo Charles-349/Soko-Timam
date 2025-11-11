@@ -23,19 +23,70 @@ import {
 } from "./user.service";
 import { sendEmail } from "../mailer/mailer";
 // Create user
+// export const createUserController = async (req: Request, res: Response) => {
+//   try {
+//     const user = req.body;
+
+//     // Validate password
+//     if (!user.password || user.password.length < 6) {
+//       return res
+//         .status(400)
+//         .json({ message: "Password must be at least 6 characters long" });
+//     }
+
+//     // Hash password
+//     user.password = await bcrypt.hash(user.password, 10);
+
+//     // Create user
+//     await createUserService(user);
+
+//     // Retrieve created user
+//     const [createdUser] = await db
+//       .select()
+//       .from(users)
+//       .where(eq(users.email, user.email))
+//       .execute();
+
+//     if (!createdUser) {
+//       return res.status(500).json({ message: "User was not created properly." });
+//     }
+
+//     return res.status(201).json({
+//       message: "User created successfully.",
+//       user: {
+//         id: createdUser.id,
+//         firstname: createdUser.firstname,
+//         lastname: createdUser.lastname,
+//         email: createdUser.email,
+//         role: createdUser.role,
+//       },
+//     });
+//   } catch (error: any) {
+//     console.error("Error creating user:", error);
+//     return res.status(500).json({ message: error.message });
+//   }
+// };
+
+
+// Create user (updated)
 export const createUserController = async (req: Request, res: Response) => {
   try {
     const user = req.body;
 
-    // Validate password
-    if (!user.password || user.password.length < 6) {
-      return res
-        .status(400)
-        .json({ message: "Password must be at least 6 characters long" });
-    }
+    // If it's a normal registration, validate password
+    if (!user.isGoogleUser) {
+      if (!user.password || user.password.length < 6) {
+        return res
+          .status(400)
+          .json({ message: "Password must be at least 6 characters long" });
+      }
 
-    // Hash password
-    user.password = await bcrypt.hash(user.password, 10);
+      // Hash password
+      user.password = await bcrypt.hash(user.password, 10);
+    } else {
+      // If it's from Google, mark password as 'google_oauth'
+      user.password = "google_oauth";
+    }
 
     // Create user
     await createUserService(user);
@@ -66,6 +117,7 @@ export const createUserController = async (req: Request, res: Response) => {
     return res.status(500).json({ message: error.message });
   }
 };
+
 
 // Login
 export const userLoginController = async (req: Request, res: Response) => {
