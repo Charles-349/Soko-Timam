@@ -68,30 +68,58 @@ import { sendEmail } from "../mailer/mailer";
 // };
 
 
-// Create user (updated)
+// Create user 
 export const createUserController = async (req: Request, res: Response) => {
   try {
     const user = req.body;
 
-    // If it's a normal registration, validate password
+    // Check if the user already exists
+    const [existingUser] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, user.email))
+      .execute();
+
+    //If user exists
+    if (existingUser) {
+      //If it's a Google user, log them in
+      if (user.isGoogleUser) {
+        return res.status(200).json({
+          message: "Logged in successfully via Google.",
+          user: {
+            id: existingUser.id,
+            firstname: existingUser.firstname,
+            lastname: existingUser.lastname,
+            email: existingUser.email,
+            role: existingUser.role,
+          },
+        });
+      }
+
+      //If not Google user, block registration
+      return res
+        .status(400)
+        .json({ message: "User with this email already exists." });
+    }
+
+    //Handle password
     if (!user.isGoogleUser) {
       if (!user.password || user.password.length < 6) {
         return res
           .status(400)
-          .json({ message: "Password must be at least 6 characters long" });
+          .json({ message: "Password must be at least 6 characters long." });
       }
 
-      // Hash password
       user.password = await bcrypt.hash(user.password, 10);
     } else {
-      // If it's from Google, mark password as 'google_oauth'
+      // For Google users, mark password as special
       user.password = "google_oauth";
     }
 
-    // Create user
+    //Create user
     await createUserService(user);
 
-    // Retrieve created user
+    // Retrieve newly created user
     const [createdUser] = await db
       .select()
       .from(users)
@@ -99,7 +127,9 @@ export const createUserController = async (req: Request, res: Response) => {
       .execute();
 
     if (!createdUser) {
-      return res.status(500).json({ message: "User was not created properly." });
+      return res
+        .status(500)
+        .json({ message: "User was not created properly." });
     }
 
     return res.status(201).json({
