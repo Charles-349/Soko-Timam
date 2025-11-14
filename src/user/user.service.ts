@@ -148,7 +148,8 @@ export const forgotPasswordService = async (email: string) => {
   });
 
   //Create frontend reset link
-  const resetLink = `https://yourfrontend.com/reset-password?token=${resetToken}`;
+  // const resetLink = `https://yourfrontend.com/reset-password?token=${resetToken}`;
+    const resetLink = `https://soko-timam.vercel.app/resetPassword?token=${resetToken}`;
 
   //Prepare email content
   const subject = "🔑 Reset your Soko Timam password";
