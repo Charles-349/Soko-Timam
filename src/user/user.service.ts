@@ -31,7 +31,8 @@ export const userLoginService = async (email: string) => {
       phone: true,
       role: true,
     },
-    where: sql`${users.email} = ${email}`,
+   where: eq(users.email, email),
+
   });
 };
 
