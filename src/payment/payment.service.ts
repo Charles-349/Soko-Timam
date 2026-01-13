@@ -537,6 +537,7 @@ export const getB2CAccessToken = async () => {
       headers: {
         Authorization: `Basic ${auth}`,
       },
+      //sandboxapi
     }
   );
 
