@@ -434,9 +434,9 @@ export const paySellerViaMpesa = async (phone: string, amount: number) => {
   const token = await getB2CAccessToken();
   if (!token) throw new Error("Missing MPESA_B2C_TOKEN");
 
-  const originatorConversationID = randomUUID().replace(/-/g, "").slice(0, 32);
+  // const originatorConversationID = randomUUID().replace(/-/g, "").slice(0, 32);
   const payload = {
-    OriginatorConversationID: originatorConversationID,
+    OriginatorConversationID: process.env.Originator_Conversation_ID,
     InitiatorName: process.env.MPESA_INITIATOR,
     SecurityCredential: process.env.MPESA_SECURITY_CREDENTIAL,
     CommandID: "BusinessPayment",

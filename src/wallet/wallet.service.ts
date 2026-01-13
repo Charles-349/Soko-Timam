@@ -156,7 +156,7 @@ export const completeWithdrawalService = async (transactionId: number) => {
 
 
 // Auto payout service
-const MIN_PAYOUT_AMOUNT = 1000; 
+const MIN_PAYOUT_AMOUNT = 1; 
 
 
 export const autoPayoutService = async () => {
