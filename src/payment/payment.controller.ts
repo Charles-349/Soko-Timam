@@ -1,6 +1,6 @@
 
-import { Request, Response, RequestHandler } from "express";
-import { initiateStkPush, handleMpesaCallback, getPaymentStatus } from "./payment.service";
+import { Request, Response, RequestHandler, NextFunction } from "express";
+import { initiateStkPush, handleMpesaCallback, getPaymentStatus, handleB2CResultService, handleB2CTimeoutService, paySellerViaMpesa } from "./payment.service";
 import { getIo } from "../socket";
 
 // STK Push Controller
@@ -111,3 +111,45 @@ export const getPaymentStatusController: RequestHandler = async (req, res) => {
     res.status(500).json({ success: false, message: "Failed to get payment status" });
   }
 };
+
+export const handleB2CTimeoutController = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await handleB2CTimeoutService(req.body);
+    res.status(200).json({ message: "Timeout received" });
+  } catch (error: any) {
+    console.error("B2C Timeout Error:", error.message);
+    res.status(500).json({ message: "Error handling B2C timeout" });
+  }
+};
+
+export const handleB2CResultController = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await handleB2CResultService(req.body);
+    res.status(200).json({ message: "Result received" });
+  } catch (error: any) {
+    console.error("B2C Result Error:", error.message);
+    res.status(500).json({ message: "Error handling B2C result" });
+  }
+};
+
+export const paySellerB2CTestController = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { phone, amount } = req.body;
+
+    if (!phone || !amount) {
+      return res.status(400).json({ success: false, message: "Missing phone or amount" });
+    }
+
+    const result = await paySellerViaMpesa(phone, Number(amount));
+
+    res.status(200).json({
+      success: true,
+      message: "B2C payout request sent",
+      data: result,
+    });
+  } catch (error: any) {
+    console.error("B2C Test Controller Error:", error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+

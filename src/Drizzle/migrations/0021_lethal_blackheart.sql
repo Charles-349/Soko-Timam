@@ -1,0 +1,1 @@
+ALTER TABLE "seller_wallet_transactions" ADD COLUMN "updated_at" timestamp DEFAULT now();

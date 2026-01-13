@@ -127,6 +127,34 @@
       "when": 1762523366795,
       "tag": "0017_legal_starfox",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1763643227657,
+      "tag": "0018_lush_magma",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1763643589642,
+      "tag": "0019_magical_black_bolt",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1763646827739,
+      "tag": "0020_happy_thaddeus_ross",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1768286916629,
+      "tag": "0021_lethal_blackheart",
+      "breakpoints": true
     }
   ]
 }

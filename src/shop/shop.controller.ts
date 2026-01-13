@@ -14,7 +14,7 @@ import {
 } from "../shop/shop.service";
 import { ICreateShopInput } from "../shop/shop.service";
 import db from "../Drizzle/db";
-import { notifications, sellers, shops } from "../Drizzle/schema";
+import { notifications, sellers, shops, users } from "../Drizzle/schema";
 import { eq } from "drizzle-orm";
 import { sendEmail } from "../mailer/mailer";
 //CREATE SHOP
@@ -125,9 +125,9 @@ export const updateShopController = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Shop not found" });
     }
 
-    // Send notification and email if status changed
+    // Only react to status changes
     if (req.body.status === "active" || req.body.status === "suspended") {
-      // Find the seller
+      // Get seller
       const [seller] = await db
         .select()
         .from(sellers)
@@ -135,15 +135,26 @@ export const updateShopController = async (req: Request, res: Response) => {
 
       if (seller) {
         const isActivated = req.body.status === "active";
+
+        //AUTO UPDATE USER ROLE
+        await db
+          .update(users)
+          .set({
+            role: isActivated ? "seller" : "customer",
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, seller.userId));
+
+        // Notifications & Email
         const subject = isActivated
           ? `Your shop "${updatedShop.name}" is now active 🎉`
           : `Your shop "${updatedShop.name}" has been suspended ⚠️`;
 
         const message = isActivated
-          ? `🎉 Great news! Your shop "${updatedShop.name}" has been approved and activated on Soko Timam. Customers can now view and buy your products.`
-          : `⚠️ Your shop "${updatedShop.name}" has been suspended. Please contact support if you believe this was a mistake.`;
+          ? `🎉 Great news! Your shop "${updatedShop.name}" has been approved and activated. You can now sell products on Soko Timam.`
+          : `⚠️ Your shop "${updatedShop.name}" has been suspended. Your account has been reverted to a customer account. Please contact support if this was a mistake.`;
 
-        // Create DB notification
+        // Create notification
         await db.insert(notifications).values({
           userId: seller.userId,
           message,
@@ -151,7 +162,7 @@ export const updateShopController = async (req: Request, res: Response) => {
           isRead: false,
         });
 
-        // Send Email
+        // Send email
         await sendEmail(
           "wamahiucharles123@gmail.com",
           subject,

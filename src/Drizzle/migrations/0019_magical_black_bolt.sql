@@ -1,0 +1,1 @@
+ALTER TABLE "seller_wallet_transactions" DROP COLUMN "status";

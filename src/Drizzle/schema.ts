@@ -7,7 +7,8 @@ export const ShopStatusEnum = pgEnum("status", ["pending", "active", "suspended"
 export const OrderStatusEnum = pgEnum("order_status", ["pending", "paid", "shipped", "completed", "cancelled"]);
 export const PaymentStatusEnum = pgEnum("payment_status", ["unpaid", "paid", "failed"]); 
 export const ShippingStatusEnum = pgEnum("shipping_status", ["preparing", "dispatched", "delivered"]); 
-export const FlashSalesStatusEnum = pgEnum("flash_sale_status", ["upcoming", "active", "ended"]);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
+export const FlashSalesStatusEnum = pgEnum("flash_sale_status", ["upcoming", "active", "ended"]);  
+export const WalletStatusEnum = pgEnum("wallet_status", ["pending", "completed", "failed"]);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
 
 // USERS
 export const users = pgTable("users", {
@@ -74,6 +75,41 @@ export const bankAccounts = pgTable("bank_accounts", {
   branchCode: varchar("branch_code", { length: 20 }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// SELLER WALLETS & WALLET TRANSACTIONS
+export const sellerWallets = pgTable("seller_wallets", {
+  id: serial("id").primaryKey(),
+  sellerId: integer("seller_id").references(() => sellers.id, { onDelete: "cascade" }).notNull(),
+  balance: decimal("balance", { precision: 14, scale: 2 }).notNull().default("0"),
+  totalEarned: decimal("total_earned", { precision: 14, scale: 2 }).notNull().default("0"),
+  pendingWithdrawal: decimal("pending_withdrawal", { precision: 14, scale: 2 }).notNull().default("0"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const sellerWalletTransactions = pgTable("seller_wallet_transactions", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id").references(() => orders.id),
+  productId: integer("product_id").references(() => products.id),
+  amount: decimal("amount", { precision: 14, scale: 2 }).notNull(),
+  // "credit" | "debit" | "withdrawal" | "commission_refund" | 
+  type: varchar("type", { length: 50 }).notNull(),
+  note: text("note"),
+  walletStatus: WalletStatusEnum("wallet_status").default("completed"), // pending, completed, failed
+  sellerId: integer("seller_id").references(() => sellers.id, { onDelete: "cascade" }).notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// PLATFORM COMMISSIONS
+export const platformCommissions = pgTable("platform_commissions", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id").references(() => orders.id).notNull(),
+  shopId: integer("shop_id").references(() => shops.id).notNull(),
+  sellerId: integer("seller_id").references(() => sellers.id).notNull(),
+  commission: decimal("commission", { precision: 10, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 //CATEGORIES 
@@ -415,6 +451,28 @@ export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
   }),
 }));
 
+export const sellersRelations = relations(sellers, ({ one, many }) => ({
+  user: one(users, {
+    fields: [sellers.userId],
+    references: [users.id],
+  }),
+  shops: many(shops),
+  bankAccounts: many(bankAccounts),
+  wallet: one(sellerWallets, {
+    fields: [sellers.id],
+    references: [sellerWallets.sellerId],
+    relationName: "sellerWallet",
+  }),
+  walletTransactions: many(sellerWalletTransactions),
+}));
+
+export const platformCommissionsRelations = relations(platformCommissions, ({ one }) => ({
+  order: one(orders, { fields: [platformCommissions.orderId], references: [orders.id] }),
+  shop: one(shops, { fields: [platformCommissions.shopId], references: [shops.id] }),
+  seller: one(sellers, { fields: [platformCommissions.sellerId], references: [sellers.id] }),
+}));
+
+
 
 // TYPE INFERENCE 
 export type TIUser = typeof users.$inferInsert;
@@ -471,3 +529,13 @@ export type TSNotification = typeof notifications.$inferSelect;
 
 export type TIAuditLog = typeof auditLogs.$inferInsert;
 export type TSAuditLog = typeof auditLogs.$inferSelect;
+
+export type TISellerWallet = typeof sellerWallets.$inferInsert;
+export type TSSellerWallet = typeof sellerWallets.$inferSelect;
+
+export type TISellerWalletTx = typeof sellerWalletTransactions.$inferInsert;
+export type TSSellerWalletTx = typeof sellerWalletTransactions.$inferSelect;
+
+export type TIPlatformCommission = typeof platformCommissions.$inferInsert;
+export type TSPlatformCommission = typeof platformCommissions.$inferSelect;
+

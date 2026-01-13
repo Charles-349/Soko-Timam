@@ -3,6 +3,9 @@ import {
   stkPushController,
   mpesaCallbackController,
   getPaymentStatusController,
+  handleB2CResultController,
+  handleB2CTimeoutController,
+  paySellerB2CTestController,
 } from "./payment.controller";
 
 const payment = (app: Express) => {
@@ -32,6 +35,30 @@ const payment = (app: Express) => {
       next(error);
     }
   });
+
+  app.route("/payment/b2c/timeout").post(async (req, res, next) => {
+    try {
+      await handleB2CTimeoutController(req, res, next);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+   app.route("/payment/b2c/result").post(async (req, res, next) => {
+    try {
+      await handleB2CResultController(req, res, next);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.route("/payment/b2c/test").post(async (req, res, next) => {
+    try {
+      await paySellerB2CTestController(req, res, next);
+    } catch (error) {
+      next(error);
+    }
+  }); 
 };
 
 export default payment;

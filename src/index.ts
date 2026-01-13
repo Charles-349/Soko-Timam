@@ -20,6 +20,7 @@ import mail from './mail/mail.router';
 import payment from './payment/payment.router';
 import order from './order/order.router';
 import { v2 as cloudinary } from 'cloudinary';
+import sellerWallet from './wallet/wallet.router';
 
 const app = express();
 
@@ -52,6 +53,7 @@ bank(app);
 mail(app);
 payment(app);
 order(app);
+sellerWallet(app);        
 
 // Cloudinary config
 cloudinary.config({
