@@ -127,6 +127,7 @@ export const completeWithdrawalService = async (transactionId: number) => {
     const phone = normalizePhoneNumber(seller.phone);
 
     const mpesaResult = await paySellerViaMpesa(
+      transactionId,
       phone,
       Number(withdrawal.amount)
     );

@@ -430,74 +430,100 @@ export const getPaymentStatus = async (orderId: number) => {
 //   return response.data;
 // };
 
-export const paySellerViaMpesa = async (phone: string, amount: number) => {
+export const paySellerViaMpesa = async (
+  sellerWalletTransactionId: number,
+  phone: string,
+  amount: number
+) => {
   const token = await getB2CAccessToken();
-  if (!token) throw new Error("Missing MPESA_B2C_TOKEN");
+  const normalizedPhone = normalizePhoneNumber(phone);
 
-  // const originatorConversationID = randomUUID().replace(/-/g, "").slice(0, 32);
+  // Use walletTransactionId as the MPESA reference
+  const reference = sellerWalletTransactionId.toString();
+
   const payload = {
-    OriginatorConversationID: process.env.Originator_Conversation_ID,
+    OriginatorConversationID: reference,   
     InitiatorName: process.env.MPESA_INITIATOR,
     SecurityCredential: process.env.MPESA_SECURITY_CREDENTIAL,
     CommandID: "BusinessPayment",
-    Amount: amount,
+    Amount: Math.floor(amount),           
     PartyA: process.env.MPESA_B2C_SHORTCODE,
-    PartyB: phone,
-    Remarks: "Withdrawal payout",
+    PartyB: normalizedPhone,  
+    Remarks: "Seller Withdrawal",
     QueueTimeOutURL: process.env.MPESA_TIMEOUT_URL,
     ResultURL: process.env.MPESA_RESULT_URL,
   };
 
-  try {
-    const response = await axios.post(
-      process.env.MPESA_ENV === "sandbox"
-        ? "https://sandbox.safaricom.co.ke/mpesa/b2c/v3/paymentrequest"
-        : "https://api.safaricom.co.ke/mpesa/b2c/v3/paymentrequest",
-      payload,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-
-    return response.data;
-  }catch (error: any) {
-  console.error("B2C Error Full:", JSON.stringify(error?.response?.data, null, 2));
-  throw new Error(
-    error?.response?.data?.errorMessage ||
-    error?.response?.data?.ResponseDescription ||
-    "B2C request rejected by Safaricom"
+  const response = await axios.post(
+    process.env.MPESA_ENV === "sandbox"
+      ? "https://sandbox.safaricom.co.ke/mpesa/b2c/v3/paymentrequest"
+      : "https://api.safaricom.co.ke/mpesa/b2c/v3/paymentrequest",
+    payload,
+    { headers: { Authorization: `Bearer ${token}` } }
   );
-}
-}
 
-export const handleB2CTimeoutService = async (callbackBody: any) => {
-  console.log("B2C Timeout received:", callbackBody);
-  const transactionId = callbackBody?.TransactionID;
-  if (transactionId) {
-    await db.update(sellerWalletTransactions).set({
-      walletStatus: "failed",
+  // Store reference in wallet row
+  await db
+    .update(sellerWalletTransactions)
+    .set({
+      externalTransactionId: reference,  
+      walletStatus: "processing",
       updatedAt: new Date(),
-    }).where(eq(sellerWalletTransactions.id, transactionId));
-  }
-  return { success: true };
+    })
+    .where(eq(sellerWalletTransactions.id, sellerWalletTransactionId));
+
+  return {
+    mpesa: response.data,
+    externalTransactionId: reference,
+  };
 };
 
+export const handleB2CTimeoutService = async (callbackBody: any) => {
+  console.log("B2C Timeout:", callbackBody);
+
+  const ref = callbackBody?.OriginatorConversationID;
+  if (!ref) return;
+
+  await db
+    .update(sellerWalletTransactions)
+    .set({
+      walletStatus: "failed",
+      updatedAt: new Date(),
+    })
+    .where(eq(sellerWalletTransactions.externalTransactionId, ref));
+
+  return { success: true };
+};
 export const handleB2CResultService = async (callbackBody: any) => {
-  console.log("B2C Result received:", callbackBody);
+  console.log("B2C Result:", callbackBody);
 
   const result = callbackBody?.Result;
-  if (!result) throw new Error("Invalid B2C result payload");
+  if (!result) throw new Error("Invalid B2C payload");
 
-  const phone = result?.ReceiverPartyPublicName || result?.PartyB;
-  const amount = Number(result?.TransactionAmount || 0);
-  const transactionId = result?.TransactionID;
+  const ref = result.OriginatorConversationID;
+  if (!ref) throw new Error("Missing OriginatorConversationID");
 
-  if (transactionId) {
-    await db.update(sellerWalletTransactions).set({
-      walletStatus: result.ResultDesc === "The service request is processed successfully." ? "completed" : "failed",
+  const walletStatus =
+    result.ResultCode === 0 ? "completed" : "failed";
+
+  const updated = await db
+    .update(sellerWalletTransactions)
+    .set({
+      walletStatus,
       updatedAt: new Date(),
-    }).where(eq(sellerWalletTransactions.id, transactionId));
+    })
+    .where(eq(sellerWalletTransactions.externalTransactionId, ref))
+    .returning();
+
+  if (!updated.length) {
+    console.error("B2C CALLBACK: No wallet row found for", ref);
   }
 
-  return { success: true, data: result };
+  return {
+    success: true,
+    transaction: ref,
+    walletStatus,
+  };
 };
 
 export const getB2CAccessToken = async () => {

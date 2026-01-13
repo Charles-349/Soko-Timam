@@ -90,6 +90,7 @@ export const sellerWallets = pgTable("seller_wallets", {
 
 export const sellerWalletTransactions = pgTable("seller_wallet_transactions", {
   id: serial("id").primaryKey(),
+  externalTransactionId: varchar("external_transaction_id", { length: 100 }).unique(),
   orderId: integer("order_id").references(() => orders.id),
   productId: integer("product_id").references(() => products.id),
   amount: decimal("amount", { precision: 14, scale: 2 }).notNull(),

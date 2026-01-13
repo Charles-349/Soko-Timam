@@ -1,0 +1,2 @@
+ALTER TABLE "seller_wallet_transactions" ADD COLUMN "external_transaction_id" varchar(100);--> statement-breakpoint
+ALTER TABLE "seller_wallet_transactions" ADD CONSTRAINT "seller_wallet_transactions_external_transaction_id_unique" UNIQUE("external_transaction_id");

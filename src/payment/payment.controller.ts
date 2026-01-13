@@ -2,6 +2,8 @@
 import { Request, Response, RequestHandler, NextFunction } from "express";
 import { initiateStkPush, handleMpesaCallback, getPaymentStatus, handleB2CResultService, handleB2CTimeoutService, paySellerViaMpesa } from "./payment.service";
 import { getIo } from "../socket";
+import db from "../Drizzle/db";
+import { sellerWalletTransactions } from "../Drizzle/schema";
 
 // STK Push Controller
 export const stkPushController: RequestHandler = async (req, res) => {
@@ -122,34 +124,61 @@ export const handleB2CTimeoutController = async (req: Request, res: Response, ne
   }
 };
 
-export const handleB2CResultController = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    await handleB2CResultService(req.body);
-    res.status(200).json({ message: "Result received" });
-  } catch (error: any) {
-    console.error("B2C Result Error:", error.message);
-    res.status(500).json({ message: "Error handling B2C result" });
-  }
-};
 
-export const paySellerB2CTestController = async (req: Request, res: Response, next: NextFunction) => {
+export const paySellerB2CTestController: RequestHandler = async (req, res) => {
   try {
-    const { phone, amount } = req.body;
+    const { phone, amount, walletTransactionId } = req.body;
 
-    if (!phone || !amount) {
-      return res.status(400).json({ success: false, message: "Missing phone or amount" });
+    if (!phone || !amount || !walletTransactionId) {
+      res.status(400).json({
+        success: false,
+        message: "phone, amount and walletTransactionId are required",
+      });
+      return;
     }
 
-    const result = await paySellerViaMpesa(phone, Number(amount));
+    // Trigger B2C using existing wallet transaction
+    const b2c = await paySellerViaMpesa(
+      Number(walletTransactionId),
+      phone,
+      Number(amount)
+    );
 
     res.status(200).json({
       success: true,
-      message: "B2C payout request sent",
-      data: result,
+      message: "B2C payout initiated",
+      walletTransactionId,
+      externalTransactionId: b2c.externalTransactionId,
+      mpesa: b2c.mpesa,
     });
-  } catch (error: any) {
-    console.error("B2C Test Controller Error:", error.message);
-    res.status(500).json({ success: false, message: error.message });
+  } catch (error) {
+    console.error("B2C Test Controller Error:", (error as Error).message);
+    res.status(500).json({
+      success: false,
+      message: "B2C test failed",
+    });
+  }
+};
+
+export const handleB2CResultController: RequestHandler = async (req, res) => {
+  try {
+    const result = await handleB2CResultService(req.body);
+
+    if (!result.success) {
+      res.status(400).json(result);
+      return;
+    }
+
+    res.status(200).json({
+      message: "B2C result processed",
+      transaction: result.transaction,
+      walletStatus: result.walletStatus,
+    });
+  } catch (error) {
+    console.error("B2C Result Error:", (error as Error).message);
+    res.status(500).json({
+      message: "Error handling B2C result",
+    });
   }
 };
 
