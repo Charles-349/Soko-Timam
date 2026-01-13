@@ -6,6 +6,7 @@ import {
   sellers,
 } from "../Drizzle/schema";
 import { paySellerViaMpesa } from "../payment/payment.service";
+import { normalizePhoneNumber } from "../utils/normalizePhoneNumber";
 
 export const getSellerWalletService = async (sellerId: number) => {
   const wallet = await db.query.sellerWallets.findFirst({
@@ -123,23 +124,22 @@ export const completeWithdrawalService = async (transactionId: number) => {
   if (!seller) throw new Error("Seller not found");
 
   try {
+    const phone = normalizePhoneNumber(seller.phone);
+
     const mpesaResult = await paySellerViaMpesa(
-      seller.phone,
+      phone,
       Number(withdrawal.amount)
     );
 
+    // Mark as processing, not completed
     await db.update(sellerWalletTransactions).set({
-      walletStatus: "completed",
+      walletStatus: "processing",
       updatedAt: new Date(),
     }).where(eq(sellerWalletTransactions.id, transactionId));
 
-    await db.update(sellerWallets).set({
-      pendingWithdrawal: sql`${sellerWallets.pendingWithdrawal} - ${withdrawal.amount}`,
-    }).where(eq(sellerWallets.sellerId, withdrawal.sellerId));
-
     return { success: true, mpesaResult };
   } catch (err) {
-    // refund money
+    // Refund seller
     await db.update(sellerWallets).set({
       balance: sql`${sellerWallets.balance} + ${withdrawal.amount}`,
       pendingWithdrawal: sql`${sellerWallets.pendingWithdrawal} - ${withdrawal.amount}`,
@@ -152,6 +152,7 @@ export const completeWithdrawalService = async (transactionId: number) => {
     throw err;
   }
 };
+
 
 
 // Auto payout service
