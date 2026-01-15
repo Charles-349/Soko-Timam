@@ -188,3 +188,19 @@ export const autoPayoutService = async () => {
     console.error("Auto-payout job failed:", err.message);
   }
 };
+
+//get wallet transactions using wallet id
+export const getWalletTransactionsByWalletIdService = async (walletId: number) => {
+  const wallet = await db.query.sellerWallets.findFirst({
+    where: eq(sellerWallets.id, walletId),
+  });
+
+  if (!wallet) {
+    throw new Error("Wallet not found");
+  }
+
+  return await db.query.sellerWalletTransactions.findMany({
+    where: eq(sellerWalletTransactions.sellerId, wallet.sellerId),
+    orderBy: (tx, { desc }) => [desc(tx.createdAt)],
+  });
+};

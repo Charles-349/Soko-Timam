@@ -6,6 +6,7 @@ import {
   debitSellerWalletController,
   requestWithdrawalController,
   completeWithdrawalController,
+  getWalletTransactionsByWalletIdController,
 } from "./wallet.controller";
 import { Express } from "express";
 
@@ -65,6 +66,18 @@ const sellerWallet = (app: Express) => {
     .post(adminRoleAuth, async (req, res, next) => {
       try {
         await completeWithdrawalController(req, res);
+      } catch (error) {
+        next(error);
+      }
+    });
+
+
+    // Get Wallet Transactions by Wallet ID
+    app
+    .route("/seller-wallet/transactions/:walletId")
+    .get(async (req, res, next) => {
+      try {
+        await getWalletTransactionsByWalletIdController(req, res);
       } catch (error) {
         next(error);
       }

@@ -6,6 +6,7 @@ import {
   debitSellerWalletService,
   requestWithdrawalService,
   completeWithdrawalService,
+  getWalletTransactionsByWalletIdService,
 } from "./wallet.service";
 
 // Get Seller Wallet
@@ -152,6 +153,31 @@ export const completeWithdrawalController = async (
     });
   } catch (error: any) {
     console.error("Complete Withdrawal Error:", error);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+
+//get wallet transactions using wallet id
+export const getWalletTransactionsByWalletIdController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const walletId = parseInt(req.params.walletId);
+
+    if (isNaN(walletId)) {
+      return res.status(400).json({ message: "Invalid wallet ID" });
+    }
+
+    const transactions = await getWalletTransactionsByWalletIdService(walletId);
+
+    return res.status(200).json({
+      message: "Wallet transactions retrieved successfully",
+      transactions,
+    });
+  } catch (error: any) {
+    console.error("Get Wallet Transactions Error:", error);
     return res.status(500).json({ message: error.message });
   }
 };
