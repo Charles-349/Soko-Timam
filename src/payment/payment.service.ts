@@ -430,43 +430,99 @@ export const getPaymentStatus = async (orderId: number) => {
 //   return response.data;
 // };
 
+// export const paySellerViaMpesa = async (
+//   sellerWalletTransactionId: number,
+//   phone: string,
+//   amount: number
+// ) => {
+//   const token = await getB2CAccessToken();
+//   const normalizedPhone = normalizePhoneNumber(phone);
+
+//   // Use walletTransactionId as the MPESA reference
+//   const reference = sellerWalletTransactionId.toString();
+
+//   const payload = {
+//     OriginatorConversationID: reference,   
+//     InitiatorName: process.env.MPESA_INITIATOR,
+//     SecurityCredential: process.env.MPESA_SECURITY_CREDENTIAL,
+//     CommandID: "BusinessPayment",
+//     Amount: Math.floor(amount),           
+//     PartyA: process.env.MPESA_B2C_SHORTCODE,
+//     PartyB: 254708374150,  
+//     Remarks: "Seller Withdrawal",
+//     QueueTimeOutURL: process.env.MPESA_TIMEOUT_URL,
+//     ResultURL: process.env.MPESA_RESULT_URL,
+//   };
+
+//   const response = await axios.post(
+//     process.env.MPESA_ENV === "sandbox"
+//       ? "https://sandbox.safaricom.co.ke/mpesa/b2c/v3/paymentrequest"
+//       : "https://api.safaricom.co.ke/mpesa/b2c/v3/paymentrequest",
+//     payload,
+//     { headers: { Authorization: `Bearer ${token}` } }
+//   );
+
+//   // Store reference in wallet row
+//   await db
+//     .update(sellerWalletTransactions)
+//     .set({
+//       externalTransactionId: reference,  
+//       walletStatus: "processing",
+//       updatedAt: new Date(),
+//     })
+//     .where(eq(sellerWalletTransactions.id, sellerWalletTransactionId));
+
+//   return {
+//     mpesa: response.data,
+//     externalTransactionId: reference,
+//   };
+// };
+
 export const paySellerViaMpesa = async (
   sellerWalletTransactionId: number,
   phone: string,
   amount: number
 ) => {
   const token = await getB2CAccessToken();
-  const normalizedPhone = normalizePhoneNumber(phone);
+
+  // Determine PartyB based on environment
+  const isSandbox = process.env.MPESA_ENV === "sandbox";
+  const partyB = isSandbox
+    ? 254708374150
+    : normalizePhoneNumber(phone);
+
+  // Amount must be at least 10 for sandbox
+  const paymentAmount = Math.max(10, Math.floor(amount));
 
   // Use walletTransactionId as the MPESA reference
   const reference = sellerWalletTransactionId.toString();
 
   const payload = {
-    OriginatorConversationID: reference,   
+    OriginatorConversationID: reference,
     InitiatorName: process.env.MPESA_INITIATOR,
     SecurityCredential: process.env.MPESA_SECURITY_CREDENTIAL,
     CommandID: "BusinessPayment",
-    Amount: Math.floor(amount),           
-    PartyA: process.env.MPESA_B2C_SHORTCODE,
-    PartyB: 254708374150,  
+    Amount: paymentAmount,
+    PartyA: Number(process.env.MPESA_B2C_SHORTCODE),
+    PartyB: partyB,
     Remarks: "Seller Withdrawal",
     QueueTimeOutURL: process.env.MPESA_TIMEOUT_URL,
     ResultURL: process.env.MPESA_RESULT_URL,
   };
 
-  const response = await axios.post(
-    process.env.MPESA_ENV === "sandbox"
-      ? "https://sandbox.safaricom.co.ke/mpesa/b2c/v3/paymentrequest"
-      : "https://api.safaricom.co.ke/mpesa/b2c/v3/paymentrequest",
-    payload,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
+  const endpoint = isSandbox
+    ? "https://sandbox.safaricom.co.ke/mpesa/b2c/v3/paymentrequest"
+    : "https://api.safaricom.co.ke/mpesa/b2c/v3/paymentrequest";
+
+  const response = await axios.post(endpoint, payload, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
 
   // Store reference in wallet row
   await db
     .update(sellerWalletTransactions)
     .set({
-      externalTransactionId: reference,  
+      externalTransactionId: reference,
       walletStatus: "processing",
       updatedAt: new Date(),
     })
@@ -477,6 +533,7 @@ export const paySellerViaMpesa = async (
     externalTransactionId: reference,
   };
 };
+
 
 export const handleB2CTimeoutService = async (callbackBody: any) => {
   console.log("B2C Timeout:", callbackBody);
