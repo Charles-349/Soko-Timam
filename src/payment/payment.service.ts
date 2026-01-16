@@ -448,7 +448,7 @@ export const paySellerViaMpesa = async (
     CommandID: "BusinessPayment",
     Amount: Math.floor(amount),           
     PartyA: process.env.MPESA_B2C_SHORTCODE,
-    PartyB: normalizedPhone,  
+    PartyB: 254708374150,  
     Remarks: "Seller Withdrawal",
     QueueTimeOutURL: process.env.MPESA_TIMEOUT_URL,
     ResultURL: process.env.MPESA_RESULT_URL,
