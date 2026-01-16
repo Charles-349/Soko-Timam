@@ -477,7 +477,6 @@ export const getPaymentStatus = async (orderId: number) => {
 //     externalTransactionId: reference,
 //   };
 // };
-
 export const paySellerViaMpesa = async (
   sellerWalletTransactionId: number,
   phone: string,
@@ -485,16 +484,20 @@ export const paySellerViaMpesa = async (
 ) => {
   const token = await getB2CAccessToken();
 
-  // Determine PartyB based on environment
   const isSandbox = process.env.MPESA_ENV === "sandbox";
+
+  // Sandbox test numbers (must use these)
+  const sandboxTestNumbers = [254708374149, 254708374150, 254708374151];
+
+  // Choose PartyB
   const partyB = isSandbox
-    ? 254708374150
+    ? sandboxTestNumbers[sellerWalletTransactionId % sandboxTestNumbers.length]
     : normalizePhoneNumber(phone);
 
-  // Amount must be at least 10 for sandbox
-  const paymentAmount = Math.max(10, Math.floor(amount));
+  // Amount must be >= 10 in sandbox
+  const paymentAmount = isSandbox ? Math.max(10, Math.floor(amount)) : Math.floor(amount);
 
-  // Use walletTransactionId as the MPESA reference
+  // OriginatorConversationID
   const reference = sellerWalletTransactionId.toString();
 
   const payload = {
@@ -510,15 +513,19 @@ export const paySellerViaMpesa = async (
     ResultURL: process.env.MPESA_RESULT_URL,
   };
 
+  console.log("B2C Payload:", payload);
+
+  // Endpoint
   const endpoint = isSandbox
     ? "https://sandbox.safaricom.co.ke/mpesa/b2c/v3/paymentrequest"
     : "https://api.safaricom.co.ke/mpesa/b2c/v3/paymentrequest";
 
+  // Send request
   const response = await axios.post(endpoint, payload, {
     headers: { Authorization: `Bearer ${token}` },
   });
 
-  // Store reference in wallet row
+  // Update wallet transaction as processing
   await db
     .update(sellerWalletTransactions)
     .set({
