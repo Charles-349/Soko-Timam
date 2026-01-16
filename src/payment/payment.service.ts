@@ -486,27 +486,23 @@ export const paySellerViaMpesa = async (
 
   const isSandbox = process.env.MPESA_ENV === "sandbox";
 
-  // Sandbox test numbers (must use these)
-  const sandboxTestNumbers = [254708374149, 254708374150, 254708374151];
-
-  // Choose PartyB
   const partyB = isSandbox
-    ? sandboxTestNumbers[sellerWalletTransactionId % sandboxTestNumbers.length]
+    ? 254708374149
     : normalizePhoneNumber(phone);
 
-  // Amount must be >= 10 in sandbox
-  const paymentAmount = isSandbox ? Math.max(10, Math.floor(amount)) : Math.floor(amount);
+  const paymentAmount = isSandbox
+    ? Math.max(10, Math.floor(amount))
+    : Math.floor(amount);
 
-  // OriginatorConversationID
   const reference = sellerWalletTransactionId.toString();
 
   const payload = {
     OriginatorConversationID: reference,
-    InitiatorName: process.env.MPESA_INITIATOR,
+    InitiatorName: process.env.MPESA_INITIATOR, 
     SecurityCredential: process.env.MPESA_SECURITY_CREDENTIAL,
-    CommandID: "BusinessPayment",
+    CommandID: isSandbox ? "SalaryPayment" : "BusinessPayment",
     Amount: paymentAmount,
-    PartyA: Number(process.env.MPESA_B2C_SHORTCODE),
+    PartyA: Number(process.env.MPESA_B2C_SHORTCODE), 
     PartyB: partyB,
     Remarks: "Seller Withdrawal",
     QueueTimeOutURL: process.env.MPESA_TIMEOUT_URL,
@@ -515,17 +511,16 @@ export const paySellerViaMpesa = async (
 
   console.log("B2C Payload:", payload);
 
-  // Endpoint
   const endpoint = isSandbox
     ? "https://sandbox.safaricom.co.ke/mpesa/b2c/v3/paymentrequest"
     : "https://api.safaricom.co.ke/mpesa/b2c/v3/paymentrequest";
 
-  // Send request
   const response = await axios.post(endpoint, payload, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
   });
 
-  // Update wallet transaction as processing
   await db
     .update(sellerWalletTransactions)
     .set({
@@ -540,6 +535,7 @@ export const paySellerViaMpesa = async (
     externalTransactionId: reference,
   };
 };
+
 
 
 export const handleB2CTimeoutService = async (callbackBody: any) => {
