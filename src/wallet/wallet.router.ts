@@ -7,6 +7,7 @@ import {
   requestWithdrawalController,
   completeWithdrawalController,
   getWalletTransactionsByWalletIdController,
+  getPendingWithdrawalRequestsController,
 } from "./wallet.controller";
 import { Express } from "express";
 
@@ -19,6 +20,16 @@ const sellerWallet = (app: Express) => {
       next(error);
     }
   });
+      // Admin: Get All Wallet Transactions
+    app
+    .route("/admin/wallet-transactions")
+    .get(adminRoleAuth, async (req, res, next) => {
+      try {
+        await getPendingWithdrawalRequestsController(req, res);
+      } catch (error) {
+        next(error);
+      }
+    });
 
   // Get Seller Wallet Transactions
   app
@@ -82,6 +93,8 @@ const sellerWallet = (app: Express) => {
         next(error);
       }
     });
+
+
 };
 
 export default sellerWallet;

@@ -1,5 +1,5 @@
 import db from "../Drizzle/db";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, and } from "drizzle-orm";
 import {
   sellerWallets,
   sellerWalletTransactions,
@@ -204,3 +204,34 @@ export const getWalletTransactionsByWalletIdService = async (walletId: number) =
     orderBy: (tx, { desc }) => [desc(tx.createdAt)],
   });
 };
+
+//get all transactions
+export const getPendingWithdrawalRequestsService = async () => {
+  const transactions = await db
+    .select({
+      transactionId: sellerWalletTransactions.id,
+      externalTransactionId: sellerWalletTransactions.externalTransactionId,
+      amount: sellerWalletTransactions.amount,
+      note: sellerWalletTransactions.note,
+      walletStatus: sellerWalletTransactions.walletStatus,
+      sellerId: sellerWalletTransactions.sellerId,
+      sellerName: sellers.fullname,
+      sellerEmail: sellers.email,
+      createdAt: sellerWalletTransactions.createdAt,
+    })
+    .from(sellerWalletTransactions)
+    .leftJoin(
+      sellers,
+      eq(sellers.id, sellerWalletTransactions.sellerId)
+    )
+    .where(
+      and(
+        eq(sellerWalletTransactions.type, "withdrawal"),
+        eq(sellerWalletTransactions.walletStatus, "pending")
+      )
+    )
+    .orderBy(desc(sellerWalletTransactions.createdAt));
+
+  return transactions;
+};
+

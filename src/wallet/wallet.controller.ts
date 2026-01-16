@@ -7,6 +7,8 @@ import {
   requestWithdrawalService,
   completeWithdrawalService,
   getWalletTransactionsByWalletIdService,
+  getAllWalletTransactionsService,
+  getPendingWithdrawalRequestsService,
 } from "./wallet.service";
 
 // Get Seller Wallet
@@ -181,3 +183,23 @@ export const getWalletTransactionsByWalletIdController = async (
     return res.status(500).json({ message: error.message });
   }
 };
+
+//get all wallet transactions
+export const getPendingWithdrawalRequestsController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const transactions = await getPendingWithdrawalRequestsService();
+
+    return res.status(200).json({
+      message: "Pending withdrawal requests retrieved successfully",
+      transactions,
+    });
+  } catch (error: any) {
+    console.error("Get Pending Withdrawal Requests Error:", error);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+
