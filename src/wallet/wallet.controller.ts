@@ -7,7 +7,6 @@ import {
   requestWithdrawalService,
   completeWithdrawalService,
   getWalletTransactionsByWalletIdService,
-  getAllWalletTransactionsService,
   getPendingWithdrawalRequestsService,
 } from "./wallet.service";
 
