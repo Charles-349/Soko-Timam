@@ -1,7 +1,7 @@
 import crypto from "crypto";
 
 //nitiator password
-const initiatorPassword = "Safaricom123!!";
+const initiatorPassword = "Safaricom123!";
 
 // Official Daraja sandbox public key 
 const pubKey = `-----BEGIN PUBLIC KEY-----
