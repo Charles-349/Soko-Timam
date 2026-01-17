@@ -217,6 +217,7 @@ export const getPendingWithdrawalRequestsService = async () => {
       sellerId: sellerWalletTransactions.sellerId,
       sellerName: sellers.fullname,
       sellerEmail: sellers.email,
+      sellerPhone: sellers.phone,
       createdAt: sellerWalletTransactions.createdAt,
     })
     .from(sellerWalletTransactions)
