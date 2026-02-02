@@ -168,7 +168,7 @@
 import axios from "axios";
 import { eq, sql } from "drizzle-orm";
 import db from "../Drizzle/db";
-import { payments, orders, cartItems, carts, orderItems, sellerWallets, sellerWalletTransactions, shops, platformCommissions } from "../Drizzle/schema";
+import { payments, orders, cartItems, carts, orderItems, sellerWallets, sellerWalletTransactions, shops, platformCommissions, shipping } from "../Drizzle/schema";
 import { normalizePhoneNumber } from "../utils/normalizePhoneNumber";
 import { getAccessToken, generatePassword } from "../utils/helper";
 import { TISellerWallet } from "../Drizzle/schema"; 
@@ -303,6 +303,18 @@ export const handleMpesaCallback = async (orderId: number, callbackBody: any) =>
       updatedAt: new Date(),
     })
     .where(eq(orders.id, orderId));
+
+ //AUTO CREATE SHIPPING AFTER PAYMENT
+await db.insert(shipping).values({
+  orderId,
+  originStationId: order.originStationId, 
+  pickupStationId: order.pickupStationId || null,
+  pickupAgentId: order.pickupAgentId || null,
+  address: order.shippingAddress,
+  status: "preparing",
+  createdAt: new Date(),
+});
+
 
   // Delete user's cart after successful payment
   await db.delete(carts).where(eq(carts.userId, order.userId));

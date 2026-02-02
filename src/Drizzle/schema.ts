@@ -2,11 +2,17 @@ import { pgEnum,pgTable, serial, varchar, text, integer, timestamp, boolean, dec
 import { relations } from "drizzle-orm";
 
 //ENUMS
-export const RoleEnum = pgEnum("role", ["admin", "seller", "customer"]); 
+export const RoleEnum = pgEnum("role", ["admin", "seller", "customer", "station_manager", "agent"]); 
 export const ShopStatusEnum = pgEnum("status", ["pending", "active", "suspended"]);
-export const OrderStatusEnum = pgEnum("order_status", ["pending", "paid", "shipped", "completed", "cancelled"]);
+export const OrderStatusEnum = pgEnum("order_status", ["pending", "paid",  "at_station", "shipped", "completed", "cancelled"]);
 export const PaymentStatusEnum = pgEnum("payment_status", ["unpaid", "paid", "failed"]); 
-export const ShippingStatusEnum = pgEnum("shipping_status", ["preparing", "dispatched", "delivered"]); 
+export const ShippingStatusEnum = pgEnum("shipping_status", [
+  "preparing",
+  "in_transit",
+  "ready_for_pickup",
+  "picked_up",
+  "delivered"
+]); 
 export const FlashSalesStatusEnum = pgEnum("flash_sale_status", ["upcoming", "active", "ended"]);  
 export const WalletStatusEnum = pgEnum("wallet_status", ["pending", "completed", "failed", "processing"]);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
 
@@ -26,6 +32,36 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+//STATIONS
+export const stations = pgTable("stations", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  managerId: integer("manager_id") 
+    .references(() => users.id)
+    .notNull(),
+  county: varchar("county", { length: 100 }).notNull(),
+  area: varchar("area", { length: 150 }).notNull(),
+  address: varchar("address"),
+  phone: varchar("phone", { length: 20 }),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+//AGENTS
+export const agents = pgTable("agents", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id") 
+    .references(() => users.id)
+    .notNull(),
+  county: varchar("county", { length: 100 }).notNull(),
+  area: varchar("area", { length: 150 }).notNull(),
+  address: varchar("address"),
+  phone: varchar("phone", { length: 20 }),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
 
 export const passwordResetTokens = pgTable("password_reset_tokens", {
   id: serial("id").primaryKey(),
@@ -182,6 +218,12 @@ export const orders = pgTable("orders", {
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
   paymentStatus: PaymentStatusEnum("payment_status").default("unpaid"),
   shippingAddress: text("shipping_address").notNull(),
+  originStationId: integer("origin_station_id")
+    .references(() => stations.id),
+  pickupStationId: integer("pickup_station_id")
+    .references(() => stations.id),
+  pickupAgentId: integer("pickup_agent_id")
+    .references(() => agents.id),
   updatedAt: timestamp("updated_at").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -211,10 +253,17 @@ export const payments = pgTable("payments", {
 //  SHIPPING
 export const shipping = pgTable("shipping", {
   id: serial("id").primaryKey(),
-  orderId: integer("order_id").references(() => orders.id).notNull(),
-  courier: varchar("courier", { length: 100 }),
-  trackingNumber: varchar("tracking_number", { length: 255 }),
-  status: ShippingStatusEnum("shipping_status").default("preparing"), // preparing, dispatched, in-transit, delivered
+  orderId: integer("order_id")
+    .references(() => orders.id)
+    .notNull(),
+  originStationId: integer("origin_station_id")
+    .references(() => stations.id),
+  pickupStationId: integer("pickup_station_id")
+    .references(() => stations.id),
+  pickupAgentId: integer("pickup_agent_id")
+    .references(() => agents.id),
+  status: ShippingStatusEnum("shipping_status")
+    .default("preparing"),
   recipientName: varchar("recipient_name", { length: 255 }),
   recipientPhone: varchar("recipient_phone", { length: 20 }),
   address: text("address").notNull(),
@@ -414,11 +463,29 @@ export const paymentsRelations = relations(payments, ({ one }) => ({
 }));
 
 export const shippingRelations = relations(shipping, ({ one }) => ({
+
   order: one(orders, {
     fields: [shipping.orderId],
     references: [orders.id],
   }),
+
+  originStation: one(stations, {
+    fields: [shipping.originStationId],
+    references: [stations.id],
+  }),
+
+  pickupStation: one(stations, {
+    fields: [shipping.pickupStationId],
+    references: [stations.id],
+  }),
+
+  pickupAgent: one(agents, {
+    fields: [shipping.pickupAgentId],
+    references: [agents.id],
+  }),
+
 }));
+
 
 export const reviewsRelations = relations(reviews, ({ one }) => ({
   product: one(products, {
@@ -472,6 +539,21 @@ export const platformCommissionsRelations = relations(platformCommissions, ({ on
   shop: one(shops, { fields: [platformCommissions.shopId], references: [shops.id] }),
   seller: one(sellers, { fields: [platformCommissions.sellerId], references: [sellers.id] }),
 }));
+
+export const stationsRelations = relations(stations, ({ one}) => ({
+  manager: one(users, {
+    fields: [stations.managerId],
+    references: [users.id],
+  })
+}));
+
+export const agentsRelations = relations(agents, ({ one }) => ({
+  user: one(users, {
+    fields: [agents.userId],
+    references: [users.id],
+  })
+}));
+
 
 
 
@@ -539,4 +621,10 @@ export type TSSellerWalletTx = typeof sellerWalletTransactions.$inferSelect;
 
 export type TIPlatformCommission = typeof platformCommissions.$inferInsert;
 export type TSPlatformCommission = typeof platformCommissions.$inferSelect;
+
+export type TIStation = typeof stations.$inferInsert;
+export type TSStation = typeof stations.$inferSelect;
+
+export type TIAgent = typeof agents.$inferInsert;
+export type TSAgent = typeof agents.$inferSelect;
 

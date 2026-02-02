@@ -8,12 +8,43 @@ import {
   getOrdersByUserIdService,
   getOrdersBySellerIdService,
   markOrderAsShippedService,
+  assignOriginStationService,
 } from "./order.service";
 
 //Create or Update Order
+// export const createOrderController = async (req: Request, res: Response) => {
+//   try {
+//     const { userId, items, shippingAddress } = req.body;
+
+//     if (!userId || !items || !Array.isArray(items) || items.length === 0) {
+//       return res.status(400).json({
+//         message: "User ID and at least one item are required",
+//       });
+//     }
+
+//     const data = await createOrUpdateOrderService(userId, items, shippingAddress);
+
+//     return res.status(200).json({
+//       message: "Order created or updated successfully",
+//       data,
+//     });
+//   } catch (error: any) {
+//     console.error("Create/Update Order Error:", error);
+//     return res.status(500).json({
+//       message: error.message || "Failed to create or update order",
+//     });
+//   }
+// };
+
 export const createOrderController = async (req: Request, res: Response) => {
   try {
-    const { userId, items, shippingAddress } = req.body;
+    const {
+      userId,
+      items,
+      shippingAddress,
+      pickupStationId,
+      pickupAgentId,
+    } = req.body;
 
     if (!userId || !items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({
@@ -21,7 +52,22 @@ export const createOrderController = async (req: Request, res: Response) => {
       });
     }
 
-    const data = await createOrUpdateOrderService(userId, items, shippingAddress);
+   // Helper to safely convert to nullable number
+const toNullableInt = (v: any): number | undefined => {
+  if (v === undefined || v === null || v === "" || Number(v) <= 0) return undefined;
+  return Number(v);
+};
+
+const cleanPickupStationId = toNullableInt(pickupStationId);
+const cleanPickupAgentId = toNullableInt(pickupAgentId);
+
+    const data = await createOrUpdateOrderService(
+      userId,
+      items,
+      shippingAddress,
+      cleanPickupStationId,
+      cleanPickupAgentId
+    );
 
     return res.status(200).json({
       message: "Order created or updated successfully",
@@ -29,11 +75,13 @@ export const createOrderController = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error("Create/Update Order Error:", error);
+
     return res.status(500).json({
       message: error.message || "Failed to create or update order",
     });
   }
 };
+
 
 //Get All Orders
 export const getAllOrdersController = async (_req: Request, res: Response) => {
@@ -180,6 +228,24 @@ export const getOrdersBySellerIdController = async (
     });
   }
 };
+
+export const assignOriginStationController = async (req: Request, res: Response) => {
+  try {
+    const orderId = Number(req.params.id);
+    const { stationId } = req.body;
+
+    if (!stationId) {
+      return res.status(400).json({ message: "stationId is required" });
+    }
+
+    const result = await assignOriginStationService(orderId, stationId);
+
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 
 export const markOrderAsShippedController = async (req: Request, res: Response) => {
   try {

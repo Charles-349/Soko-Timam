@@ -7,7 +7,8 @@ import shop from './shop/shop.router';
 import category from './category/category.router';
 import cart from './cart/cart.router';
 import wishlist from './wishlist/wishlist.router';
-import shipping from './shipping/shipping.router';
+// import shipping from './shipping/shipping.router';
+import logistics from './logistics/logistics.router';
 import review from './reviews/reviews.router';
 import productAttribute from './productattribute/productattribute.router';
 import productImage from './productimage/productimage.router';
@@ -41,7 +42,7 @@ shop(app);
 category(app);
 cart(app);
 wishlist(app);
-shipping(app);
+// shipping(app);
 review(app);
 productAttribute(app);
 productImage(app);
@@ -53,7 +54,8 @@ bank(app);
 mail(app);
 payment(app);
 order(app);
-sellerWallet(app);        
+sellerWallet(app);  
+logistics(app);      
 
 // Cloudinary config
 cloudinary.config({

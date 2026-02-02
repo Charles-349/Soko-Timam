@@ -23,17 +23,91 @@ const calculateTotalAmount = async (orderId: number) => {
 };
 
 //Create or update existing unpaid order and order items
+// export const createOrUpdateOrderService = async (
+//   userId: number,
+//   items: { productId: number; quantity: number }[],
+//   shippingAddress: string
+// ) => {
+//   //Find existing unpaid order
+//   let existingOrder = await db.query.orders.findFirst({
+//     where: and(eq(orders.userId, userId), eq(orders.paymentStatus, "unpaid")),
+//   });
+
+//   //If none exists, create a new order
+//   if (!existingOrder) {
+//     const [newOrder] = await db
+//       .insert(orders)
+//       .values({
+//         userId,
+//         paymentStatus: "unpaid",
+//         status: "pending",
+//         totalAmount: "0",
+//         shippingAddress,
+//       })
+//       .returning();
+
+//     existingOrder = newOrder;
+//   }
+
+//   //Add or update each item in order_items
+//   for (const { productId, quantity } of items) {
+//     const product = await db.query.products.findFirst({
+//       where: eq(products.id, productId),
+//     });
+
+//     if (!product) {
+//       throw new Error(`Product with ID ${productId} not found`);
+//     }
+
+//     // Check if item already exists in this order
+//     const existingItem = await db.query.orderItems.findFirst({
+//       where: and(eq(orderItems.orderId, existingOrder.id), eq(orderItems.productId, productId)),
+//     });
+
+//     if (existingItem) {
+//       // Update quantity
+//       await db
+//         .update(orderItems)
+//         .set({
+//           quantity: existingItem.quantity + quantity,
+//           price: product.price,
+//         })
+//         .where(eq(orderItems.id, existingItem.id));
+//     } else {
+//       // Create new item
+//       await db.insert(orderItems).values({
+//         orderId: existingOrder.id,
+//         productId,
+//         shopId: product.shopId,
+//         quantity,
+//         price: product.price,
+//       });
+//     }
+//   }
+
+//   //Recalculate total
+//   const totalAmount = await calculateTotalAmount(existingOrder.id);
+
+//   return {
+//     message: "Order updated successfully",
+//     orderId: existingOrder.id,
+//     totalAmount,
+//   };
+// };
+
 export const createOrUpdateOrderService = async (
   userId: number,
   items: { productId: number; quantity: number }[],
-  shippingAddress: string
+  shippingAddress: string,
+  pickupStationId?: number, 
+  pickupAgentId?: number    
 ) => {
-  //Find existing unpaid order
+  // Find existing unpaid order
   let existingOrder = await db.query.orders.findFirst({
     where: and(eq(orders.userId, userId), eq(orders.paymentStatus, "unpaid")),
   });
 
-  //If none exists, create a new order
+  // If none exists, create a new order
   if (!existingOrder) {
     const [newOrder] = await db
       .insert(orders)
@@ -43,13 +117,27 @@ export const createOrUpdateOrderService = async (
         status: "pending",
         totalAmount: "0",
         shippingAddress,
+        pickupStationId: pickupStationId ?? null,
+        pickupAgentId: pickupAgentId ?? null,
+        originStationId: null, 
       })
       .returning();
 
     existingOrder = newOrder;
+  } else {
+    // Update pickup info if customer changes selection
+    await db
+      .update(orders)
+      .set({
+        shippingAddress,
+        pickupStationId: pickupStationId ?? existingOrder.pickupStationId,
+        pickupAgentId: pickupAgentId ?? existingOrder.pickupAgentId,
+
+      })
+      .where(eq(orders.id, existingOrder.id));
   }
 
-  //Add or update each item in order_items
+  // Add or update each item in order_items
   for (const { productId, quantity } of items) {
     const product = await db.query.products.findFirst({
       where: eq(products.id, productId),
@@ -59,13 +147,14 @@ export const createOrUpdateOrderService = async (
       throw new Error(`Product with ID ${productId} not found`);
     }
 
-    // Check if item already exists in this order
     const existingItem = await db.query.orderItems.findFirst({
-      where: and(eq(orderItems.orderId, existingOrder.id), eq(orderItems.productId, productId)),
+      where: and(
+        eq(orderItems.orderId, existingOrder.id),
+        eq(orderItems.productId, productId)
+      ),
     });
 
     if (existingItem) {
-      // Update quantity
       await db
         .update(orderItems)
         .set({
@@ -74,7 +163,6 @@ export const createOrUpdateOrderService = async (
         })
         .where(eq(orderItems.id, existingItem.id));
     } else {
-      // Create new item
       await db.insert(orderItems).values({
         orderId: existingOrder.id,
         productId,
@@ -85,15 +173,19 @@ export const createOrUpdateOrderService = async (
     }
   }
 
-  //Recalculate total
+  // Recalculate total
   const totalAmount = await calculateTotalAmount(existingOrder.id);
 
   return {
     message: "Order updated successfully",
     orderId: existingOrder.id,
     totalAmount,
+    pickupStationId: existingOrder.pickupStationId ?? pickupStationId ?? null,
+    pickupAgentId: existingOrder.pickupAgentId ?? pickupAgentId ?? null,
+
   };
 };
+
 
 //Get all orders
 export const getAllOrdersService = async () => {
@@ -257,9 +349,10 @@ export const getOrdersBySellerIdService = async (sellerId: number) => {
     .select({
       id: shipping.id,
       orderId: shipping.orderId,
-      courier: shipping.courier,
-      trackingNumber: shipping.trackingNumber,
       status: shipping.status,
+      originStationId: shipping.originStationId,
+      pickupStationId: shipping.pickupStationId,
+      pickupAgentId: shipping.pickupAgentId,
       recipientName: shipping.recipientName,
       recipientPhone: shipping.recipientPhone,
       address: shipping.address,
@@ -371,6 +464,34 @@ export const getOrdersBySellerIdService = async (sellerId: number) => {
 //   return combined;
 // };
 
+
+export const assignOriginStationService = async (
+  orderId: number,
+  stationId: number
+) => {
+  // Check order exists
+  const order = await db.query.orders.findFirst({
+    where: eq(orders.id, orderId),
+  });
+
+  if (!order) throw new Error("Order not found");
+
+  // Update origin station
+  await db.update(orders)
+    .set({
+      originStationId: stationId,
+      status: "at_station", 
+      updatedAt: new Date(),
+    })
+    .where(eq(orders.id, orderId));
+
+  return {
+    message: "Origin station assigned successfully",
+    orderId,
+    stationId,
+  };
+};
+
 export const markOrderAsShippedService = async (orderId: number) => {
   // Fetch the order
   const order = await db.query.orders.findFirst({
@@ -388,13 +509,14 @@ export const markOrderAsShippedService = async (orderId: number) => {
   });
 
   if (shippingRecord) {
-    await db.update(shipping).set({ status: "dispatched" }).where(eq(shipping.id, shippingRecord.id));
+    await db.update(shipping).set({ status: "in_transit" }).where(eq(shipping.id, shippingRecord.id));
   } else {
     //create a shipping record if none exists
     await db.insert(shipping).values({
       orderId,
-      status: "dispatched",
+      status: "in_transit",
       address: order.shippingAddress,
+      originStationId: order.originStationId || 0,
     });
   }
 

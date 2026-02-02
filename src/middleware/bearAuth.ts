@@ -3,7 +3,7 @@ import { Request, Response, NextFunction } from 'express';
 import "dotenv/config";
 
 
-export const checkRoles = (allowedRoles: ("admin" | "seller" | "customer")[]) => {
+export const checkRoles = (allowedRoles: ("admin" | "seller" | "customer" | "station_manager" | "agent")[]) => {
   return (req: Request, res: Response, next: NextFunction): void => {
     const authHeader = req.headers.authorization;
 
@@ -40,5 +40,7 @@ export const checkRoles = (allowedRoles: ("admin" | "seller" | "customer")[]) =>
 export const adminRoleAuth = checkRoles(["admin"]);
 export const SellerRoleAuth = checkRoles(["seller"]);
 export const customerRoleAuth = checkRoles(["customer"]);
+export const stationManagerRoleAuth = checkRoles(["station_manager"]);
+export const agentRoleAuth = checkRoles(["agent"]);
 
 
