@@ -18,9 +18,10 @@ import {
   getShippingWithOrderController,
   getShippingsByDateRangeController,
   getCompletedShippingsController,
-  getActiveShippingsController,
   getShippingsByStatusController,
   getShippingByOrderIdController,
+  getShippingsByAgentIdController,
+  getShippingsByStationIdController,
 } from "./logistics.contoller";
 
 const logistics = (app: Express) => {
@@ -182,16 +183,7 @@ const logistics = (app: Express) => {
         next(error);
       }
     });
-  
-    // Active Shippings
-    app.route("/shipping/active").get(async (req, res, next) => {
-      try {
-        await getActiveShippingsController(req, res);
-      } catch (error) {
-        next(error);
-      }
-    });
-  
+
     // Completed Shippings
     app.route("/shipping/completed").get(async (req, res, next) => {
       try {
@@ -214,6 +206,24 @@ const logistics = (app: Express) => {
     app.route("/shipping/:id/order").get(async (req, res, next) => {
       try {
         await getShippingWithOrderController(req, res);
+      } catch (error) {
+        next(error);
+      }
+    });
+
+    //Get shippings with related order by agent id
+    app.route("/agent/shippings/:agentId").get(async (req, res, next) => {
+      try {
+        await getShippingsByAgentIdController(req, res);
+      } catch (error) {
+        next(error);
+      }
+    });
+
+    //Get shippings with related order by station id
+    app.route("/station/shippings/:stationId").get(async (req, res, next) => {
+      try {
+        await getShippingsByStationIdController(req, res);
       } catch (error) {
         next(error);
       }

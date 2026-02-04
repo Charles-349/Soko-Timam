@@ -18,9 +18,10 @@ import {
   getShippingWithOrderService,
   getShippingsByDateRangeService,
   getCompletedShippingsService,
-  getActiveShippingsService,
   getShippingsByStatusService,
   getShippingByOrderIdService,
+  getShippingsByAgentIdService,
+  getShippingsByStationIdService,
 } from "./logistics.service";
 
 // STATIONS
@@ -170,13 +171,30 @@ export const getShippingByIdController = async (req: Request, res: Response) => 
 export const updateShippingController = async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
-    const updated = await updateShippingService(id, req.body);
-    if (!updated) return res.status(404).json({ message: "Shipping record not found" });
+
+    const data = { ...req.body };
+
+    if (data.estimatedDelivery) {
+      data.estimatedDelivery = new Date(data.estimatedDelivery);
+    }
+
+    const updated = await updateShippingService(id, data);
+
+    if (!updated) {
+      return res.status(404).json({ message: "Shipping record not found" });
+    }
+
     res.status(200).json({ message: updated });
+
   } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    console.error(error);
+
+    res.status(500).json({
+      message: error.message,
+    });
   }
 };
+
 
 export const deleteShippingController = async (req: Request, res: Response) => {
   try {
@@ -211,16 +229,10 @@ export const getShippingsByStatusController = async (req: Request, res: Response
   try {
     const { status } = req.params;
     const shippings = await getShippingsByStatusService(status);
-    return res.status(200).json({ shippings });
-  } catch (error: any) {
-    return res.status(500).json({ message: error.message });
-  }
-};
 
-// Get active shippings
-export const getActiveShippingsController = async (req: Request, res: Response) => {
-  try {
-    const shippings = await getActiveShippingsService();
+    if (!shippings.length) {
+      return res.status(404).json({ message: "No shippings found with this status" });
+    }
     return res.status(200).json({ shippings });
   } catch (error: any) {
     return res.status(500).json({ message: error.message });
@@ -273,3 +285,34 @@ export const getShippingWithOrderController = async (req: Request, res: Response
   }
 };
 
+//Get shippings with related order by agent id
+export const getShippingsByAgentIdController = async (req: Request, res: Response) => {
+  try {
+    const agentId = parseInt(req.params.agentId);
+    const shippings = await getShippingsByAgentIdService(agentId);
+
+    if (!shippings.length) {
+      return res.status(404).json({ message: "No shippings found for this agent" });
+    }
+
+    return res.status(200).json({ shippings });
+  } catch (error: any) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+//Get shippings with related order by station id
+export const getShippingsByStationIdController = async (req: Request, res: Response) => {
+  try {
+    const stationId = parseInt(req.params.stationId);
+    const shippings = await getShippingsByStationIdService(stationId);
+
+    if (!shippings.length) {
+      return res.status(404).json({ message: "No shippings found for this station" });
+    }
+
+    return res.status(200).json({ shippings });
+  } catch (error: any) {
+    return res.status(500).json({ message: error.message });
+  }
+};

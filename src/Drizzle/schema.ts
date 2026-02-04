@@ -24,7 +24,7 @@ export const users = pgTable("users", {
   email: varchar("email", { length: 255 }).notNull().unique(),
   password: varchar("password", { length: 255 }),
   phone: varchar("phone", { length: 20 }),
-  role: RoleEnum("role").default("customer"), // admin, seller, customer
+  role: RoleEnum("role").default("customer"), 
   image_url: varchar("image_url", { length: 255 }).default(
     "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y"
   ),

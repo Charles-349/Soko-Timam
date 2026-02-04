@@ -1,4 +1,4 @@
-import { and, eq, gte, lte } from "drizzle-orm";
+import { and, eq, gte, inArray, lte, or } from "drizzle-orm";
 import db from "../Drizzle/db";
 import { stations, agents, shipping, TSShipping, TIShipping, TIStation, TIAgent } from "../Drizzle/schema";
 import { sql } from "drizzle-orm";
@@ -143,13 +143,6 @@ export const getShippingsByStatusService = async (status: string) => {
   });
 };
 
-// Get active shippings (dispatched or in-transit)
-export const getActiveShippingsService = async () => {
-  return await db.query.shipping.findMany({
-    where: sql`${shipping.status} IN ('dispatched', 'in-transit')`,
-  });
-};
-
 // Get completed shippings (delivered)
 export const getCompletedShippingsService = async () => {
   return await db.query.shipping.findMany({
@@ -170,7 +163,7 @@ export const getShippingsByDateRangeService = async (
   });
 };
 
-// Shipping with related Order (and order details)
+// Shipping with related Order 
 export const getShippingWithOrderService = async (id: number) => {
   return await db.query.shipping.findFirst({
     where: eq(shipping.id, id),
@@ -186,3 +179,39 @@ export const getShippingWithOrderService = async (id: number) => {
   });
 };
 
+
+//get shippings with related order by agent id
+export const getShippingsByAgentIdService = async (agentId: number) => {
+  return await db.query.shipping.findMany({
+    where: eq(shipping.pickupAgentId, agentId),
+    with: {
+      order: {
+        with: {
+          items: true,
+          payments: true,
+          user: true,
+        },
+      },
+    },
+  });
+};
+
+
+//Get shippings with related order by station id
+export const getShippingsByStationIdService = async (stationId: number) => {
+  return await db.query.shipping.findMany({
+    where: or(
+      eq(shipping.originStationId, stationId),
+      eq(shipping.pickupStationId, stationId)
+    ),
+    with: {
+      order: {
+        with: {
+          items: true,
+          payments: true,
+          user: true,
+        },
+      },
+    },
+  });
+};

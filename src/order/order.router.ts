@@ -9,6 +9,7 @@ import {
   getOrdersBySellerIdController,
   markOrderAsShippedController,
   assignOriginStationController,
+  getOrdersByAgentIdController,
 } from "./order.controller";
 import { adminRoleAuth, customerRoleAuth } from "../middleware/bearAuth";
 
@@ -88,6 +89,15 @@ const order = (app: Express) => {
   app.route("/order/:id/ship").post(async (req, res, next) => {
     try {
       await markOrderAsShippedController(req, res);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  //get orders by agent id
+    app.route("/agent/orders/:agentId").get(async (req, res, next) => {
+    try {
+      await getOrdersByAgentIdController(req, res);
     } catch (error) {
       next(error);
     }

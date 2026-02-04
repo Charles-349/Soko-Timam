@@ -9,6 +9,7 @@ import {
   getOrdersBySellerIdService,
   markOrderAsShippedService,
   assignOriginStationService,
+  getOrdersByAgentIdService,
 } from "./order.service";
 
 //Create or Update Order
@@ -261,5 +262,31 @@ export const markOrderAsShippedController = async (req: Request, res: Response) 
   } catch (error: any) {
     console.error("Error marking order as shipped:", error.message || error);
     return res.status(500).json({ message: error.message || "Something went wrong" });
+  }
+};
+
+//Get orders by agent id
+export const getOrdersByAgentIdController = async (
+  req: Request,
+  res: Response,
+) => {
+  try {
+    const agentId = parseInt(req.params.agentId);
+
+    if (isNaN(agentId)) {
+      return res.status(400).json({ message: "Invalid agent ID" });
+    }
+
+    const orders = await getOrdersByAgentIdService(agentId);
+
+    return res.status(200).json({
+      message: "Orders for agent retrieved successfully",
+      data: orders,
+    });
+  } catch (error: any) {
+    console.error("Get agent Orders Error:", error);
+    return res.status(500).json({
+      message: error.message || "Failed to retrieve agent orders",
+    });
   }
 };
