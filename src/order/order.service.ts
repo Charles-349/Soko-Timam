@@ -1,6 +1,6 @@
 import db from "../Drizzle/db"; 
 import { eq, and, inArray } from "drizzle-orm";
-import { orders, orderItems, products, payments, shops, shipping } from "../Drizzle/schema";
+import { orders, orderItems, products, payments, shops, shipping, stations, agents, users } from "../Drizzle/schema";
 import type { TIOrder, TIOrderItem } from "../Drizzle/schema";
 
 //Helper: Calculate total order amount
@@ -238,7 +238,6 @@ export const cancelOrderService = async (orderId: number, userId: number) => {
 };
 
 // Mark order as paid
-
 export const markOrderAsPaidService = async (orderId: number, transactionRef: string) => {
   const order = await db.query.orders.findFirst({
     where: eq(orders.id, orderId),
@@ -476,4 +475,34 @@ export const getOrdersByAgentIdService = async (agentId: number) => {
     .where(inArray(orders.id, orderIds));
 
   return agentOrders;
+};
+
+//GET ALL STATIONS AND AGENTS 
+export const getStationsAndAgentsService = async () => {
+
+  // Stations
+  const stationList = await db
+    .select({
+      id: stations.id,
+      name: stations.name,
+      county: stations.county,
+      area: stations.area,
+      address: stations.address,
+    })
+    .from(stations)
+    .where(eq(stations.isActive, true));
+
+  const agentList = await db
+    .select({
+      id: agents.id,
+      name: users.firstname, 
+      county: agents.county,
+      area: agents.area,
+      address: agents.address,
+    })
+    .from(agents)
+    .innerJoin(users, eq(agents.userId, users.id))
+    .where(eq(agents.isActive, true));
+
+  return [...stationList, ...agentList];
 };

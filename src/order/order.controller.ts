@@ -10,6 +10,7 @@ import {
   markOrderAsShippedService,
   assignOriginStationService,
   getOrdersByAgentIdService,
+  getStationsAndAgentsService,
 } from "./order.service";
 
 //Create or Update Order
@@ -287,6 +288,33 @@ export const getOrdersByAgentIdController = async (
     console.error("Get agent Orders Error:", error);
     return res.status(500).json({
       message: error.message || "Failed to retrieve agent orders",
+    });
+  }
+};
+
+//Get all stations and agents 
+export const getStationsAndAgentsController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const data = await getStationsAndAgentsService();
+
+    if (!data.length) {
+      return res.status(404).json({
+        message: "No stations or agents found",
+      });
+    }
+
+    return res.status(200).json({
+      message: "Stations and agents retrieved successfully",
+      data,
+    });
+  } catch (error: any) {
+    console.error("Get Stations and Agents Error:", error);
+
+    return res.status(500).json({
+      message: error.message || "Failed to retrieve stations and agents",
     });
   }
 };
