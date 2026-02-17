@@ -2,6 +2,7 @@ import db from "../Drizzle/db";
 import { eq, and, inArray } from "drizzle-orm";
 import { orders, orderItems, products, payments, shops, shipping, stations, agents, users } from "../Drizzle/schema";
 import type { TIOrder, TIOrderItem } from "../Drizzle/schema";
+import { sql } from "drizzle-orm";
 
 //Helper: Calculate total order amount
 const calculateTotalAmount = async (orderId: number) => {
@@ -488,6 +489,7 @@ export const getStationsAndAgentsService = async () => {
       county: stations.county,
       area: stations.area,
       address: stations.address,
+      isStation: sql<boolean>`true`.as("isStation"),
     })
     .from(stations)
     .where(eq(stations.isActive, true));
@@ -499,6 +501,7 @@ export const getStationsAndAgentsService = async () => {
       county: agents.county,
       area: agents.area,
       address: agents.address,
+      isStation: sql<boolean>`false`.as("isStation"),
     })
     .from(agents)
     .innerJoin(users, eq(agents.userId, users.id))
