@@ -310,7 +310,6 @@ await db.insert(shipping).values({
   originStationId: order.originStationId, 
   pickupStationId: order.pickupStationId || null,
   pickupAgentId: order.pickupAgentId || null,
-  address: order.shippingAddress,
   status: "preparing",
   createdAt: new Date(),
 });
