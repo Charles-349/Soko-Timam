@@ -117,7 +117,6 @@ export const createOrUpdateOrderService = async (
         paymentStatus: "unpaid",
         status: "pending",
         totalAmount: "0",
-        shippingAddress,
         pickupStationId: pickupStationId ?? null,
         pickupAgentId: pickupAgentId ?? null,
         originStationId: null, 
@@ -130,7 +129,6 @@ export const createOrUpdateOrderService = async (
     await db
       .update(orders)
       .set({
-        shippingAddress,
         pickupStationId: pickupStationId ?? existingOrder.pickupStationId,
         pickupAgentId: pickupAgentId ?? existingOrder.pickupAgentId,
 
@@ -337,7 +335,6 @@ export const getOrdersBySellerIdService = async (sellerId: number) => {
       status: orders.status,
       totalAmount: orders.totalAmount,
       paymentStatus: orders.paymentStatus,
-      shippingAddress: orders.shippingAddress,
       createdAt: orders.createdAt,
       updatedAt: orders.updatedAt,
     })
@@ -355,7 +352,6 @@ export const getOrdersBySellerIdService = async (sellerId: number) => {
       pickupAgentId: shipping.pickupAgentId,
       recipientName: shipping.recipientName,
       recipientPhone: shipping.recipientPhone,
-      address: shipping.address,
       estimatedDelivery: shipping.estimatedDelivery,
     })
     .from(shipping)
@@ -373,7 +369,6 @@ export const getOrdersBySellerIdService = async (sellerId: number) => {
         ? {
             orderId: order.id,
             status: "dispatched",
-            address: order.shippingAddress,
           }
         : null);
 
@@ -437,7 +432,6 @@ export const markOrderAsShippedService = async (orderId: number) => {
     await db.insert(shipping).values({
       orderId,
       status: "in_transit",
-      address: order.shippingAddress,
       originStationId: order.originStationId || 0,
     });
   }
@@ -468,7 +462,6 @@ export const getOrdersByAgentIdService = async (agentId: number) => {
       status: orders.status,
       totalAmount: orders.totalAmount,
       paymentStatus: orders.paymentStatus,
-      shippingAddress: orders.shippingAddress,
       createdAt: orders.createdAt,
       updatedAt: orders.updatedAt,
     })

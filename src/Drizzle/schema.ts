@@ -217,7 +217,6 @@ export const orders = pgTable("orders", {
   status: OrderStatusEnum("order_status").default("pending"), // pending, paid, shipped, completed, cancelled
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
   paymentStatus: PaymentStatusEnum("payment_status").default("unpaid"),
-  shippingAddress: text("shipping_address").notNull(),
   originStationId: integer("origin_station_id")
     .references(() => stations.id),
   pickupStationId: integer("pickup_station_id")
@@ -266,7 +265,6 @@ export const shipping = pgTable("shipping", {
     .default("preparing"),
   recipientName: varchar("recipient_name", { length: 255 }),
   recipientPhone: varchar("recipient_phone", { length: 20 }),
-  address: text("address").notNull(),
   estimatedDelivery: timestamp("estimated_delivery"),
   createdAt: timestamp("created_at").defaultNow(),
 });
