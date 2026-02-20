@@ -41,8 +41,17 @@ export const deleteStationService = async (id: number) => {
   return "Station deleted successfully";
 };
 
-// AGENTS
+//Get station by user id
+export const getStationByUserIdService = async (userId: number) => {
+  return await db.query.stations.findFirst({
+    where: eq(stations.managerId, userId),
+    with: {
+      manager: true,
+    },
+  });
+};
 
+// AGENTS
 export const createAgentService = async (agent: TIAgent) => {
   await db.insert(agents).values(agent);
   return "Agent created successfully";

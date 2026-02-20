@@ -22,6 +22,7 @@ import {
   getShippingByOrderIdService,
   getShippingsByAgentIdService,
   getShippingsByStationIdService,
+  getStationByUserIdService,
 } from "./logistics.service";
 
 // STATIONS
@@ -61,6 +62,18 @@ export const updateStationController = async (req: Request, res: Response) => {
     const updated = await updateStationService(id, req.body);
     if (!updated) return res.status(404).json({ message: "Station not found" });
     res.status(200).json({ message: updated });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+//Get station by user id
+export const getStationByUserIdController = async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    const station = await getStationByUserIdService(userId);
+    if (!station) return res.status(404).json({ message: "Station not found for this user" });
+    res.status(200).json({ message: "Station retrieved successfully", station });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
