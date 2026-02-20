@@ -539,16 +539,28 @@ export const getOrdersByStationIdService = async (stationId: number) => {
 export const getOrdersByOriginStationIdService = async (stationId: number) => {
   const stationOrders = await db
     .select({
-      id: orders.id,
+      orderId: orders.id,
       userId: orders.userId,
       status: orders.status,
       totalAmount: orders.totalAmount,
       paymentStatus: orders.paymentStatus,
       createdAt: orders.createdAt,
-      updatedAt: orders.updatedAt,
+      customerName: users.firstname,
+      shopId: shops.id,
+      shopName: shops.name,
+      itemId: orderItems.id,
+      productId: orderItems.productId,
+      quantity: orderItems.quantity,
+      price: orderItems.price,
+      estimatedDelivery: shipping.estimatedDelivery,
     })
     .from(orders)
+    .leftJoin(users, eq(orders.userId, users.id))
+    .leftJoin(shipping, eq(orders.id, shipping.orderId))
+    .leftJoin(orderItems, eq(orderItems.orderId, orders.id))
+    .leftJoin(shops, eq(orderItems.shopId, shops.id))
     .where(eq(orders.originStationId, stationId));
+ 
 
   return stationOrders;
 };
