@@ -11,6 +11,8 @@ import {
   assignOriginStationController,
   getOrdersByAgentIdController,
   getStationsAndAgentsController,
+  getOrdersByStationIdController,
+  getOrdersByOriginStationIdController,
 } from "./order.controller";
 import { adminRoleAuth, customerRoleAuth } from "../middleware/bearAuth";
 
@@ -46,6 +48,24 @@ const order = (app: Express) => {
   app.route("/order/:id").get(async (req, res, next) => {
     try {
       await getOrderByIdController(req, res);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  //Get Orders by Origin Station ID
+  app.route("/order/origin-station/:stationId").get(async (req, res, next) => {
+    try {
+      await getOrdersByOriginStationIdController(req, res);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  //Get Orders by Station ID
+  app.route("/order/station/:stationId").get(async (req, res, next) => {
+    try {
+      await getOrdersByStationIdController(req, res);
     } catch (error) {
       next(error);
     }

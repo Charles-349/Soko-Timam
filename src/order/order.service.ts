@@ -502,3 +502,53 @@ export const getStationsAndAgentsService = async () => {
 
   return [...stationList, ...agentList];
 };
+
+//Get orders by station id
+export const getOrdersByStationIdService = async (stationId: number) => {
+  // Find all shipping records assigned to the station
+  const stationShippings = await db
+    .select({ orderId: shipping.orderId })
+    .from(shipping)
+    .where(eq(shipping.pickupStationId, stationId));
+
+  if (stationShippings.length === 0) {
+    console.log("No shipping records found for this station");
+    return [];
+  }
+
+  const orderIds = stationShippings.map((ship) => ship.orderId);
+
+  // Fetch all orders related to those order IDs
+  const stationOrders = await db
+    .select({
+      id: orders.id,
+      userId: orders.userId,
+      status: orders.status,
+      totalAmount: orders.totalAmount,
+      paymentStatus: orders.paymentStatus,
+      createdAt: orders.createdAt,
+      updatedAt: orders.updatedAt,
+    })
+    .from(orders)
+    .where(inArray(orders.id, orderIds));
+
+  return stationOrders; 
+};
+
+//Get orders by origin station id
+export const getOrdersByOriginStationIdService = async (stationId: number) => {
+  const stationOrders = await db
+    .select({
+      id: orders.id,
+      userId: orders.userId,
+      status: orders.status,
+      totalAmount: orders.totalAmount,
+      paymentStatus: orders.paymentStatus,
+      createdAt: orders.createdAt,
+      updatedAt: orders.updatedAt,
+    })
+    .from(orders)
+    .where(eq(orders.originStationId, stationId));
+
+  return stationOrders;
+};

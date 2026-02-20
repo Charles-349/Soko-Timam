@@ -11,6 +11,8 @@ import {
   assignOriginStationService,
   getOrdersByAgentIdService,
   getStationsAndAgentsService,
+  getOrdersByOriginStationIdService,
+  getOrdersByStationIdService,
 } from "./order.service";
 
 //Create or Update Order
@@ -315,6 +317,58 @@ export const getStationsAndAgentsController = async (
 
     return res.status(500).json({
       message: error.message || "Failed to retrieve stations and agents",
+    });
+  }
+};
+
+//Get orders by station id
+export const getOrdersByStationIdController = async (
+  req: Request,
+  res: Response,
+) => {
+  try {
+    const stationId = parseInt(req.params.stationId);
+
+    if (isNaN(stationId)) {
+      return res.status(400).json({ message: "Invalid station ID" });
+    }
+
+    const orders = await getOrdersByStationIdService(stationId);
+
+    return res.status(200).json({
+      message: "Orders for station retrieved successfully",
+      data: orders,
+    });
+  } catch (error: any) {
+    console.error("Get station Orders Error:", error);
+    return res.status(500).json({
+      message: error.message || "Failed to retrieve station orders",
+    });
+  }
+};
+
+//Get orders by origin station id
+export const getOrdersByOriginStationIdController = async (
+  req: Request,
+  res: Response,
+) => {
+  try {
+    const stationId = parseInt(req.params.stationId);
+
+    if (isNaN(stationId)) {
+      return res.status(400).json({ message: "Invalid station ID" });
+    }
+
+    const orders = await getOrdersByOriginStationIdService(stationId);
+
+    return res.status(200).json({
+      message: "Orders for origin station retrieved successfully",
+      data: orders,
+    });
+  } catch (error: any) {
+    console.error("Get origin station Orders Error:", error);
+    return res.status(500).json({
+      message: error.message || "Failed to retrieve origin station orders",
     });
   }
 };
