@@ -555,19 +555,25 @@ export const getOrdersByOriginStationIdService = async (stationId: number) => {
       shopName: shops.name,
 
       sellerId: sellers.id,
-      sellerName: sellerUser.firstname,   
+      sellerName: sellerUser.firstname,
 
       itemId: orderItems.id,
-      productId: orderItems.productId,
       quantity: orderItems.quantity,
       price: orderItems.price,
+
+      //Product details
+      productId: products.id,
+      productName: products.name,
+      productDescription: products.description,
+      productImage: products.ImageUrl,
 
       estimatedDelivery: shipping.estimatedDelivery,
     })
     .from(orders)
-    .leftJoin(users, eq(orders.userId, users.id)) 
+    .leftJoin(users, eq(orders.userId, users.id))
     .leftJoin(shipping, eq(orders.id, shipping.orderId))
     .leftJoin(orderItems, eq(orderItems.orderId, orders.id))
+    .leftJoin(products, eq(orderItems.productId, products.id))   
     .leftJoin(shops, eq(orderItems.shopId, shops.id))
     .leftJoin(sellers, eq(shops.sellerId, sellers.id))
     .leftJoin(sellerUser, eq(sellers.userId, sellerUser.id))
@@ -575,4 +581,5 @@ export const getOrdersByOriginStationIdService = async (stationId: number) => {
 
   return stationOrders;
 };
+
 
