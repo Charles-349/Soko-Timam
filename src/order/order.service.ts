@@ -100,9 +100,8 @@ const calculateTotalAmount = async (orderId: number) => {
 export const createOrUpdateOrderService = async (
   userId: number,
   items: { productId: number; quantity: number }[],
-  shippingAddress: string,
-  pickupStationId?: number, 
-  pickupAgentId?: number    
+  pickupStationId?: number | null, 
+  pickupAgentId?: number |null   
 ) => {
   // Find existing unpaid order
   let existingOrder = await db.query.orders.findFirst({

@@ -45,7 +45,6 @@ export const createOrderController = async (req: Request, res: Response) => {
     const {
       userId,
       items,
-      shippingAddress,
       pickupStationId,
       pickupAgentId,
     } = req.body;
@@ -57,8 +56,8 @@ export const createOrderController = async (req: Request, res: Response) => {
     }
 
    // Helper to safely convert to nullable number
-const toNullableInt = (v: any): number | undefined => {
-  if (v === undefined || v === null || v === "" || Number(v) <= 0) return undefined;
+const toNullableInt = (v: any): number | null => {
+  if (v === undefined || v === null || v === "" || Number(v) <= 0) return null;
   return Number(v);
 };
 
@@ -68,7 +67,6 @@ const cleanPickupAgentId = toNullableInt(pickupAgentId);
     const data = await createOrUpdateOrderService(
       userId,
       items,
-      shippingAddress,
       cleanPickupStationId,
       cleanPickupAgentId
     );
