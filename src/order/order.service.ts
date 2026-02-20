@@ -1,8 +1,9 @@
 import db from "../Drizzle/db"; 
 import { eq, and, inArray } from "drizzle-orm";
-import { orders, orderItems, products, payments, shops, shipping, stations, agents, users } from "../Drizzle/schema";
+import { orders, orderItems, products, payments, shops, shipping, stations, agents, users, sellers } from "../Drizzle/schema";
 import type { TIOrder, TIOrderItem } from "../Drizzle/schema";
 import { sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 
 //Helper: Calculate total order amount
 const calculateTotalAmount = async (orderId: number) => {
@@ -537,6 +538,8 @@ export const getOrdersByStationIdService = async (stationId: number) => {
 
 //Get orders by origin station id
 export const getOrdersByOriginStationIdService = async (stationId: number) => {
+  const sellerUser = alias(users, "sellerUser");
+
   const stationOrders = await db
     .select({
       orderId: orders.id,
@@ -545,22 +548,31 @@ export const getOrdersByOriginStationIdService = async (stationId: number) => {
       totalAmount: orders.totalAmount,
       paymentStatus: orders.paymentStatus,
       createdAt: orders.createdAt,
+
       customerName: users.firstname,
+
       shopId: shops.id,
       shopName: shops.name,
+
+      sellerId: sellers.id,
+      sellerName: sellerUser.firstname,   
+
       itemId: orderItems.id,
       productId: orderItems.productId,
       quantity: orderItems.quantity,
       price: orderItems.price,
+
       estimatedDelivery: shipping.estimatedDelivery,
     })
     .from(orders)
-    .leftJoin(users, eq(orders.userId, users.id))
+    .leftJoin(users, eq(orders.userId, users.id)) 
     .leftJoin(shipping, eq(orders.id, shipping.orderId))
     .leftJoin(orderItems, eq(orderItems.orderId, orders.id))
     .leftJoin(shops, eq(orderItems.shopId, shops.id))
+    .leftJoin(sellers, eq(shops.sellerId, sellers.id))
+    .leftJoin(sellerUser, eq(sellers.userId, sellerUser.id))
     .where(eq(orders.originStationId, stationId));
- 
 
   return stationOrders;
 };
+
