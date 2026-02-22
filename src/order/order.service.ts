@@ -502,12 +502,12 @@ export const markOrderAsDeliveredService = async (orderId: number, providedCode:
   // Fetch the order
   const order = await db.query.orders.findFirst({
     where: eq(orders.id, orderId),
-    with: { shipping: true }, // fetch shipping record too
+    with: { shipping: true }, 
   });
 
   if (!order) throw new Error("Order not found");
 
-  const shippingRecord = order.shipping[0]; // assuming one shipping record per order
+  const shippingRecord = order.shipping[0];
 
   if (!shippingRecord) throw new Error("Shipping record not found for this order");
 
