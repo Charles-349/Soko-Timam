@@ -556,7 +556,6 @@ export const getOrdersByStationIdService = async (stationId: number) => {
 
   if (!rows.length) return [];
 
-  // 🔥 GROUP ORDERS PROPERLY (scalable)
   const orderMap = new Map<number, any>();
 
   for (const row of rows) {
@@ -612,46 +611,102 @@ export const getOrdersByStationIdService = async (stationId: number) => {
 export const getOrdersByOriginStationIdService = async (stationId: number) => {
   const sellerUser = alias(users, "sellerUser");
 
-  const stationOrders = await db
+  const rows = await db
     .select({
+      // Order
       orderId: orders.id,
       userId: orders.userId,
       status: orders.status,
       totalAmount: orders.totalAmount,
       paymentStatus: orders.paymentStatus,
       createdAt: orders.createdAt,
+      updatedAt: orders.updatedAt,
 
+      // Customer
+      customerId: users.id,
       customerName: users.firstname,
 
+      // Shop
       shopId: shops.id,
       shopName: shops.name,
 
+      // Seller
       sellerId: sellers.id,
       sellerName: sellerUser.firstname,
 
+      // Item
       itemId: orderItems.id,
       quantity: orderItems.quantity,
       price: orderItems.price,
 
-      //Product details
+      // Product
       productId: products.id,
       productName: products.name,
       productDescription: products.description,
       productImage: products.ImageUrl,
 
+      // Shipping
       estimatedDelivery: shipping.estimatedDelivery,
     })
     .from(orders)
     .leftJoin(users, eq(orders.userId, users.id))
     .leftJoin(shipping, eq(orders.id, shipping.orderId))
     .leftJoin(orderItems, eq(orderItems.orderId, orders.id))
-    .leftJoin(products, eq(orderItems.productId, products.id))   
+    .leftJoin(products, eq(orderItems.productId, products.id))
     .leftJoin(shops, eq(orderItems.shopId, shops.id))
     .leftJoin(sellers, eq(shops.sellerId, sellers.id))
     .leftJoin(sellerUser, eq(sellers.userId, sellerUser.id))
     .where(eq(orders.originStationId, stationId));
 
-  return stationOrders;
-};
+  if (!rows.length) return [];
 
+  const orderMap = new Map<number, any>();
+
+  for (const row of rows) {
+    if (!orderMap.has(row.orderId)) {
+      orderMap.set(row.orderId, {
+        orderId: row.orderId,
+        userId: row.userId,
+        status: row.status,
+        totalAmount: row.totalAmount,
+        paymentStatus: row.paymentStatus,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+
+        customer: {
+          id: row.customerId,
+          name: row.customerName,
+        },
+
+        seller: {
+          id: row.sellerId,
+          name: row.sellerName,
+        },
+
+        shop: {
+          id: row.shopId,
+          name: row.shopName,
+        },
+
+        estimatedDelivery: row.estimatedDelivery,
+
+        items: [],
+      });
+    }
+
+    if (row.itemId) {
+      orderMap.get(row.orderId).items.push({
+        itemId: row.itemId,
+        productId: row.productId,
+        productName: row.productName,
+        productDescription: row.productDescription,
+        productImage: row.productImage,
+        quantity: row.quantity,
+        price: row.price,
+      });
+    }
+  }
+
+  return Array.from(orderMap.values());
+};
 
