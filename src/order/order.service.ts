@@ -441,34 +441,105 @@ export const markOrderAsShippedService = async (orderId: number) => {
 
 //Get orders by agent id
 export const getOrdersByAgentIdService = async (agentId: number) => {
-  // Find all shipping records assigned to the agent
-  const agentShippings = await db
-    .select({ orderId: shipping.orderId })
-    .from(shipping)
-    .where(eq(shipping.pickupAgentId, agentId));
+  const sellerUser = alias(users, "sellerUser");
 
-  if (agentShippings.length === 0) {
-    console.log("No shipping records found for this agent");
-    return [];
-  }
-
-  const orderIds = agentShippings.map((ship) => ship.orderId);
-
-  // Fetch all orders related to those order IDs
-  const agentOrders = await db
+  const rows = await db
     .select({
-      id: orders.id,
+      // Order
+      orderId: orders.id,
       userId: orders.userId,
       status: orders.status,
       totalAmount: orders.totalAmount,
       paymentStatus: orders.paymentStatus,
       createdAt: orders.createdAt,
       updatedAt: orders.updatedAt,
-    })
-    .from(orders)
-    .where(inArray(orders.id, orderIds));
 
-  return agentOrders;
+      // Customer
+      customerId: users.id,
+      customerName: users.firstname,
+
+      // Shop
+      shopId: shops.id,
+      shopName: shops.name,
+
+      // Seller
+      sellerId: sellers.id,
+      sellerName: sellerUser.firstname,
+
+      // Item
+      itemId: orderItems.id,
+      quantity: orderItems.quantity,
+      price: orderItems.price,
+
+      // Product
+      productId: products.id,
+      productName: products.name,
+      productDescription: products.description,
+      productImage: products.ImageUrl,
+
+      // Shipping
+      estimatedDelivery: shipping.estimatedDelivery,
+    })
+    .from(shipping)
+    .innerJoin(orders, eq(shipping.orderId, orders.id))
+    .leftJoin(users, eq(orders.userId, users.id))
+    .leftJoin(orderItems, eq(orderItems.orderId, orders.id))
+    .leftJoin(products, eq(orderItems.productId, products.id))
+    .leftJoin(shops, eq(orderItems.shopId, shops.id))
+    .leftJoin(sellers, eq(shops.sellerId, sellers.id))
+    .leftJoin(sellerUser, eq(sellers.userId, sellerUser.id))
+    .where(eq(shipping.pickupAgentId, agentId));
+
+  if (!rows.length) return [];
+
+  const orderMap = new Map<number, any>();
+
+  for (const row of rows) {
+    if (!orderMap.has(row.orderId)) {
+      orderMap.set(row.orderId, {
+        orderId: row.orderId,
+        userId: row.userId,
+        status: row.status,
+        totalAmount: row.totalAmount,
+        paymentStatus: row.paymentStatus,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+
+        customer: {
+          id: row.customerId,
+          name: row.customerName,
+        },
+
+        seller: {
+          id: row.sellerId,
+          name: row.sellerName,
+        },
+
+        shop: {
+          id: row.shopId,
+          name: row.shopName,
+        },
+
+        estimatedDelivery: row.estimatedDelivery,
+
+        items: [],
+      });
+    }
+
+    if (row.itemId) {
+      orderMap.get(row.orderId).items.push({
+        itemId: row.itemId,
+        productId: row.productId,
+        productName: row.productName,
+        productDescription: row.productDescription,
+        productImage: row.productImage,
+        quantity: row.quantity,
+        price: row.price,
+      });
+    }
+  }
+
+  return Array.from(orderMap.values());
 };
 
 //GET ALL STATIONS AND AGENTS 
