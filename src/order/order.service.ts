@@ -1,6 +1,6 @@
 import db from "../Drizzle/db"; 
 import { eq, and, inArray } from "drizzle-orm";
-import { orders, orderItems, products, payments, shops, shipping, stations, agents, users, sellers } from "../Drizzle/schema";
+import { orders, orderItems, products, payments, shops, shipping, stations, agents, users, sellers, productImages } from "../Drizzle/schema";
 import type { TIOrder, TIOrderItem } from "../Drizzle/schema";
 import { sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
@@ -475,7 +475,7 @@ export const getOrdersByAgentIdService = async (agentId: number) => {
       productId: products.id,
       productName: products.name,
       productDescription: products.description,
-      productImage: products.ImageUrl,
+      productImage: productImages.imageUrl,
 
       // Shipping
       shippingStatus: shipping.status,
@@ -486,6 +486,13 @@ export const getOrdersByAgentIdService = async (agentId: number) => {
     .leftJoin(users, eq(orders.userId, users.id))
     .leftJoin(orderItems, eq(orderItems.orderId, orders.id))
     .leftJoin(products, eq(orderItems.productId, products.id))
+     .leftJoin(
+      productImages,
+      and(
+        eq(productImages.productId, products.id),
+        eq(productImages.isMain, true)
+      )
+    )
     .leftJoin(shops, eq(orderItems.shopId, shops.id))
     .leftJoin(sellers, eq(shops.sellerId, sellers.id))
     .leftJoin(sellerUser, eq(sellers.userId, sellerUser.id))
@@ -614,7 +621,7 @@ export const getOrdersByStationIdService = async (stationId: number) => {
       productId: products.id,
       productName: products.name,
       productDescription: products.description,
-      productImage: products.ImageUrl,
+      productImage: productImages.imageUrl,
 
       // Shipping
       shippingStatus: shipping.status,
@@ -625,6 +632,13 @@ export const getOrdersByStationIdService = async (stationId: number) => {
     .leftJoin(users, eq(orders.userId, users.id))
     .leftJoin(orderItems, eq(orderItems.orderId, orders.id))
     .leftJoin(products, eq(orderItems.productId, products.id))
+     .leftJoin(
+      productImages,
+      and(
+        eq(productImages.productId, products.id),
+        eq(productImages.isMain, true)
+      )
+    )
     .leftJoin(shops, eq(orderItems.shopId, shops.id))
     .leftJoin(sellers, eq(shops.sellerId, sellers.id))
     .leftJoin(sellerUser, eq(sellers.userId, sellerUser.id))
@@ -721,7 +735,7 @@ export const getOrdersByOriginStationIdService = async (stationId: number) => {
       productId: products.id,
       productName: products.name,
       productDescription: products.description,
-      productImage: products.ImageUrl,
+      productImage: productImages.imageUrl, 
 
       // Shipping
       shippingStatus: shipping.status,
@@ -732,6 +746,14 @@ export const getOrdersByOriginStationIdService = async (stationId: number) => {
     .leftJoin(shipping, eq(orders.id, shipping.orderId))
     .leftJoin(orderItems, eq(orderItems.orderId, orders.id))
     .leftJoin(products, eq(orderItems.productId, products.id))
+    .leftJoin(
+      productImages,
+      and(
+        eq(productImages.productId, products.id),
+        eq(productImages.isMain, true)
+      )
+    )
+
     .leftJoin(shops, eq(orderItems.shopId, shops.id))
     .leftJoin(sellers, eq(shops.sellerId, sellers.id))
     .leftJoin(sellerUser, eq(sellers.userId, sellerUser.id))
@@ -767,7 +789,7 @@ export const getOrdersByOriginStationIdService = async (stationId: number) => {
           name: row.shopName,
         },
 
-         shipping: {
+        shipping: {
           status: row.shippingStatus,
           estimatedDelivery: row.estimatedDelivery,
         },
@@ -782,7 +804,7 @@ export const getOrdersByOriginStationIdService = async (stationId: number) => {
         productId: row.productId,
         productName: row.productName,
         productDescription: row.productDescription,
-        productImage: row.productImage,
+        productImage: row.productImage, 
         quantity: row.quantity,
         price: row.price,
       });
@@ -791,4 +813,3 @@ export const getOrdersByOriginStationIdService = async (stationId: number) => {
 
   return Array.from(orderMap.values());
 };
-
