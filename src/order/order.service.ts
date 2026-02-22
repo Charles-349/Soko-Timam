@@ -478,6 +478,7 @@ export const getOrdersByAgentIdService = async (agentId: number) => {
       productImage: products.ImageUrl,
 
       // Shipping
+      shippingStatus: shipping.status,
       estimatedDelivery: shipping.estimatedDelivery,
     })
     .from(shipping)
@@ -520,7 +521,10 @@ export const getOrdersByAgentIdService = async (agentId: number) => {
           name: row.shopName,
         },
 
-        estimatedDelivery: row.estimatedDelivery,
+        shipping: {
+          status: row.shippingStatus,
+          estimatedDelivery: row.estimatedDelivery,
+        },
 
         items: [],
       });
@@ -613,6 +617,7 @@ export const getOrdersByStationIdService = async (stationId: number) => {
       productImage: products.ImageUrl,
 
       // Shipping
+      shippingStatus: shipping.status,
       estimatedDelivery: shipping.estimatedDelivery,
     })
     .from(shipping)
@@ -654,8 +659,10 @@ export const getOrdersByStationIdService = async (stationId: number) => {
           id: row.shopId,
           name: row.shopName,
         },
-
-        estimatedDelivery: row.estimatedDelivery,
+        shipping: {
+          status: row.shippingStatus,
+          estimatedDelivery: row.estimatedDelivery,
+        },
 
         items: [],
       });
@@ -717,6 +724,7 @@ export const getOrdersByOriginStationIdService = async (stationId: number) => {
       productImage: products.ImageUrl,
 
       // Shipping
+      shippingStatus: shipping.status,
       estimatedDelivery: shipping.estimatedDelivery,
     })
     .from(orders)
@@ -759,7 +767,10 @@ export const getOrdersByOriginStationIdService = async (stationId: number) => {
           name: row.shopName,
         },
 
-        estimatedDelivery: row.estimatedDelivery,
+         shipping: {
+          status: row.shippingStatus,
+          estimatedDelivery: row.estimatedDelivery,
+        },
 
         items: [],
       });
