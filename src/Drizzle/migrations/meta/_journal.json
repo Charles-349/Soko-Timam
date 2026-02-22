@@ -197,6 +197,13 @@
       "when": 1771614312328,
       "tag": "0027_cute_scalphunter",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1771775921285,
+      "tag": "0028_brainy_kinsey_walden",
+      "breakpoints": true
     }
   ]
 }

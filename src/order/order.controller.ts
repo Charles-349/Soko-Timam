@@ -269,15 +269,21 @@ export const markOrderAsShippedController = async (req: Request, res: Response) 
 };
 
 // Mark Order as Delivered
+
 export const markOrderAsDeliveredController = async (req: Request, res: Response) => {
   try {
     const orderId = Number(req.params.id);
+    const { pickupCode } = req.body; 
 
     if (isNaN(orderId)) {
       return res.status(400).json({ message: "Invalid order ID" });
     }
 
-    const result = await markOrderAsDeliveredService(orderId);
+    if (!pickupCode || typeof pickupCode !== "string") {
+      return res.status(400).json({ message: "Pickup code is required" });
+    }
+
+    const result = await markOrderAsDeliveredService(orderId, pickupCode);
 
     return res.status(200).json(result);
   } catch (error: any) {

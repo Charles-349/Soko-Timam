@@ -4,6 +4,8 @@ import { orders, orderItems, products, payments, shops, shipping, stations, agen
 import type { TIOrder, TIOrderItem } from "../Drizzle/schema";
 import { sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
+import { sendEmail } from "../mailer/mailer";
+import crypto from "crypto";
 
 //Helper: Calculate total order amount
 const calculateTotalAmount = async (orderId: number) => {
@@ -441,62 +443,91 @@ export const markOrderAsShippedService = async (orderId: number) => {
 
 //Mark order as ready for pickup
 export const markOrderAsReadyForPickupService = async (orderId: number) => {
-  // Fetch the order
+  // Fetch the order with customer info
   const order = await db.query.orders.findFirst({
     where: eq(orders.id, orderId),
+    with: { user: true },
   });
 
   if (!order) throw new Error("Order not found");
 
+  // Generate a random 6-character alphanumeric pickup code
+  const pickupCode = crypto.randomBytes(3).toString("hex").toUpperCase();
+
   // Update shipping record if it exists
-  const shippingRecord = await db.query.shipping.findFirst({
+  let shippingRecord = await db.query.shipping.findFirst({
     where: eq(shipping.orderId, orderId),
   });
 
   if (shippingRecord) {
-    await db.update(shipping).set({ status: "ready_for_pickup" }).where(eq(shipping.id, shippingRecord.id));
+    await db.update(shipping)
+      .set({ status: "ready_for_pickup", pickupCode })
+      .where(eq(shipping.id, shippingRecord.id));
   } else {
-    //create a shipping record if none exists
-    await db.insert(shipping).values({
+    // Create a shipping record if none exists
+    const inserted = await db.insert(shipping).values({
       orderId,
       status: "ready_for_pickup",
       originStationId: order.originStationId || 0,
-    });
+      pickupCode,
+    }).returning();
+
+    shippingRecord = inserted[0];
   }
 
-  return { message: "Order marked as ready for pickup", orderId };
+  // Send pickup code to customer's email 
+  if (order.user?.email) {
+    await sendEmail(
+      order.user.email,
+      "Your Order is Ready for Pickup",
+      `Hi ${order.user.firstname}, your order #${orderId} is ready for pickup. Pickup code: ${pickupCode}`,
+      `
+        <p>Hi ${order.user.firstname},</p>
+        <p>Your order <strong>#${orderId}</strong> is ready for pickup.</p>
+        <p><strong>Pickup Code:</strong> ${pickupCode}</p>
+        <p>Please present this code at the pickup station.</p>
+      `
+    );
+  }
+
+  return {
+    message: "Order marked as ready for pickup and code sent to customer",
+    orderId,
+    pickupCode,
+  };
 };
 
 //Mark order as delivered
-export const markOrderAsDeliveredService = async (orderId: number) => {
+export const markOrderAsDeliveredService = async (orderId: number, providedCode: string) => {
   // Fetch the order
   const order = await db.query.orders.findFirst({
     where: eq(orders.id, orderId),
+    with: { shipping: true }, // fetch shipping record too
   });
 
   if (!order) throw new Error("Order not found");
 
+  const shippingRecord = order.shipping[0]; // assuming one shipping record per order
+
+  if (!shippingRecord) throw new Error("Shipping record not found for this order");
+
+  // Verify the provided pickup code
+  if (!shippingRecord.pickupCode) throw new Error("No pickup code set for this order");
+  if (shippingRecord.pickupCode !== providedCode) throw new Error("Invalid pickup code");
+
   // Update order status to delivered
-  await db.update(orders).set({ status: "completed", updatedAt: new Date() }).where(eq(orders.id, orderId));
+  await db.update(orders)
+    .set({ status: "completed", updatedAt: new Date() })
+    .where(eq(orders.id, orderId));
 
-  // Update shipping record if it exists
-  const shippingRecord = await db.query.shipping.findFirst({
-    where: eq(shipping.orderId, orderId),
-  });
+  // Update shipping status to delivered
+  await db.update(shipping)
+    .set({ status: "delivered" })
+    .where(eq(shipping.id, shippingRecord.id));
 
-  if (shippingRecord) {
-    await db.update(shipping).set({ status: "delivered" }).where(eq(shipping.id, shippingRecord.id));
-  } else {
-    //create a shipping record if none exists
-    await db.insert(shipping).values({
-      orderId,
-      status: "delivered",
-      originStationId: order.originStationId || 0,
-    });
-  }
-
-  return { message: "Order marked as delivered", orderId };
+  return { message: "Order successfully delivered", orderId };
 };
+
 
 //Get orders by agent id
 export const getOrdersByAgentIdService = async (agentId: number) => {

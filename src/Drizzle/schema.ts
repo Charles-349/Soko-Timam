@@ -264,6 +264,7 @@ export const shipping = pgTable("shipping", {
     .default("preparing"),
   recipientName: varchar("recipient_name", { length: 255 }),
   recipientPhone: varchar("recipient_phone", { length: 20 }),
+  pickupCode: varchar("pickup_code", { length: 100 }),
   estimatedDelivery: timestamp("estimated_delivery"),
   createdAt: timestamp("created_at").defaultNow(),
 });
