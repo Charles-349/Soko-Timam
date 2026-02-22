@@ -439,6 +439,65 @@ export const markOrderAsShippedService = async (orderId: number) => {
   return { message: "Order marked as shipped", orderId };
 };
 
+//Mark order as ready for pickup
+export const markOrderAsReadyForPickupService = async (orderId: number) => {
+  // Fetch the order
+  const order = await db.query.orders.findFirst({
+    where: eq(orders.id, orderId),
+  });
+
+  if (!order) throw new Error("Order not found");
+
+  // Update shipping record if it exists
+  const shippingRecord = await db.query.shipping.findFirst({
+    where: eq(shipping.orderId, orderId),
+  });
+
+  if (shippingRecord) {
+    await db.update(shipping).set({ status: "ready_for_pickup" }).where(eq(shipping.id, shippingRecord.id));
+  } else {
+    //create a shipping record if none exists
+    await db.insert(shipping).values({
+      orderId,
+      status: "ready_for_pickup",
+      originStationId: order.originStationId || 0,
+    });
+  }
+
+  return { message: "Order marked as ready for pickup", orderId };
+};
+
+//Mark order as delivered
+export const markOrderAsDeliveredService = async (orderId: number) => {
+  // Fetch the order
+  const order = await db.query.orders.findFirst({
+    where: eq(orders.id, orderId),
+  });
+
+  if (!order) throw new Error("Order not found");
+
+  // Update order status to delivered
+  await db.update(orders).set({ status: "completed", updatedAt: new Date() }).where(eq(orders.id, orderId));
+
+  // Update shipping record if it exists
+  const shippingRecord = await db.query.shipping.findFirst({
+    where: eq(shipping.orderId, orderId),
+  });
+
+  if (shippingRecord) {
+    await db.update(shipping).set({ status: "delivered" }).where(eq(shipping.id, shippingRecord.id));
+  } else {
+    //create a shipping record if none exists
+    await db.insert(shipping).values({
+      orderId,
+      status: "delivered",
+      originStationId: order.originStationId || 0,
+    });
+  }
+
+  return { message: "Order marked as delivered", orderId };
+};
+
 //Get orders by agent id
 export const getOrdersByAgentIdService = async (agentId: number) => {
   const sellerUser = alias(users, "sellerUser");

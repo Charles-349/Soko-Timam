@@ -10,7 +10,6 @@ export const ShippingStatusEnum = pgEnum("shipping_status", [
   "preparing",
   "in_transit",
   "ready_for_pickup",
-  "picked_up",
   "delivered"
 ]); 
 export const FlashSalesStatusEnum = pgEnum("flash_sale_status", ["upcoming", "active", "ended"]);  

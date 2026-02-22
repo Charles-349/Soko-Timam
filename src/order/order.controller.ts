@@ -13,6 +13,8 @@ import {
   getStationsAndAgentsService,
   getOrdersByOriginStationIdService,
   getOrdersByStationIdService,
+  markOrderAsDeliveredService,
+  markOrderAsReadyForPickupService,
 } from "./order.service";
 
 //Create or Update Order
@@ -262,6 +264,42 @@ export const markOrderAsShippedController = async (req: Request, res: Response) 
     return res.status(200).json(result);
   } catch (error: any) {
     console.error("Error marking order as shipped:", error.message || error);
+    return res.status(500).json({ message: error.message || "Something went wrong" });
+  }
+};
+
+// Mark Order as Delivered
+export const markOrderAsDeliveredController = async (req: Request, res: Response) => {
+  try {
+    const orderId = Number(req.params.id);
+
+    if (isNaN(orderId)) {
+      return res.status(400).json({ message: "Invalid order ID" });
+    }
+
+    const result = await markOrderAsDeliveredService(orderId);
+
+    return res.status(200).json(result);
+  } catch (error: any) {
+    console.error("Error marking order as delivered:", error.message || error);
+    return res.status(500).json({ message: error.message || "Something went wrong" });
+  }
+};
+
+// Mark order as ready for pickup
+export const markOrderReadyForPickupController = async (req: Request, res: Response) => {
+  try {
+    const orderId = Number(req.params.id);
+
+    if (isNaN(orderId)) {
+      return res.status(400).json({ message: "Invalid order ID" });
+    }
+
+    const result = await markOrderAsReadyForPickupService(orderId);
+
+    return res.status(200).json(result);
+  } catch (error: any) {
+    console.error("Error marking order as ready for pickup:", error.message || error);
     return res.status(500).json({ message: error.message || "Something went wrong" });
   }
 };
