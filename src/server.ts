@@ -9,7 +9,7 @@ import cron from 'node-cron';
 const server = http.createServer(app);
 initSocket(server);
 
-const PORT = 8080;
+const PORT = 5000;
 server.listen(PORT, async () => {
   console.log(`Server running on port http://localhost:${PORT}`);
 
