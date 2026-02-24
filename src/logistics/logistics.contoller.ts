@@ -23,6 +23,7 @@ import {
   getShippingsByAgentIdService,
   getShippingsByStationIdService,
   getStationByUserIdService,
+  getAgentByUserIdService,
 } from "./logistics.service";
 
 // STATIONS
@@ -115,6 +116,18 @@ export const getAgentByIdController = async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
     const agent = await getAgentByIdService(id);
     if (!agent) return res.status(404).json({ message: "Agent not found" });
+    res.status(200).json({ message: "Agent retrieved successfully", agent });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+//Get agent by user id
+export const getAgentByUserIdController = async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    const agent = await getAgentByUserIdService(userId);
+    if (!agent) return res.status(404).json({ message: "Agent not found for this user" });
     res.status(200).json({ message: "Agent retrieved successfully", agent });
   } catch (error: any) {
     res.status(500).json({ message: error.message });

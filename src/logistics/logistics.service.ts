@@ -74,6 +74,16 @@ export const getAgentByIdService = async (id: number) => {
   });
 };
 
+//Get agent by user id
+export const getAgentByUserIdService = async (userId: number) => {
+  return await db.query.agents.findFirst({
+    where: eq(agents.userId, userId),
+    with: {
+      user: true,
+    },
+  });
+};
+
 export const updateAgentService = async (id: number, agent: Partial<TIAgent>) => {
   const updated = await db.update(agents).set(agent).where(eq(agents.id, id)).returning();
   if (!updated.length) return null;

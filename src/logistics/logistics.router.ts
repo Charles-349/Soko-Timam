@@ -23,6 +23,7 @@ import {
   getShippingsByAgentIdController,
   getShippingsByStationIdController,
   getStationByUserIdController,
+  getAgentByUserIdController,
 } from "./logistics.contoller";
 
 const logistics = (app: Express) => {
@@ -107,6 +108,15 @@ const logistics = (app: Express) => {
   app.route("/agent/:id").get(async (req, res, next) => {
     try {
       await getAgentByIdController(req, res);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Get Agent By User ID
+  app.route("/agent/user/:userId").get(async (req, res, next) => {
+    try {
+      await getAgentByUserIdController(req, res);
     } catch (error) {
       next(error);
     }
