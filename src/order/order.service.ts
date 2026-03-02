@@ -394,7 +394,7 @@ export const assignOriginStationService = async (
   });
 
   if (!order) throw new Error("Order not found");
-
+  if(order.status !== "paid") throw new Error("Only paid orders can be assigned an origin station");
   // Update origin station
   await db.update(orders)
     .set({
@@ -418,6 +418,8 @@ export const markOrderAsShippedService = async (orderId: number) => {
   });
 
   if (!order) throw new Error("Order not found");
+
+  if (order.status !== "at_station") throw new Error("Order must be assigned to a station to be marked as shipped");
 
   // Update order status to shipped
   await db.update(orders).set({ status: "shipped", updatedAt: new Date() }).where(eq(orders.id, orderId));
@@ -450,6 +452,8 @@ export const markOrderAsReadyForPickupService = async (orderId: number) => {
   });
 
   if (!order) throw new Error("Order not found");
+
+  if (order.status !=="shipped") throw new Error("Only shipped orders can be marked as ready for pickup");
 
   // Generate a random 6-character alphanumeric pickup code
   const pickupCode = crypto.randomBytes(3).toString("hex").toUpperCase();
@@ -515,6 +519,7 @@ export const markOrderAsDeliveredService = async (orderId: number, providedCode:
   if (!shippingRecord.pickupCode) throw new Error("No pickup code set for this order");
   if (shippingRecord.pickupCode !== providedCode) throw new Error("Invalid pickup code");
 
+  if (shippingRecord.status !== "ready_for_pickup") throw new Error("Order is not ready for pickup, cannot be marked as delivered");
   // Update order status to delivered
   await db.update(orders)
     .set({ status: "completed", updatedAt: new Date() })
@@ -569,6 +574,8 @@ export const getOrdersByAgentIdService = async (agentId: number) => {
 
       // Shipping
       shippingStatus: shipping.status,
+      recipientName: shipping.recipientName,
+      recipientPhone: shipping.recipientPhone,
       estimatedDelivery: shipping.estimatedDelivery,
     })
     .from(shipping)
@@ -620,6 +627,8 @@ export const getOrdersByAgentIdService = async (agentId: number) => {
 
         shipping: {
           status: row.shippingStatus,
+          recipientName: row.recipientName,
+          recipientPhone: row.recipientPhone,
           estimatedDelivery: row.estimatedDelivery,
         },
 
@@ -715,6 +724,8 @@ export const getOrdersByStationIdService = async (stationId: number) => {
 
       // Shipping
       shippingStatus: shipping.status,
+      recipientName: shipping.recipientName,
+      recipientPhone: shipping.recipientPhone,
       estimatedDelivery: shipping.estimatedDelivery,
     })
     .from(shipping)
@@ -765,6 +776,8 @@ export const getOrdersByStationIdService = async (stationId: number) => {
         },
         shipping: {
           status: row.shippingStatus,
+          recipientName: row.recipientName,
+          recipientPhone: row.recipientPhone,
           estimatedDelivery: row.estimatedDelivery,
         },
 
@@ -829,6 +842,8 @@ export const getOrdersByOriginStationIdService = async (stationId: number) => {
 
       // Shipping
       shippingStatus: shipping.status,
+      recipientName: shipping.recipientName,
+      recipientPhone: shipping.recipientPhone,
       estimatedDelivery: shipping.estimatedDelivery,
     })
     .from(orders)
@@ -881,6 +896,8 @@ export const getOrdersByOriginStationIdService = async (stationId: number) => {
 
         shipping: {
           status: row.shippingStatus,
+          recipientName: row.recipientName,
+          recipientPhone: row.recipientPhone,
           estimatedDelivery: row.estimatedDelivery,
         },
 
@@ -903,3 +920,4 @@ export const getOrdersByOriginStationIdService = async (stationId: number) => {
 
   return Array.from(orderMap.values());
 };
+

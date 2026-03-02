@@ -13,7 +13,18 @@ export const ShippingStatusEnum = pgEnum("shipping_status", [
   "delivered"
 ]); 
 export const FlashSalesStatusEnum = pgEnum("flash_sale_status", ["upcoming", "active", "ended"]);  
-export const WalletStatusEnum = pgEnum("wallet_status", ["pending", "completed", "failed", "processing"]);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
+export const WalletStatusEnum = pgEnum("wallet_status", ["pending", "completed", "failed", "processing"]);  
+export const ReturnStatusEnum = pgEnum("return_status", [
+  "requested",
+  "approved",
+  "rejected",
+  "received",
+  "refunded",
+  "exchanged",
+  "closed"
+  
+]);  
+export const RefundStatusEnum = pgEnum("refund_status", ["pending", "completed", "failed"]);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
 
 // USERS
 export const users = pgTable("users", {
@@ -235,11 +246,56 @@ export const orderItems = pgTable("order_items", {
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
 });
 
+//RETURNS
+export const returns = pgTable("returns", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id")
+    .references(() => orders.id)
+    .notNull(),
+  orderItemId: integer("order_item_id")
+    .references(() => orderItems.id)
+    .notNull(),
+  quantity: integer("quantity").notNull().default(1),
+  userId: integer("user_id")
+    .references(() => users.id)
+    .notNull(),
+  sellerId: integer("seller_id")
+    .references(() => sellers.id)
+    .notNull(),
+  reason: varchar("reason", { length: 255 }).notNull(),
+  status: ReturnStatusEnum("status").default("requested"),
+  resolutionType: varchar("resolution_type", { length: 50 }),
+  refundAmount: decimal("refund_amount", {
+    precision: 10,
+    scale: 2,
+  }),
+  customerNote: text("customer_note"),
+  adminNote: text("admin_note"),
+  evidenceUrl: text("evidence_url"),
+  processedAt: timestamp("processed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+})
+
+//REFUNDS
+export const refunds = pgTable("refunds", {
+  id: serial("id").primaryKey(),
+  returnId: integer("return_id")
+    .references(() => returns.id)
+    .notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  status: RefundStatusEnum("status").default("pending"),
+  externalTransactionId: varchar("external_transaction_id", { length: 255 }),
+  attempts: integer("attempts").default(0), // retry counter
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // PAYMENTS
 export const payments = pgTable("payments", {
   id: serial("id").primaryKey(),
   orderId: integer("order_id").references(() => orders.id).notNull(),
-  method: varchar("method", { length: 50 }).notNull(), // mpesa, card, wallet
+  method: varchar("method", { length: 50 }).notNull(), // mpesa,wallet
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   status: varchar("status", { length: 20 }).default("pending"),
   transactionRef: varchar("transaction_ref", { length: 255 }),
@@ -266,6 +322,7 @@ export const shipping = pgTable("shipping", {
   recipientPhone: varchar("recipient_phone", { length: 20 }),
   pickupCode: varchar("pickup_code", { length: 100 }),
   estimatedDelivery: timestamp("estimated_delivery"),
+  deliveredAt: timestamp("delivered_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -552,7 +609,31 @@ export const agentsRelations = relations(agents, ({ one }) => ({
   })
 }));
 
+export const returnsRelations = relations(returns, ({ one }) => ({
+  order: one(orders, {
+    fields: [returns.orderId],
+    references: [orders.id],
+  }),
+  orderItem: one(orderItems, {
+    fields: [returns.orderItemId],
+    references: [orderItems.id],
+  }),
+  user: one(users, {
+    fields: [returns.userId],
+    references: [users.id],
+  }),
+  seller: one(sellers, {
+    fields: [returns.sellerId],
+    references: [sellers.id],
+  }),
+}));
 
+export const refundsRelations = relations(refunds, ({ one }) => ({
+  return: one(returns, {
+    fields: [refunds.returnId],
+    references: [returns.id],
+  }),
+}));
 
 
 // TYPE INFERENCE 

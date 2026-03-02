@@ -168,11 +168,11 @@
 import axios from "axios";
 import { eq, sql } from "drizzle-orm";
 import db from "../Drizzle/db";
-import { payments, orders, cartItems, carts, orderItems, sellerWallets, sellerWalletTransactions, shops, platformCommissions, shipping } from "../Drizzle/schema";
+import { payments, orders, cartItems, carts, orderItems, sellerWallets, sellerWalletTransactions, shops, platformCommissions, shipping, users } from "../Drizzle/schema";
 import { normalizePhoneNumber } from "../utils/normalizePhoneNumber";
 import { getAccessToken, generatePassword } from "../utils/helper";
 import { TISellerWallet } from "../Drizzle/schema"; 
-import { randomUUID } from "crypto";
+
 
 
 // Initiate M-Pesa STK Push
@@ -247,10 +247,18 @@ export const handleMpesaCallback = async (orderId: number, callbackBody: any) =>
     where: eq(orders.id, orderId),
   });
 
-  if (!order) {
-    console.error(`Order ${orderId} not found`);
-    return;
-  }
+if (!order) 
+{
+  return;
+}
+
+const customer = await db.query.users.findFirst({
+  where: eq(users.id, order.userId),
+});
+
+if (!customer) {
+  return;
+}
   // Payment failed or cancelled
   if (resultCode !== 0) {
     await db
@@ -307,6 +315,9 @@ export const handleMpesaCallback = async (orderId: number, callbackBody: any) =>
  //AUTO CREATE SHIPPING AFTER PAYMENT
 await db.insert(shipping).values({
   orderId,
+  recipientName: `${customer?.firstname} ${customer?.lastname}`,
+  recipientPhone: customer?.phone ?? null,
+  estimatedDelivery: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
   originStationId: order.originStationId, 
   pickupStationId: order.pickupStationId || null,
   pickupAgentId: order.pickupAgentId || null,
