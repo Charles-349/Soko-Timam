@@ -24,7 +24,8 @@ export const ReturnStatusEnum = pgEnum("return_status", [
   "closed"
   
 ]);  
-export const RefundStatusEnum = pgEnum("refund_status", ["pending", "completed", "failed"]);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
+export const RefundStatusEnum = pgEnum("refund_status", ["pending", "completed", "failed"]);   
+export const SettlementStatusEnum = pgEnum("settlement_status", ["pending", "completed"]);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
 
 // USERS
 export const users = pgTable("users", {
@@ -126,10 +127,29 @@ export const bankAccounts = pgTable("bank_accounts", {
 // SELLER WALLETS & WALLET TRANSACTIONS
 export const sellerWallets = pgTable("seller_wallets", {
   id: serial("id").primaryKey(),
-  sellerId: integer("seller_id").references(() => sellers.id, { onDelete: "cascade" }).notNull(),
-  balance: decimal("balance", { precision: 14, scale: 2 }).notNull().default("0"),
-  totalEarned: decimal("total_earned", { precision: 14, scale: 2 }).notNull().default("0"),
-  pendingWithdrawal: decimal("pending_withdrawal", { precision: 14, scale: 2 }).notNull().default("0"),
+  sellerId: integer("seller_id")
+    .references(() => sellers.id, { onDelete: "cascade" })
+    .notNull()
+    .unique(),
+  balance :decimal("balance", {
+    precision: 14,
+    scale: 2,  }).notNull().default("0"),
+  pendingBalance: decimal("pending_balance", {
+    precision: 14,
+    scale: 2,
+  }).notNull().default("0"),
+  availableBalance: decimal("available_balance", {
+    precision: 14,
+    scale: 2,
+  }).notNull().default("0"),
+  totalEarned: decimal("total_earned", {
+    precision: 14,
+    scale: 2,
+  }).notNull().default("0"),
+  totalWithdrawn: decimal("total_withdrawn", {
+    precision: 14,
+    scale: 2,
+  }).notNull().default("0"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -227,6 +247,19 @@ export const orders = pgTable("orders", {
   status: OrderStatusEnum("order_status").default("pending"), // pending, paid, shipped, completed, cancelled
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
   paymentStatus: PaymentStatusEnum("payment_status").default("unpaid"),
+  deliveredAt: timestamp("delivered_at"),
+  returnWindowEndsAt: timestamp("return_window_ends_at"),
+  escrowReleaseAt: timestamp("escrow_release_at"),
+  isEscrowReleased: boolean("is_escrow_released").default(false),
+  isEscrowLocked: boolean("is_escrow_locked").default(false),
+  escrowLockedAmount: decimal("escrow_locked_amount", {
+  precision: 10,
+  scale: 2,
+  }).default("0"),
+  escrowReleasedAmount: decimal("escrow_released_amount", {
+  precision: 15,
+  scale: 2,
+  }).default("0"),
   originStationId: integer("origin_station_id")
     .references(() => stations.id),
   pickupStationId: integer("pickup_station_id")
@@ -239,11 +272,25 @@ export const orders = pgTable("orders", {
 
 export const orderItems = pgTable("order_items", {
   id: serial("id").primaryKey(),
-  orderId: integer("order_id").references(() => orders.id).notNull(),
-  productId: integer("product_id").references(() => products.id).notNull(),
-  shopId: integer("shop_id").references(() => shops.id).notNull(),
+  orderId: integer("order_id")
+    .references(() => orders.id)
+    .notNull(),
+  productId: integer("product_id")
+    .references(() => products.id)
+    .notNull(),
+  shopId: integer("shop_id")
+    .references(() => shops.id)
+    .notNull(),
   quantity: integer("quantity").notNull(),
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  platformCommission: decimal("platform_commission", {
+    precision: 10,
+    scale: 2,
+  }).notNull().default("0"),
+  sellerEarning: decimal("seller_earning", {
+    precision: 10,
+    scale: 2,
+  }).notNull().default("0"),
 });
 
 //RETURNS
@@ -269,6 +316,9 @@ export const returns = pgTable("returns", {
     precision: 10,
     scale: 2,
   }),
+  refundResponsibility: varchar("refund_responsibility", {
+  length: 30,
+}), // seller_fault | buyer_fault | logistics_fault
   customerNote: text("customer_note"),
   adminNote: text("admin_note"),
   evidenceUrl: text("evidence_url"),
@@ -289,6 +339,40 @@ export const refunds = pgTable("refunds", {
   attempts: integer("attempts").default(0), // retry counter
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+//SETTLEMENTS
+export const settlements = pgTable("settlements", {
+  id: serial("id").primaryKey(),
+  sellerId: integer("seller_id")
+    .references(() => sellers.id)
+    .notNull(),
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  totalAmount: decimal("total_amount", {
+    precision: 14,
+    scale: 2,
+  }).notNull(),
+  status: SettlementStatusEnum("status").default("pending"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+//LEGDER
+export const ledger = pgTable("ledger", {
+  id: serial("id").primaryKey(),
+  sellerId: integer("seller_id")
+    .references(() => sellers.id),
+  type: varchar("type", { length: 20 }).notNull(), 
+  source: varchar("source", { length: 50 }).notNull(),
+  referenceId: integer("reference_id"),
+  amount: decimal("amount", {
+    precision: 14,
+    scale: 2,
+  }).notNull(),
+  balanceAfter: decimal("balance_after", {
+    precision: 14,
+    scale: 2,
+  }),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // PAYMENTS

@@ -4,6 +4,7 @@ import app from './index';
 import { initSocket } from './socket'; 
 import { updateFlashSaleStatuses } from './utils/flashsale.schedular';
 import cron from 'node-cron';
+import { startSettlementCron } from './utils/settlement.job';
 
 // Create HTTP server and attach socket
 const server = http.createServer(app);
@@ -15,6 +16,8 @@ server.listen(PORT, async () => {
 
   // Initial flash sale update
   await updateFlashSaleStatuses();
+
+  startSettlementCron();
 
   // Schedule flash sale updates every minute
   cron.schedule("* * * * *", async () => {

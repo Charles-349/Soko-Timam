@@ -204,6 +204,20 @@
       "when": 1771775921285,
       "tag": "0028_brainy_kinsey_walden",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1772436133697,
+      "tag": "0029_giant_slayback",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1772530034075,
+      "tag": "0030_sweet_anthem",
+      "breakpoints": true
     }
   ]
 }

@@ -8,6 +8,7 @@ import {
 import { paySellerViaMpesa } from "../payment/payment.service";
 import { normalizePhoneNumber } from "../utils/normalizePhoneNumber";
 
+//GET WALLET
 export const getSellerWalletService = async (sellerId: number) => {
   const wallet = await db.query.sellerWallets.findFirst({
     where: eq(sellerWallets.sellerId, sellerId),
@@ -17,32 +18,32 @@ export const getSellerWalletService = async (sellerId: number) => {
   return wallet;
 };
 
-export const getSellerWalletTransactionsService = async (sellerId: number) => {
+//GET WALLET TRANSACTIONS
+export const getSellerWalletTransactionsService = async (
+  sellerId: number
+) => {
   return await db.query.sellerWalletTransactions.findMany({
     where: eq(sellerWalletTransactions.sellerId, sellerId),
     orderBy: (tx, { desc }) => [desc(tx.createdAt)],
   });
 };
 
-
-// CREDIT
+//CREDIT
 export const creditSellerWalletService = async ({
   sellerId,
   amount,
   orderId,
-  productId,
-  note = "Order payment",
+  note = "Order payment (escrow)",
 }: {
   sellerId: number;
   amount: number;
   orderId?: number;
-  productId?: number;
   note?: string;
 }) => {
   const amountNum = Number(amount);
 
   await db.update(sellerWallets).set({
-    balance: sql`${sellerWallets.balance} + ${amountNum}`,
+    pendingBalance: sql`${sellerWallets.pendingBalance} + ${amountNum}`,
     totalEarned: sql`${sellerWallets.totalEarned} + ${amountNum}`,
   }).where(eq(sellerWallets.sellerId, sellerId));
 
@@ -50,29 +51,64 @@ export const creditSellerWalletService = async ({
     sellerId,
     amount: amountNum.toString(),
     orderId,
-    productId,
     type: "credit",
     note,
     walletStatus: "completed",
+    createdAt: new Date(),
   });
 };
 
-// DEBIT
+export const releaseEscrowToAvailableService = async (
+  sellerId: number,
+  amount: number,
+  note = "Escrow settlement release"
+) => {
+  const wallet = await getSellerWalletService(sellerId);
+
+  if (Number(wallet.pendingBalance) < amount)
+    throw new Error("Insufficient pending balance");
+
+  await db.update(sellerWallets).set({
+    pendingBalance: sql`${sellerWallets.pendingBalance} - ${amount}`,
+    availableBalance: sql`${sellerWallets.availableBalance} + ${amount}`,
+  }).where(eq(sellerWallets.sellerId, sellerId));
+
+  await db.insert(sellerWalletTransactions).values({
+    sellerId,
+    amount: amount.toString(),
+    type: "credit",
+    note,
+    walletStatus: "completed",
+    createdAt: new Date(),
+  });
+};
+
+//DEBIT FOR REFUND
 export const debitSellerWalletService = async ({
   sellerId,
   amount,
-  note = "Platform debit",
+  note = "Refund debit",
 }: {
   sellerId: number;
   amount: number;
   note?: string;
 }) => {
   const wallet = await getSellerWalletService(sellerId);
-  if (Number(wallet.balance) < amount) throw new Error("Insufficient balance");
 
-  await db.update(sellerWallets).set({
-    balance: sql`${sellerWallets.balance} - ${amount}`,
-  }).where(eq(sellerWallets.sellerId, sellerId));
+  const pending = Number(wallet.pendingBalance);
+  const available = Number(wallet.availableBalance);
+
+  if (pending >= amount) {
+    await db.update(sellerWallets).set({
+      pendingBalance: sql`${sellerWallets.pendingBalance} - ${amount}`,
+    }).where(eq(sellerWallets.sellerId, sellerId));
+  } else if (available >= amount) {
+    await db.update(sellerWallets).set({
+      availableBalance: sql`${sellerWallets.availableBalance} - ${amount}`,
+    }).where(eq(sellerWallets.sellerId, sellerId));
+  } else {
+    throw new Error("Insufficient funds for refund");
+  }
 
   await db.insert(sellerWalletTransactions).values({
     sellerId,
@@ -80,17 +116,22 @@ export const debitSellerWalletService = async ({
     type: "debit",
     note,
     walletStatus: "completed",
+    createdAt: new Date(),
   });
 };
 
-// SELLER REQUESTS WITHDRAWAL
-export const requestWithdrawalService = async (sellerId: number, amount: number) => {
+//SELLER REQUEST WITHDRAWAL
+export const requestWithdrawalService = async (
+  sellerId: number,
+  amount: number
+) => {
   const wallet = await getSellerWalletService(sellerId);
-  if (Number(wallet.balance) < amount) throw new Error("Insufficient balance");
+
+  if (Number(wallet.availableBalance) < amount)
+    throw new Error("Insufficient available balance");
 
   await db.update(sellerWallets).set({
-    balance: sql`${sellerWallets.balance} - ${amount}`,
-    pendingWithdrawal: sql`${sellerWallets.pendingWithdrawal} + ${amount}`,
+    availableBalance: sql`${sellerWallets.availableBalance} - ${amount}`,
   }).where(eq(sellerWallets.sellerId, sellerId));
 
   const [tx] = await db.insert(sellerWalletTransactions).values({
@@ -105,9 +146,11 @@ export const requestWithdrawalService = async (sellerId: number, amount: number)
   return tx;
 };
 
-// ADMIN COMPLETES WITHDRAWAL
-export const completeWithdrawalService = async (transactionId: number) => {
-  const withdrawal: any = await db.query.sellerWalletTransactions.findFirst({
+//  ADMIN COMPLETE WITHDRAWAL (M-Pesa B2C)
+export const completeWithdrawalService = async (
+  transactionId: number
+) => {
+  const withdrawal = await db.query.sellerWalletTransactions.findFirst({
     where: eq(sellerWalletTransactions.id, transactionId),
   });
 
@@ -132,18 +175,20 @@ export const completeWithdrawalService = async (transactionId: number) => {
       Number(withdrawal.amount)
     );
 
-    // Mark as processing, not completed
     await db.update(sellerWalletTransactions).set({
-      walletStatus: "processing",
+      walletStatus: "completed",
       updatedAt: new Date(),
     }).where(eq(sellerWalletTransactions.id, transactionId));
 
+    await db.update(sellerWallets).set({
+      totalWithdrawn: sql`${sellerWallets.totalWithdrawn} + ${withdrawal.amount}`,
+    }).where(eq(sellerWallets.sellerId, withdrawal.sellerId));
+
     return { success: true, mpesaResult };
   } catch (err) {
-    // Refund seller
+    // rollback
     await db.update(sellerWallets).set({
-      balance: sql`${sellerWallets.balance} + ${withdrawal.amount}`,
-      pendingWithdrawal: sql`${sellerWallets.pendingWithdrawal} - ${withdrawal.amount}`,
+      availableBalance: sql`${sellerWallets.availableBalance} + ${withdrawal.amount}`,
     }).where(eq(sellerWallets.sellerId, withdrawal.sellerId));
 
     await db.update(sellerWalletTransactions).set({
@@ -154,50 +199,15 @@ export const completeWithdrawalService = async (transactionId: number) => {
   }
 };
 
-
-
-// Auto payout service
-const MIN_PAYOUT_AMOUNT = 1; 
-
-
-export const autoPayoutService = async () => {
-  try {
-    // Get all sellers with balance > MIN_PAYOUT_AMOUNT
-    const eligibleWallets = await db.query.sellerWallets.findMany({
-      where: sql`${sellerWallets.balance} >= ${MIN_PAYOUT_AMOUNT}`,
-    });
-
-    for (const wallet of eligibleWallets) {
-      try {
-        console.log(`Processing auto-payout for sellerId: ${wallet.sellerId}`);
-
-        //Request Withdrawal
-        const tx = await requestWithdrawalService(
-          wallet.sellerId,
-          Number(wallet.balance)
-        );
-
-        //Complete Withdrawal (trigger B2C)
-        const result = await completeWithdrawalService(tx.id);
-        console.log(`Auto-payout success for sellerId ${wallet.sellerId}`, result.mpesaResult);
-      } catch (err: any) {
-        console.error(`Auto-payout failed for sellerId ${wallet.sellerId}:`, err.message);
-      }
-    }
-  } catch (err: any) {
-    console.error("Auto-payout job failed:", err.message);
-  }
-};
-
-//get wallet transactions using wallet id
-export const getWalletTransactionsByWalletIdService = async (walletId: number) => {
+//GET TRANSACTIONS BY WALLET ID
+export const getWalletTransactionsByWalletIdService = async (
+  walletId: number
+) => {
   const wallet = await db.query.sellerWallets.findFirst({
     where: eq(sellerWallets.id, walletId),
   });
 
-  if (!wallet) {
-    throw new Error("Wallet not found");
-  }
+  if (!wallet) throw new Error("Wallet not found");
 
   return await db.query.sellerWalletTransactions.findMany({
     where: eq(sellerWalletTransactions.sellerId, wallet.sellerId),
@@ -205,9 +215,9 @@ export const getWalletTransactionsByWalletIdService = async (walletId: number) =
   });
 };
 
-//get all transactions
+// GET PENDING WITHDRAWAL REQUESTS (Admin)
 export const getPendingWithdrawalRequestsService = async () => {
-  const transactions = await db
+  return await db
     .select({
       transactionId: sellerWalletTransactions.id,
       externalTransactionId: sellerWalletTransactions.externalTransactionId,
@@ -232,7 +242,4 @@ export const getPendingWithdrawalRequestsService = async () => {
       )
     )
     .orderBy(desc(sellerWalletTransactions.createdAt));
-
-  return transactions;
 };
-
