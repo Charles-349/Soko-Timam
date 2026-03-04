@@ -41,73 +41,96 @@ export const createReturnService = async ({
   orderItemIds: number[];
   reason: string;
 }): Promise<ReturnRow[]> => {
-  if (!orderItemIds?.length) throw new Error("No order items specified");
+  if (!orderItemIds?.length)
+    throw new Error("No order items specified");
 
-  const returnRecords: ReturnRow[] = [];
-  const affectedOrderIds = new Set<number>();
+  return await db.transaction(async (tx) => {
+    const returnRecords: ReturnRow[] = [];
+    const affectedOrderIds = new Set<number>();
 
-  for (const itemId of orderItemIds) {
-    const [orderItem] = await db
-      .select()
-      .from(orderItems)
-      .where(eq(orderItems.id, itemId));
+    for (const itemId of orderItemIds) {
+      const [orderItem] = await tx
+        .select()
+        .from(orderItems)
+        .where(eq(orderItems.id, itemId));
 
-    if (!orderItem) throw new Error(`Order item ${itemId} not found`);
+      if (!orderItem)
+        throw new Error(`Order item ${itemId} not found`);
 
-    const [existingReturn] = await db
-      .select()
-      .from(returns)
-      .where(eq(returns.orderItemId, itemId));
+      const [existingReturn] = await tx
+        .select()
+        .from(returns)
+        .where(eq(returns.orderItemId, itemId));
 
-    if (existingReturn)
-      throw new Error(`Return already exists for order item ${itemId}`);
+      if (existingReturn)
+        throw new Error(
+          `Return already exists for order item ${itemId}`
+        );
 
-    const [shop] = await db
-      .select()
-      .from(shops)
-      .where(eq(shops.id, orderItem.shopId));
+      const [order] = await tx
+        .select()
+        .from(orders)
+        .where(eq(orders.id, orderItem.orderId))
+        .for("update");
 
-    if (!shop)
-      throw new Error(`Shop not found for order item ${itemId}`);
+      if (!order)
+        throw new Error(
+          `Order not found for item ${itemId}`
+        );
 
-    const sellerId = shop.sellerId;
+      //Return window validation
+      if (!order.returnWindowEndsAt)
+        throw new Error("Return window not initialized");
 
-    const [order] = await db
-      .select()
-      .from(orders)
-      .where(eq(orders.id, orderItem.orderId));
+      const now = new Date();
+      const windowEnd = new Date(order.returnWindowEndsAt);
 
-    const userId = order?.userId ?? 0;
+      if (now > windowEnd)
+        throw new Error("Return window expired");
 
-    const [returnRecord] = await db
-      .insert(returns)
-      .values({
-        orderItemId: itemId,
-        orderId: orderItem.orderId,
-        sellerId,
-        userId,
-        reason,
-        refundAmount: sql`${Number(orderItem.price) * Number(orderItem.quantity)}`,
-        status: "requested",
-      })
-      .returning();
+      const [shop] = await tx
+        .select()
+        .from(shops)
+        .where(eq(shops.id, orderItem.shopId));
 
-    returnRecords.push(returnRecord);
-    affectedOrderIds.add(orderItem.orderId);
-  }
+      if (!shop)
+        throw new Error(
+          `Shop not found for order item ${itemId}`
+        );
 
-  //LOCK ESCROW FOR AFFECTED ORDERS
-  for (const orderId of affectedOrderIds) {
-    await db
-      .update(orders)
-      .set({
-        isEscrowLocked: true,
-        updatedAt: new Date(),
-      })
-      .where(eq(orders.id, orderId));
-  }
+      const sellerId = shop.sellerId;
+      const userId = order.userId ?? 0;
 
-  return returnRecords;
+      const [returnRecord] = await tx
+        .insert(returns)
+        .values({
+          orderItemId: itemId,
+          orderId: orderItem.orderId,
+          sellerId,
+          userId,
+          reason,
+          refundAmount: sql`${Number(orderItem.price) * Number(orderItem.quantity)}`,
+          status: "requested",
+        })
+        .returning();
+
+      returnRecords.push(returnRecord);
+      affectedOrderIds.add(orderItem.orderId);
+    }
+
+    //Lock escrow once per affected order
+    for (const orderId of affectedOrderIds) {
+      await tx
+        .update(orders)
+        .set({
+          isEscrowLocked: true,
+          updatedAt: new Date(),
+        })
+        .where(eq(orders.id, orderId));
+    }
+
+    return returnRecords;
+  });
 };
 
 

@@ -521,13 +521,26 @@ export const markOrderAsDeliveredService = async (orderId: number, providedCode:
 
   if (shippingRecord.status !== "ready_for_pickup") throw new Error("Order is not ready for pickup, cannot be marked as delivered");
   // Update order status to delivered
-  await db.update(orders)
-    .set({ status: "completed", updatedAt: new Date() })
-    .where(eq(orders.id, orderId));
+  const now = new Date();
+const returnWindowDays = 7; // configurable
+const returnWindowEnds = new Date(
+  now.getTime() + returnWindowDays * 24 * 60 * 60 * 1000
+);
+
+await db.update(orders).set({
+  status: "completed",
+  deliveredAt: now,
+  returnWindowEndsAt: returnWindowEnds,
+  escrowReleaseAt: returnWindowEnds,
+  updatedAt: now,
+}).where(eq(orders.id, orderId));
 
   // Update shipping status to delivered
   await db.update(shipping)
-    .set({ status: "delivered" })
+    .set({ 
+      status: "delivered",
+      deliveredAt: new Date(),
+    })
     .where(eq(shipping.id, shippingRecord.id));
 
   return { message: "Order successfully delivered", orderId };
