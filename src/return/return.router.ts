@@ -4,6 +4,7 @@ import {
   processReturnRefundController,
   getReturnsController,
   getReturnByIdController,
+  reviewReturnController,
 } from "./return.controller";
 import { adminRoleAuth } from "../middleware/bearAuth";
 
@@ -16,6 +17,17 @@ const returnsRouter = (app: Express) => {
       next(error);
     }
   });
+
+  // REVIEW RETURN REQUEST - Approve or Reject
+  app
+    .route("/returns/:returnId/review")
+    .post(adminRoleAuth, async (req, res, next) => {
+      try {
+        await reviewReturnController(req, res);
+      } catch (error) {
+        next(error);
+      }
+    });
 
   // Process Return Refund
   app

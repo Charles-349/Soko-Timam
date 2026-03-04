@@ -110,6 +110,84 @@ export const createReturnService = async ({
   return returnRecords;
 };
 
+
+export const reviewReturnService = async ({
+  returnId,
+  action, 
+  resolutionType, 
+  refundResponsibility, 
+  adminNote,
+}: {
+  returnId: number;
+  action: "approve" | "reject";
+  resolutionType?: string;
+  refundResponsibility?: string;
+  adminNote?: string;
+}) => {
+  const [returnRecord] = await db
+    .select()
+    .from(returns)
+    .where(eq(returns.id, returnId));
+
+  if (!returnRecord) throw new Error("Return not found");
+
+  if (returnRecord.status !== "requested")
+    throw new Error("Return already processed");
+
+  if (action === "reject") {
+    await db
+      .update(returns)
+      .set({
+        status: "rejected",
+        adminNote,
+        updatedAt: new Date(),
+      })
+      .where(eq(returns.id, returnId));
+
+    // Unlock escrow immediately if rejected
+    await db
+      .update(orders)
+      .set({
+        isEscrowLocked: false,
+        escrowLockedAmount: "0",
+        updatedAt: new Date(),
+      })
+      .where(eq(orders.id, returnRecord.orderId));
+
+    return { message: "Return rejected" };
+  }
+
+  // APPROVE FLOW
+  if (!resolutionType)
+    throw new Error("Resolution type required for approval");
+
+  const refundAmount = Number(returnRecord.refundAmount || 0);
+
+  // Increase locked escrow amount
+  await db
+    .update(orders)
+    .set({
+      escrowLockedAmount: sql`
+        ${orders.escrowLockedAmount} + ${refundAmount}
+      `,
+      updatedAt: new Date(),
+    })
+    .where(eq(orders.id, returnRecord.orderId));
+
+  await db
+    .update(returns)
+    .set({
+      status: "approved",
+      resolutionType,
+      refundResponsibility,
+      adminNote,
+      updatedAt: new Date(),
+    })
+    .where(eq(returns.id, returnId));
+
+  return { message: "Return approved" };
+};
+
 // PROCESS RETURN REFUNDS
 export const processReturnRefundService = async (
   returnIds: number[]
@@ -142,9 +220,13 @@ export const processReturnRefundService = async (
         `No refundable amount for return ID ${returnId}`
       );
 
+    if (returnRecord.status !== "approved")
+      throw new Error(
+        `Return ID ${returnId} is not approved for refund`
+      );
     const sellerId = returnRecord.sellerId;
     const refundAmount = Number(returnRecord.refundAmount);
-
+    
     const [refundRecord] = await db
       .insert(refunds)
       .values({

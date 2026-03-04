@@ -4,6 +4,7 @@ import {
   processReturnRefundService,
   getReturnsService,
   getReturnByIdService,
+  reviewReturnService,
 } from "./return.sevice";
 
 // Create Return Request
@@ -26,6 +27,51 @@ export const createReturnController = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error("Create Return Error:", error);
     return res.status(500).json({ message: error.message });
+  }
+};
+
+//REVIEW RETURN REQUEST - Approve or Reject
+export const reviewReturnController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { returnId } = req.params;
+    const {
+      action,
+      resolutionType,
+      refundResponsibility,
+      adminNote,
+    } = req.body;
+
+    if (!returnId || !action) {
+      return res.status(400).json({
+        message: "Return ID and action are required",
+      });
+    }
+
+    if (!["approve", "reject"].includes(action)) {
+      return res.status(400).json({
+        message: "Action must be approve or reject",
+      });
+    }
+
+    const result = await reviewReturnService({
+      returnId: Number(returnId),
+      action,
+      resolutionType,
+      refundResponsibility,
+      adminNote,
+    });
+
+    return res.status(200).json({
+      message: result.message,
+    });
+  } catch (error: any) {
+    console.error("Review Return Error:", error);
+    return res.status(500).json({
+      message: error.message,
+    });
   }
 };
 
