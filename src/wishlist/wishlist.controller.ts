@@ -17,7 +17,9 @@ export const createWishlistController = async (req: Request, res: Response) => {
     await createWishlistService(wishlist);
     return res
       .status(201)
-      .json({ message: "Wishlist item created successfully" });
+      .json({ message: "Wishlist item created successfully",
+        data: wishlist 
+       });
   } catch (error: any) {
     return res.status(500).json({ message: error.message });
   }

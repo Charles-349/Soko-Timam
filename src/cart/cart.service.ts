@@ -2,6 +2,7 @@
 import { eq, and } from "drizzle-orm";
 import db from "../Drizzle/db";
 import { TICart, carts, cartItems, products } from "../Drizzle/schema";
+import { sql } from "drizzle-orm";
 
 export const createOrAddToCartService = async (
   userId: number,
@@ -76,15 +77,29 @@ export const deleteCartService = async (id: number) => {
   return "Cart deleted successfully";
 };
 // Update Cart Item Quantity
-export const updateCartItemService = async (itemId: number, quantity: number) => {
+// export const updateCartItemService = async (itemId: number, quantity: number) => {
+//   const updatedItem = await db
+//     .update(cartItems)
+//     .set({ quantity })
+//     .where(eq(cartItems.id, itemId))
+//     .returning();
+
+//   if (updatedItem.length === 0) return null;
+//   return "Cart item updated successfully";
+// };
+
+export const updateCartItemService = async (itemId: number, delta: number) => {
   const updatedItem = await db
     .update(cartItems)
-    .set({ quantity })
-    .where(eq(cartItems.id, itemId))
+    .set({
+      quantity: sql`${cartItems.quantity} + ${delta}`,
+    })
+    .where(and(eq(cartItems.id, itemId), sql`${cartItems.quantity} + ${delta} > 0`))
     .returning();
 
   if (updatedItem.length === 0) return null;
-  return "Cart item updated successfully";
+
+  return updatedItem[0]; // return updated row with new quantity
 };
 
 // Remove Cart Item

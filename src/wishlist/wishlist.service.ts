@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import db from "../Drizzle/db";
-import { wishlists, TIWishlist } from "../Drizzle/schema";
+import { wishlists, TIWishlist, productImages } from "../Drizzle/schema";
 
 // Create Wishlist Entry
 export const createWishlistService = async (wishlist: TIWishlist) => {
@@ -58,11 +58,16 @@ export const getWishlistWithUserService = async (userId: number) => {
     where: eq(wishlists.userId, userId),
     with: {
       user: true,
-      product: true,
+     product: {
+     with: {
+     images: {
+      where: eq(productImages.isMain, true)
+    }
+    }
+     }, 
     },
   });
 };
-
 
 // Wishlist with Product
 export const getWishlistWithProductService = async (id: number) => {

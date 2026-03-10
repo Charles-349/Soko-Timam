@@ -81,8 +81,8 @@ export const deleteCartController = async (req: Request, res: Response) => {
 export const updateCartItemController = async (req: Request, res: Response) => {
   try {
     const itemId = parseInt(req.params.itemId);
-    const { quantity } = req.body;
-    const updatedItem = await updateCartItemService(itemId, quantity);
+    const { delta } = req.body;
+    const updatedItem = await updateCartItemService(itemId, delta);
     if (!updatedItem) return res.status(404).json({ message: "Cart item not found" });
     return res.status(200).json({ message: "Cart item updated successfully" });
   } catch (error: any) {
