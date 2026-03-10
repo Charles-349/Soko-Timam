@@ -81,6 +81,14 @@ export const getWishlistWithProductService = async (id: number) => {
 export const getWishlistsByUserService = async (userId: number) => {
   return await db.query.wishlists.findMany({
     where: eq(wishlists.userId, userId),
-    with: { product: true },
+    with: { 
+      product: {
+     with: {
+     images: {
+      where: eq(productImages.isMain, true)
+    }
+    }
+     },
+    },
   });
 };
