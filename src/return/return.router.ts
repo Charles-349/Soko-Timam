@@ -5,6 +5,8 @@ import {
   getReturnsController,
   getReturnByIdController,
   reviewReturnController,
+  processReturnExchangeController,
+  handleReplacementShipmentDeliveredController,
 } from "./return.controller";
 import { adminRoleAuth } from "../middleware/bearAuth";
 
@@ -35,6 +37,27 @@ const returnsRouter = (app: Express) => {
     .post(adminRoleAuth, async (req, res, next) => {
       try {
         await processReturnRefundController(req, res);
+      } catch (error) {
+        next(error);
+      }
+    });
+
+  //Process exchange for return
+  app
+    .route("/returns/exchange")
+    .post(adminRoleAuth, async (req, res, next) => {
+      try {
+        await processReturnExchangeController(req, res);
+      } catch (error) {
+        next(error);
+      }
+    });
+  
+  //Shipment delivered for replacement shipments  
+    app.route("/returns/replacement-delivered")
+    .post(async (req, res, next) => {
+      try {
+        await handleReplacementShipmentDeliveredController(req, res);
       } catch (error) {
         next(error);
       }

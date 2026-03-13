@@ -1,5 +1,5 @@
 import { pgEnum,pgTable, serial, varchar, text, integer, timestamp, boolean, decimal } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { is, relations } from "drizzle-orm";
 
 //ENUMS
 export const RoleEnum = pgEnum("role", ["admin", "seller", "customer", "station_manager", "agent"]); 
@@ -25,7 +25,9 @@ export const ReturnStatusEnum = pgEnum("return_status", [
   
 ]);  
 export const RefundStatusEnum = pgEnum("refund_status", ["pending", "completed", "failed"]);   
-export const SettlementStatusEnum = pgEnum("settlement_status", ["pending", "completed"]);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
+export const SettlementStatusEnum = pgEnum("settlement_status", ["pending", "completed"]); 
+export const ReturnResolutionTypeEnum = pgEnum("return_resolution_type", ["refund", "exchange", "store_credit"]);  
+export const shippingTypeEnum = pgEnum("shipping_type", ["standard", "replacement"]);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
 
 // USERS
 export const users = pgTable("users", {
@@ -266,6 +268,8 @@ export const orders = pgTable("orders", {
     .references(() => stations.id),
   pickupAgentId: integer("pickup_agent_id")
     .references(() => agents.id),
+  replacementOfOrderId: integer("replacement_of_order_id").references(() => orders.id),
+  isReplacement: boolean("is_replacement").default(false),
   updatedAt: timestamp("updated_at").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -283,6 +287,7 @@ export const orderItems = pgTable("order_items", {
     .notNull(),
   quantity: integer("quantity").notNull(),
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  replacementForReturnId: integer("replacement_for_return_id").references(() => returns.id),
   platformCommission: decimal("platform_commission", {
     precision: 10,
     scale: 2,
@@ -311,7 +316,8 @@ export const returns = pgTable("returns", {
     .notNull(),
   reason: varchar("reason", { length: 255 }).notNull(),
   status: ReturnStatusEnum("status").default("requested"),
-  resolutionType: varchar("resolution_type", { length: 50 }),
+  resolutionType: ReturnResolutionTypeEnum("resolution_type"),
+  replacementShipmentId: integer("replacement_shipment_id"),
   refundAmount: decimal("refund_amount", {
     precision: 10,
     scale: 2,
@@ -406,6 +412,7 @@ export const shipping = pgTable("shipping", {
   recipientPhone: varchar("recipient_phone", { length: 20 }),
   pickupCode: varchar("pickup_code", { length: 100 }),
   estimatedDelivery: timestamp("estimated_delivery"),
+  type: shippingTypeEnum("shipping_type").default("standard"),
   deliveredAt: timestamp("delivered_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });

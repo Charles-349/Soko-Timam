@@ -1,7 +1,8 @@
 import { and, eq, gte, inArray, lte, or } from "drizzle-orm";
 import db from "../Drizzle/db";
-import { stations, agents, shipping, TSShipping, TIShipping, TIStation, TIAgent } from "../Drizzle/schema";
+import { stations, agents, shipping, TSShipping, TIShipping, TIStation, TIAgent, orders, returns } from "../Drizzle/schema";
 import { sql } from "drizzle-orm";
+import { handleReplacementShipmentDeliveredService } from "../return/return.sevice";
 
 // STATIONS
 
@@ -136,9 +137,24 @@ export const getShippingByIdService = async (id: number) => {
   });
 };
 
-export const updateShippingService = async (id: number, ship: Partial<TIShipping>) => {
-  const updated = await db.update(shipping).set(ship).where(eq(shipping.id, id)).returning();
-  if (!updated.length) return null;
+export const updateShippingService = async (
+  id: number,
+  ship: Partial<TIShipping>
+) => {
+  const updatedRows = await db
+    .update(shipping)
+    .set(ship)
+    .where(eq(shipping.id, id))
+    .returning();
+
+  const shipment = updatedRows[0];
+  if (!shipment) return null;
+
+  // Automatic handling for delivered replacement shipments
+  if (ship.status === "delivered" && shipment.type === "replacement") {
+    await handleReplacementShipmentDeliveredService(shipment.id);
+  }
+
   return "Shipping record updated successfully";
 };
 

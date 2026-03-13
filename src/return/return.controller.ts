@@ -5,12 +5,14 @@ import {
   getReturnsService,
   getReturnByIdService,
   reviewReturnService,
+  processReturnExchangeService,
+  handleReplacementShipmentDeliveredService,
 } from "./return.sevice";
 
 // Create Return Request
 export const createReturnController = async (req: Request, res: Response) => {
   try {
-    const { orderItemIds, reason } = req.body;
+    const { orderItemIds, reason, resolutionType } = req.body;
 
     if (!orderItemIds || !orderItemIds.length || !reason) {
       return res
@@ -18,7 +20,7 @@ export const createReturnController = async (req: Request, res: Response) => {
         .json({ message: "Order item IDs and reason are required" });
     }
 
-    const returns = await createReturnService({ orderItemIds, reason });
+    const returns = await createReturnService({ orderItemIds, reason, resolutionType });
 
     return res.status(201).json({
       message: "Return request(s) created successfully",
@@ -99,6 +101,52 @@ export const processReturnRefundController = async (
   }
 };
 
+//Process exchange for Return
+export const processReturnExchangeController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { returnIds } = req.body;
+
+    if (!returnIds || !returnIds.length) {
+      return res.status(400).json({ message: "Return IDs are required" });
+    }
+
+    const results = await processReturnExchangeService(returnIds);
+
+    return res.status(200).json({
+      message: "Return exchange(s) processed",
+      results,
+    });
+  } catch (error: any) {
+    console.error("Process Return Exchange Error:", error);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+//Shipment delivered handler for replacement shipments
+export const handleReplacementShipmentDeliveredController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { shipmentId } = req.params;
+
+    if (!shipmentId) {
+      return res.status(400).json({ message: "Shipment ID is required" });
+    }
+
+    const result = await handleReplacementShipmentDeliveredService(Number(shipmentId));
+
+    return res.status(200).json({
+      message: result.message,
+    });
+  } catch (error: any) {
+    console.error("Handle Replacement Shipment Delivered Error:", error);
+    return res.status(500).json({ message: error.message });
+  }
+};
 // Get All Returns 
 export const getReturnsController = async (req: Request, res: Response) => {
   try {

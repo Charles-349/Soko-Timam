@@ -17,7 +17,6 @@ import {
   markOrderAsDeliveredController,
 } from "./order.controller";
 import { adminRoleAuth, customerRoleAuth } from "../middleware/bearAuth";
-import { markOrderAsDeliveredService, markOrderAsReadyForPickupService } from "./order.service";
 
 const order = (app: Express) => {
   //Create or Update Order 
@@ -110,7 +109,7 @@ const order = (app: Express) => {
     }
   });
 
-    app.route("/station_manager/orders/:id/assign-station").post(async (req, res, next) => {
+    app.route("/station_manager/order-items/:id/assign-station").post(async (req, res, next) => {
     try {
       await assignOriginStationController(req, res);
     } catch (error) {
@@ -119,7 +118,7 @@ const order = (app: Express) => {
   });
 
    //Mark Order as Shipped 
-  app.route("/order/:id/ship").post(async (req, res, next) => {
+  app.route("/order-items/:id/ship").post(async (req, res, next) => {
     try {
       await markOrderAsShippedController(req, res);
     } catch (error) {
@@ -128,7 +127,7 @@ const order = (app: Express) => {
   });
 
     //Mark Order as Ready for Pickup
-  app.route("/order/:id/ready-for-pickup").post(async (req, res, next) => {
+  app.route("/order-items/:id/ready-for-pickup").post(async (req, res, next) => {
     try {
       await markOrderReadyForPickupController(req, res);
     } catch (error) {
@@ -137,7 +136,7 @@ const order = (app: Express) => {
   });
 
    //Mark Order as Delivered
-  app.route("/order/:id/deliver").post(async (req, res, next) => {
+  app.route("/order-items/:id/deliver").post(async (req, res, next) => {
     try {
       await markOrderAsDeliveredController(req, res);
     } catch (error) {
