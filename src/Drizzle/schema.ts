@@ -4,7 +4,7 @@ import { is, relations } from "drizzle-orm";
 //ENUMS
 export const RoleEnum = pgEnum("role", ["admin", "seller", "customer", "station_manager", "agent"]); 
 export const ShopStatusEnum = pgEnum("status", ["pending", "active", "suspended"]);
-export const OrderStatusEnum = pgEnum("order_status", ["pending", "paid",  "at_station", "shipped", "completed", "cancelled"]);
+export const OrderStatusEnum = pgEnum("order_status", ["pending", "paid",  "at_station", "processing","shipped", "completed", "cancelled"]);
 export const PaymentStatusEnum = pgEnum("payment_status", ["unpaid", "paid", "failed"]); 
 export const ShippingStatusEnum = pgEnum("shipping_status", [
   "preparing",

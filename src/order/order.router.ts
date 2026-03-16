@@ -15,6 +15,7 @@ import {
   getOrdersByOriginStationIdController,
   markOrderReadyForPickupController,
   markOrderAsDeliveredController,
+  getOrderForPickupVerificationController,
 } from "./order.controller";
 import { adminRoleAuth, customerRoleAuth } from "../middleware/bearAuth";
 
@@ -139,6 +140,15 @@ const order = (app: Express) => {
   app.route("/order-items/:id/deliver").post(async (req, res, next) => {
     try {
       await markOrderAsDeliveredController(req, res);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  //get order for pickup verification
+  app.route("/orders/:orderId/verify").get(async (req, res, next) => {
+    try {
+      await getOrderForPickupVerificationController(req, res);
     } catch (error) {
       next(error);
     }

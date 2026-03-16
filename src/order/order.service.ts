@@ -1433,18 +1433,61 @@ export const getOrdersBySellerIdService = async (sellerId: number) => {
 };
 
 // Helper: Get correct order for shipping actions (handles returns/exchanges)
-const getOrderForShipping = async (orderItemId: number) => {
-  const returnRecord = await db.query.returns.findFirst({ where: eq(returns.orderItemId, orderItemId) });
+// const getOrderForShipping = async (orderItemId: number) => {
+//   const returnRecord = await db.query.returns.findFirst({ where: eq(returns.orderItemId, orderItemId) });
 
+//   if (returnRecord && returnRecord.replacementShipmentId) {
+//     const replacementItem = await db.query.orderItems.findFirst({ where: eq(orderItems.replacementForReturnId, returnRecord.id) });
+//     if (!replacementItem) throw new Error("Replacement item not found");
+//     return await db.query.orders.findFirst({ where: eq(orders.id, replacementItem.orderId), with: { shipping: true } });
+//   }
+
+//   const originalItem = await db.query.orderItems.findFirst({ where: eq(orderItems.id, orderItemId) });
+//   if (!originalItem) throw new Error("Original order item not found");
+//   return await db.query.orders.findFirst({ where: eq(orders.id, originalItem.orderId), with: { shipping: true } });
+// };
+
+
+const getOrderForShipping = async (orderItemId: number) => {
+
+  const returnRecord = await db.query.returns.findFirst({
+    where: eq(returns.orderItemId, orderItemId)
+  });
+
+  // If replacement shipment exists
   if (returnRecord && returnRecord.replacementShipmentId) {
-    const replacementItem = await db.query.orderItems.findFirst({ where: eq(orderItems.replacementForReturnId, returnRecord.id) });
-    if (!replacementItem) throw new Error("Replacement item not found");
-    return await db.query.orders.findFirst({ where: eq(orders.id, replacementItem.orderId), with: { shipping: true } });
+
+    const replacementItem = await db.query.orderItems.findFirst({
+      where: eq(orderItems.replacementForReturnId, returnRecord.id)
+    });
+
+    if (!replacementItem)
+      throw new Error("Replacement item not found");
+
+    return await db.query.orders.findFirst({
+      where: eq(orders.id, replacementItem.orderId),
+      with: {
+        shipping: true,
+        user: true
+      }
+    });
   }
 
-  const originalItem = await db.query.orderItems.findFirst({ where: eq(orderItems.id, orderItemId) });
-  if (!originalItem) throw new Error("Original order item not found");
-  return await db.query.orders.findFirst({ where: eq(orders.id, originalItem.orderId), with: { shipping: true } });
+  // Otherwise original item
+  const originalItem = await db.query.orderItems.findFirst({
+    where: eq(orderItems.id, orderItemId)
+  });
+
+  if (!originalItem)
+    throw new Error("Original order item not found");
+
+  return await db.query.orders.findFirst({
+    where: eq(orders.id, originalItem.orderId),
+    with: {
+      shipping: true,
+      user: true
+    }
+  });
 };
 
 // Assign origin station (handles returns/exchanges)
@@ -1476,31 +1519,89 @@ export const markOrderAsShippedServiceEx = async (orderItemId: number) => {
 };
 
 // Mark order ready for pickup
+// export const markOrderAsReadyForPickupServiceEx = async (orderItemId: number) => {
+//   const order = await getOrderForShipping(orderItemId);
+//   if (!order) throw new Error("Order not found");
+//   if (order.status !== "shipped") throw new Error("Only shipped orders can be marked as ready for pickup");
+
+//   const pickupCode = crypto.randomBytes(3).toString("hex").toUpperCase();
+//   let shippingRecord = order.shipping[0];
+
+//   if (shippingRecord) {
+//     await db.update(shipping).set({ status: "ready_for_pickup", pickupCode }).where(eq(shipping.id, shippingRecord.id));
+//   } else {
+//     const inserted = await db.insert(shipping).values({ orderId: order.id, status: "ready_for_pickup", originStationId: order.originStationId || 0, pickupCode }).returning();
+//     shippingRecord = inserted[0];
+//   }
+
+//   if (order.user && !Array.isArray(order.user) && order.user.email) {
+//     await sendEmail(
+//       order.user.email,
+//       "Your Order is Ready for Pickup",
+//       `Hi ${order.user.firstname}, your order #${order.id} is ready for pickup. Pickup code: ${pickupCode}`,
+//       `<p>Hi ${order.user.firstname},</p><p>Your order <strong>#${order.id}</strong> is ready for pickup.</p><p><strong>Pickup Code:</strong> ${pickupCode}</p><p>Please present this code at the pickup station.</p>`
+//     );
+//   }
+
+//   return { message: "Order marked as ready for pickup and code sent to customer", orderId: order.id, pickupCode };
+// };
+
+
 export const markOrderAsReadyForPickupServiceEx = async (orderItemId: number) => {
+
   const order = await getOrderForShipping(orderItemId);
+
   if (!order) throw new Error("Order not found");
-  if (order.status !== "shipped") throw new Error("Only shipped orders can be marked as ready for pickup");
+
+  if (order.status !== "shipped")
+    throw new Error("Only shipped orders can be marked as ready for pickup");
 
   const pickupCode = crypto.randomBytes(3).toString("hex").toUpperCase();
+
   let shippingRecord = order.shipping[0];
 
   if (shippingRecord) {
-    await db.update(shipping).set({ status: "ready_for_pickup", pickupCode }).where(eq(shipping.id, shippingRecord.id));
+
+    await db
+      .update(shipping)
+      .set({
+        status: "ready_for_pickup",
+        pickupCode
+      })
+      .where(eq(shipping.id, shippingRecord.id));
+
   } else {
-    const inserted = await db.insert(shipping).values({ orderId: order.id, status: "ready_for_pickup", originStationId: order.originStationId || 0, pickupCode }).returning();
+
+    const inserted = await db
+      .insert(shipping)
+      .values({
+        orderId: order.id,
+        status: "ready_for_pickup",
+        originStationId: order.originStationId || 0,
+        pickupCode
+      })
+      .returning();
+
     shippingRecord = inserted[0];
   }
 
-  if (order.user && !Array.isArray(order.user) && order.user.email) {
+  if (order.user?.email) {
+
     await sendEmail(
       order.user.email,
       "Your Order is Ready for Pickup",
       `Hi ${order.user.firstname}, your order #${order.id} is ready for pickup. Pickup code: ${pickupCode}`,
-      `<p>Hi ${order.user.firstname},</p><p>Your order <strong>#${order.id}</strong> is ready for pickup.</p><p><strong>Pickup Code:</strong> ${pickupCode}</p><p>Please present this code at the pickup station.</p>`
+      `<p>Hi ${order.user.firstname},</p>
+       <p>Your order <strong>#${order.id}</strong> is ready for pickup.</p>
+       <p><strong>Pickup Code:</strong> ${pickupCode}</p>
+       <p>Please present this code at the pickup station.</p>`
     );
   }
 
-  return { message: "Order marked as ready for pickup and code sent to customer", orderId: order.id, pickupCode };
+  return {
+    message: "Order marked as ready for pickup and code sent to customer",
+    orderId: order.id
+  };
 };
 
 // Mark order delivered
@@ -1529,6 +1630,28 @@ export const markOrderAsDeliveredServiceEx = async (orderItemId: number, provide
   return { message: "Order successfully delivered", orderId: order.id };
 };
 
+//Get order for pickup verification
+export const getOrderForPickupVerificationService = async (orderId: number) => {
+  const order = await db.query.orders.findFirst({
+    where: eq(orders.id, orderId),
+    with: {
+      user: true,
+      items: {
+        with: {
+          product: true
+        }
+      },
+      shipping: true
+    }
+  });
+
+  if (!order) throw new Error("Order not found");
+
+  if (order.status !== "shipped")
+    throw new Error("Order is not ready for pickup preparation");
+
+  return order;
+};
 
 
 // // Assign origin station

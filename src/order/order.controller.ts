@@ -15,6 +15,7 @@ import {
   markOrderAsShippedServiceEx,
   markOrderAsDeliveredServiceEx,
   markOrderAsReadyForPickupServiceEx,
+  getOrderForPickupVerificationService,
 } from "./order.service";
 
 //Create or Update Order
@@ -279,17 +280,51 @@ export const markOrderAsDeliveredController = async (req: Request, res: Response
   }
 };
 
+
+//Get orders for pickup verification
+export const getOrderForPickupVerificationController = async (req: Request, res: Response) => {
+  try {
+    const orderId = Number(req.params.orderId);
+
+    if (!orderId) {
+      return res.status(400).json({
+        message: "Invalid order id"
+      });
+    }
+
+    const order = await getOrderForPickupVerificationService(orderId);
+
+    return res.status(200).json({
+      message: "Order fetched successfully",
+      data: order
+    });
+
+  } catch (error: any) {
+    return res.status(400).json({
+      message: error.message
+    });
+  }
+};
+
 // Mark Order Ready for Pickup (handles returns/exchanges)
 export const markOrderReadyForPickupController = async (req: Request, res: Response) => {
   try {
     const orderItemId = Number(req.params.id);
-    if (isNaN(orderItemId)) return res.status(400).json({ message: "Invalid order ID" });
+
+    if (isNaN(orderItemId)) {
+      return res.status(400).json({ message: "Invalid order item ID" });
+    }
 
     const result = await markOrderAsReadyForPickupServiceEx(orderItemId);
+
     return res.status(200).json(result);
+
   } catch (error: any) {
     console.error("Error marking order as ready for pickup:", error.message || error);
-    return res.status(500).json({ message: error.message || "Something went wrong" });
+
+    return res.status(400).json({
+      message: error.message || "Failed to mark order as ready for pickup"
+    });
   }
 };
 
