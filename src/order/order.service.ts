@@ -1495,27 +1495,81 @@ export const assignOriginStationServiceEx = async (orderItemId: number, stationI
   const order = await getOrderForShipping(orderItemId);
   if (!order) throw new Error("Order not found");
   if (order.status !== "paid") throw new Error("Only paid orders can be assigned an origin station");
-
+  // Prevent double assignment if already assigned to a station
+  if (order.originStationId && order.status !== "paid") {
+    throw new Error("Order is already assigned to a station and cannot be reassigned");
+  }
   await db.update(orders).set({ originStationId: stationId, status: "at_station", updatedAt: new Date() }).where(eq(orders.id, order.id));
   return { message: "Origin station assigned successfully", orderId: order.id, stationId };
-};
+};                                                                                                                                          
 
 // Mark order as shipped
+// export const markOrderAsShippedServiceEx = async (orderItemId: number) => {
+//   const order = await getOrderForShipping(orderItemId);
+//   if (!order) throw new Error("Order not found");
+//   if (order.status !== "at_station") throw new Error("Order must be assigned to a station to be marked as shipped");
+
+//   await db.update(orders).set({ status: "shipped", updatedAt: new Date() }).where(eq(orders.id, order.id));
+
+//   const shippingRecord = order.shipping[0];
+//   if (shippingRecord) {
+//     await db.update(shipping).set({ status: "in_transit" }).where(eq(shipping.id, shippingRecord.id));
+//   } else {
+//     await db.insert(shipping).values({ orderId: order.id, status: "in_transit", originStationId: order.originStationId || 0 });
+//   }
+
+//   return { message: "Order marked as shipped", orderId: order.id };
+
+
 export const markOrderAsShippedServiceEx = async (orderItemId: number) => {
   const order = await getOrderForShipping(orderItemId);
   if (!order) throw new Error("Order not found");
-  if (order.status !== "at_station") throw new Error("Order must be assigned to a station to be marked as shipped");
 
-  await db.update(orders).set({ status: "shipped", updatedAt: new Date() }).where(eq(orders.id, order.id));
-
-  const shippingRecord = order.shipping[0];
-  if (shippingRecord) {
-    await db.update(shipping).set({ status: "in_transit" }).where(eq(shipping.id, shippingRecord.id));
-  } else {
-    await db.insert(shipping).values({ orderId: order.id, status: "in_transit", originStationId: order.originStationId || 0 });
+  // Ensure order is at_station or already processing
+  if (!["at_station", "processing"].includes(order.status)) {
+    throw new Error("Order must be assigned to a station to be marked as shipped");
   }
 
-  return { message: "Order marked as shipped", orderId: order.id };
+  // Mark shipping record for this order
+  const shippingRecord = order.shipping[0];
+  if (shippingRecord) {
+    await db.update(shipping)
+      .set({ status: "in_transit" })
+      .where(eq(shipping.id, shippingRecord.id));
+  } else {
+    await db.insert(shipping)
+      .values({
+        orderId: order.id,
+        status: "in_transit",
+        originStationId: order.originStationId || 0,
+      });
+  }
+
+  // Check shipping records to determine overall order status
+  const allShippingRecords = await db.query.shipping.findMany({
+    where: eq(shipping.orderId, order.id),
+  });
+
+  const totalOrderItems = order.items.length;
+  const shippedCount = allShippingRecords.filter(
+    (s) => s.status === "in_transit" || s.status === "delivered"
+  ).length;
+
+  let newOrderStatus: typeof order.status;
+
+  if (shippedCount === 0) {
+    newOrderStatus = "at_station"; 
+  } else if (shippedCount < totalOrderItems) {
+    newOrderStatus = "processing";
+  } else {
+    newOrderStatus = "shipped"; 
+  }
+
+  await db.update(orders)
+    .set({ status: newOrderStatus, updatedAt: new Date() })
+    .where(eq(orders.id, order.id));
+
+  return { message: `Order marked as ${newOrderStatus}`, orderId: order.id };
 };
 
 // Mark order ready for pickup
@@ -1547,33 +1601,41 @@ export const markOrderAsShippedServiceEx = async (orderItemId: number) => {
 // };
 
 
-export const markOrderAsReadyForPickupServiceEx = async (orderItemId: number) => {
-
-  const order = await getOrderForShipping(orderItemId);
+export const markOrderAsReadyForPickupService = async (orderId: number) => {
+  const order = await db.query.orders.findFirst({
+    where: eq(orders.id, orderId),
+    with: {
+      shipping: true,
+      items: true,
+      user: true
+    }
+  });
 
   if (!order) throw new Error("Order not found");
 
-  if (order.status !== "shipped")
-    throw new Error("Only shipped orders can be marked as ready for pickup");
+  // Ensure all items have at least one shipping record marked in_transit 
+  const allShippingRecords = await db.query.shipping.findMany({
+    where: eq(shipping.orderId, order.id)
+  });
+
+  const shippedCount = allShippingRecords.filter(
+    (s) => s.status === "in_transit" 
+  ).length;
+
+  if (shippedCount < order.items.length) {
+    throw new Error("Cannot mark ready for pickup: not all items have been shipped");
+  }
 
   const pickupCode = crypto.randomBytes(3).toString("hex").toUpperCase();
 
-  let shippingRecord = order.shipping[0];
+  let shippingRecord = order.shipping?.[0];
 
   if (shippingRecord) {
-
-    await db
-      .update(shipping)
-      .set({
-        status: "ready_for_pickup",
-        pickupCode
-      })
+    await db.update(shipping)
+      .set({ status: "ready_for_pickup", pickupCode })
       .where(eq(shipping.id, shippingRecord.id));
-
   } else {
-
-    const inserted = await db
-      .insert(shipping)
+    const inserted = await db.insert(shipping)
       .values({
         orderId: order.id,
         status: "ready_for_pickup",
@@ -1586,23 +1648,23 @@ export const markOrderAsReadyForPickupServiceEx = async (orderItemId: number) =>
   }
 
   if (order.user?.email) {
-
     await sendEmail(
       order.user.email,
       "Your Order is Ready for Pickup",
       `Hi ${order.user.firstname}, your order #${order.id} is ready for pickup. Pickup code: ${pickupCode}`,
       `<p>Hi ${order.user.firstname},</p>
        <p>Your order <strong>#${order.id}</strong> is ready for pickup.</p>
-       <p><strong>Pickup Code:</strong> ${pickupCode}</p>
-       <p>Please present this code at the pickup station.</p>`
+       <p><strong>Pickup Code:</strong> ${pickupCode}</p>`
     );
   }
 
   return {
-    message: "Order marked as ready for pickup and code sent to customer",
-    orderId: order.id
+    message: "Order marked as ready for pickup",
+    orderId: order.id,
+    pickupCode
   };
 };
+
 
 // Mark order delivered
 export const markOrderAsDeliveredServiceEx = async (orderItemId: number, providedCode: string) => {
