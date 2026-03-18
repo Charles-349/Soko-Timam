@@ -1654,42 +1654,74 @@ export const markOrderAsReadyForPickupService = async (orderId: number) => {
       `Hi ${order.user.firstname}, your order #${order.id} is ready for pickup. Pickup code: ${pickupCode}`,
       `<p>Hi ${order.user.firstname},</p>
        <p>Your order <strong>#${order.id}</strong> is ready for pickup.</p>
-       <p><strong>Pickup Code:</strong> ${pickupCode}</p>`
+       <p><strong>Pickup Code:</strong> ${pickupCode}</p>
+       <p>Please present this code at the pickup station.</p>`
     );
   }
 
   return {
     message: "Order marked as ready for pickup",
     orderId: order.id,
-    pickupCode
   };
 };
 
 
 // Mark order delivered
-export const markOrderAsDeliveredServiceEx = async (orderItemId: number, providedCode: string) => {
-  const order = await getOrderForShipping(orderItemId);
+export const markOrderAsDeliveredServiceEx = async (
+  orderId: number,
+  providedCode: string
+) => {
+
+  const order = await db.query.orders.findFirst({
+    where: eq(orders.id, orderId),
+    with: {
+      shipping: true
+    }
+  });
+
   if (!order) throw new Error("Order not found");
 
-  const shippingRecord = order.shipping[0];
-  if (!shippingRecord) throw new Error("Shipping record not found for this order");
-  if (!shippingRecord.pickupCode || shippingRecord.pickupCode !== providedCode) throw new Error("Invalid pickup code");
-  if (shippingRecord.status !== "ready_for_pickup") throw new Error("Order is not ready for pickup");
+  //Find shipment with pickup code
+  const shippingRecord = order.shipping.find(
+    s => s.pickupCode === providedCode
+  );
+
+  if (!shippingRecord)
+    throw new Error("Invalid pickup code");
+
+  if (shippingRecord.status !== "ready_for_pickup")
+    throw new Error("Order is not ready for pickup");
 
   const now = new Date();
   const returnWindowDays = 7;
-  const returnWindowEnds = new Date(now.getTime() + returnWindowDays * 24 * 60 * 60 * 1000);
 
-  await db.update(orders).set({
-    status: "completed",
-    deliveredAt: now,
-    returnWindowEndsAt: returnWindowEnds,
-    escrowReleaseAt: returnWindowEnds,
-    updatedAt: now,
-  }).where(eq(orders.id, order.id));
+  const returnWindowEnds = new Date(
+    now.getTime() + returnWindowDays * 24 * 60 * 60 * 1000
+  );
 
-  await db.update(shipping).set({ status: "delivered", deliveredAt: now }).where(eq(shipping.id, shippingRecord.id));
-  return { message: "Order successfully delivered", orderId: order.id };
+  //mark ALL shipments as delivered
+  await db.update(shipping)
+    .set({
+      status: "delivered",
+      deliveredAt: now
+    })
+    .where(eq(shipping.orderId, order.id));
+
+  //complete order
+  await db.update(orders)
+    .set({
+      status: "completed",
+      deliveredAt: now,
+      returnWindowEndsAt: returnWindowEnds,
+      escrowReleaseAt: returnWindowEnds,
+      updatedAt: now,
+    })
+    .where(eq(orders.id, order.id));
+
+  return {
+    message: "Order successfully delivered",
+    orderId: order.id
+  };
 };
 
 //Get order for pickup verification
@@ -1700,11 +1732,17 @@ export const getOrderForPickupVerificationService = async (orderId: number) => {
       user: true,
       items: {
         with: {
-          product: true
-        }
+          product: {
+            with: {
+              images: {
+                where: eq(productImages.isMain, true),
+              },
+            },
+          },
+        },
       },
-      shipping: true
-    }
+      shipping: true,
+    },
   });
 
   if (!order) throw new Error("Order not found");

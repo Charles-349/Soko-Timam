@@ -266,14 +266,18 @@ export const markOrderAsShippedController = async (req: Request, res: Response) 
 // Mark Order as Delivered (handles returns/exchanges)
 export const markOrderAsDeliveredController = async (req: Request, res: Response) => {
   try {
-    const orderItemId = Number(req.params.id);
+    const orderId = Number(req.params.id);
     const { pickupCode } = req.body;
 
-    if (isNaN(orderItemId)) return res.status(400).json({ message: "Invalid order ID" });
-    if (!pickupCode || typeof pickupCode !== "string") return res.status(400).json({ message: "Pickup code is required" });
+    if (isNaN(orderId))
+      return res.status(400).json({ message: "Invalid order ID" });
 
-    const result = await markOrderAsDeliveredServiceEx(orderItemId, pickupCode);
+    if (!pickupCode || typeof pickupCode !== "string")
+      return res.status(400).json({ message: "Pickup code is required" });
+
+    const result = await markOrderAsDeliveredServiceEx(orderId, pickupCode);
     return res.status(200).json(result);
+
   } catch (error: any) {
     console.error("Error marking order as delivered:", error.message || error);
     return res.status(500).json({ message: error.message || "Something went wrong" });
