@@ -1747,8 +1747,8 @@ export const getOrderForPickupVerificationService = async (orderId: number) => {
 
   if (!order) throw new Error("Order not found");
 
-  if (order.status !== "shipped")
-    throw new Error("Order is not ready for pickup preparation");
+  // if (order.status !== "shipped")
+  //   throw new Error("Order is not ready for pickup preparation");
 
   return order;
 };
