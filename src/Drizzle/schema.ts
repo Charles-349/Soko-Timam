@@ -408,6 +408,8 @@ export const shipping = pgTable("shipping", {
     .references(() => agents.id),
   status: ShippingStatusEnum("shipping_status")
     .default("preparing"),
+  orderItemId: integer("order_item_id")
+  .references(() => orderItems.id),
   recipientName: varchar("recipient_name", { length: 255 }),
   recipientPhone: varchar("recipient_phone", { length: 20 }),
   pickupCode: varchar("pickup_code", { length: 100 }),
