@@ -262,8 +262,6 @@ export const orders = pgTable("orders", {
   precision: 15,
   scale: 2,
   }).default("0"),
-  originStationId: integer("origin_station_id")
-    .references(() => stations.id),
   pickupStationId: integer("pickup_station_id")
     .references(() => stations.id),
   pickupAgentId: integer("pickup_agent_id")
@@ -288,6 +286,8 @@ export const orderItems = pgTable("order_items", {
   quantity: integer("quantity").notNull(),
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   replacementForReturnId: integer("replacement_for_return_id").references(() => returns.id),
+  originStationId: integer("origin_station_id")
+    .references(() => stations.id),
   platformCommission: decimal("platform_commission", {
     precision: 10,
     scale: 2,

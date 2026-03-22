@@ -1494,17 +1494,42 @@ const getOrderForShipping = async (orderItemId: number) => {
 };
 
 // Assign origin station (handles returns/exchanges)
-export const assignOriginStationServiceEx = async (orderItemId: number, stationId: number) => {
-  const order = await getOrderForShipping(orderItemId);
-  if (!order) throw new Error("Order not found");
-  if (order.status !== "paid") throw new Error("Only paid orders can be assigned an origin station");
-  // Prevent double assignment if already assigned to a station
-  if (order.originStationId && order.status !== "paid") {
-    throw new Error("Order is already assigned to a station and cannot be reassigned");
+export const assignOriginStationServiceEx = async (
+  orderItemId: number,
+  stationId: number
+) => {
+  const item = await db.query.orderItems.findFirst({
+    where: eq(orderItems.id, orderItemId),
+    with: {
+      order: true,
+    },
+  });
+
+  if (!item) throw new Error("Order item not found");
+
+  //Validate payment at order level
+  if (item.order.paymentStatus !== "paid") {
+    throw new Error("Only paid orders can be assigned an origin station");
   }
-  await db.update(orders).set({ originStationId: stationId, status: "at_station", updatedAt: new Date() }).where(eq(orders.id, order.id));
-  return { message: "Origin station assigned successfully", orderId: order.id, stationId };
-};                                                                                                                                          
+
+  //Prevent double assignment 
+  if (item.originStationId) {
+    throw new Error("Item already assigned to a station");
+  }
+
+  await db
+    .update(orderItems)
+    .set({
+      originStationId: stationId,
+    })
+    .where(eq(orderItems.id, orderItemId));
+
+  return {
+    message: "Origin station assigned successfully",
+    orderItemId,
+    stationId,
+  };
+};                                                                                                                                         
 
 // Mark order as shipped
 // export const markOrderAsShippedServiceEx = async (orderItemId: number) => {
