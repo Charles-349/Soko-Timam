@@ -866,7 +866,7 @@
 
 import db from "../Drizzle/db";
 import { eq, and, inArray } from "drizzle-orm";
-import { orders, orderItems, products, payments, shops, shipping, stations, agents, users, sellers, productImages, returns } from "../Drizzle/schema";
+import { orders, orderItems, products, payments, shops, shipping, stations, agents, users, sellers, productImages, returns, TSShipping } from "../Drizzle/schema";
 import { sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { sendEmail } from "../mailer/mailer";
@@ -1450,49 +1450,69 @@ export const getOrdersBySellerIdService = async (sellerId: number) => {
 //   return await db.query.orders.findFirst({ where: eq(orders.id, originalItem.orderId), with: { shipping: true } });
 // };
 
+type ShippingRecord = TSShipping;
 
-const getOrderForShipping = async (orderItemId: number) => {
-
+type OrderWithRelations = {
+  id: number;
+  items: any[];
+  shipping: ShippingRecord[];
+  user: any;
+  status: string;
+  originStationId?: number | null;
+  paymentStatus?: string;
+};
+export const getOrderForShipping = async (
+  orderItemId: number
+): Promise<OrderWithRelations> => {
   const returnRecord = await db.query.returns.findFirst({
-    where: eq(returns.orderItemId, orderItemId)
+    where: eq(returns.orderItemId, orderItemId),
   });
 
-  // If replacement shipment exists
+  let orderId: number | null = null;
+
   if (returnRecord && returnRecord.replacementShipmentId) {
-
     const replacementItem = await db.query.orderItems.findFirst({
-      where: eq(orderItems.replacementForReturnId, returnRecord.id)
+      where: eq(orderItems.replacementForReturnId, returnRecord.id),
     });
-
-    if (!replacementItem)
-      throw new Error("Replacement item not found");
-
-    return await db.query.orders.findFirst({
-      where: eq(orders.id, replacementItem.orderId),
-      with: {
-        items: true,
-        shipping: true,
-        user: true
-      }
+    if (!replacementItem) throw new Error("Replacement item not found");
+    orderId = replacementItem.orderId;
+  } else {
+    const originalItem = await db.query.orderItems.findFirst({
+      where: eq(orderItems.id, orderItemId),
     });
+    if (!originalItem) throw new Error("Original order item not found");
+    orderId = originalItem.orderId;
   }
 
-  // Otherwise original item
-  const originalItem = await db.query.orderItems.findFirst({
-    where: eq(orderItems.id, orderItemId)
+  if (!orderId) throw new Error("Order ID not resolved");
+
+  const order = await db.query.orders.findFirst({
+    where: eq(orders.id, orderId),
+  });
+  if (!order) throw new Error("Order not found");
+
+  const items = await db.query.orderItems.findMany({
+    where: eq(orderItems.orderId, orderId),
   });
 
-  if (!originalItem)
-    throw new Error("Original order item not found");
-
-  return await db.query.orders.findFirst({
-    where: eq(orders.id, originalItem.orderId),
-    with: {
-      items: true,
-      shipping: true,
-      user: true
-    }
+  const shippingRecords = await db.query.shipping.findMany({
+    where: eq(shipping.orderId, orderId),
   });
+
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, order.userId),
+  });
+
+  // Return directly using TSShipping, no null coercion
+  return {
+    id: order.id,
+    status: order.status,
+    originStationId: order.originStationId ?? null,
+    paymentStatus: order.paymentStatus ?? undefined,
+    items,
+    shipping: shippingRecords, 
+    user,
+  };
 };
 
 // Assign origin station (handles returns/exchanges)
@@ -1550,75 +1570,63 @@ export const assignOriginStationServiceEx = async (
 //   }
 
 //   return { message: "Order marked as shipped", orderId: order.id };
-
-
 export const markOrderAsShippedServiceEx = async (orderItemId: number) => {
   const order = await getOrderForShipping(orderItemId);
   if (!order) throw new Error("Order not found");
 
-  // Ensure order has items 
   if (!order.items || order.items.length === 0) {
     throw new Error("Order has no items");
   }
 
- // Must have origin station for this item
-  const itemShipping = order.shipping?.find(s => s.orderItemId === orderItemId);
-  if (!itemShipping && !order.originStationId) {
-  throw new Error("Item must be assigned to a station before it can be shipped");
-  }
+  const existingShipping = await db.query.shipping.findMany({
+    where: eq(shipping.orderId, order.id),
+  });
 
-  //Update or insert shipping per item
+  const itemShipping = existingShipping.find(
+    (s) => s.orderItemId === orderItemId
+  );
+
+  const item = await db.query.orderItems.findFirst({
+    where: eq(orderItems.id, orderItemId),
+  });
+  if (!item?.originStationId) throw new Error("Item must be assigned to a station before shipping");
+
   if (itemShipping) {
     await db
       .update(shipping)
-      .set({
-        status: "in_transit",
-      })
+      .set({ status: "in_transit" })
       .where(eq(shipping.id, itemShipping.id));
   } else {
     await db.insert(shipping).values({
       orderId: order.id,
       orderItemId,
       status: "in_transit",
-      originStationId: order.originStationId || null,
+      originStationId: item.originStationId,
     });
   }
 
-  //Fetch ALL shipping records for this order 
   const allShippingRecords = await db.query.shipping.findMany({
     where: eq(shipping.orderId, order.id),
   });
 
-  //Total items in order
-  const totalOrderItems = order.items.length;
-
-  //Count shipped items 
   const shippedItemIds = new Set(
     allShippingRecords
       .filter((s) => s.status === "in_transit" || s.status === "delivered")
       .map((s) => s.orderItemId)
-      .filter(Boolean)
+      .filter((id): id is number => !!id)
   );
 
   const shippedCount = shippedItemIds.size;
+  const totalItems = order.items.length;
 
   let newOrderStatus: typeof order.status;
+  if (shippedCount === 0) newOrderStatus = "at_station";
+  else if (shippedCount < totalItems) newOrderStatus = "processing";
+  else newOrderStatus = "shipped";
 
-  if (shippedCount === 0) {
-    newOrderStatus = "at_station";
-  } else if (shippedCount < totalOrderItems) {
-    newOrderStatus = "processing";
-  } else {
-    newOrderStatus = "shipped";
-  }
-
-  //Update order status
   await db
     .update(orders)
-    .set({
-      status: newOrderStatus,
-      updatedAt: new Date(),
-    })
+    .set({ status: newOrderStatus, updatedAt: new Date() })
     .where(eq(orders.id, order.id));
 
   return {
