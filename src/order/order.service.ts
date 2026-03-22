@@ -1549,7 +1549,7 @@ export const assignOriginStationServiceEx = async (
   return {
     message: "Origin station assigned successfully",
     orderId: item.orderId,
-    // orderItemId,
+    orderItemId,
     stationId,
   };
 };                                                                                                                                         
