@@ -1124,7 +1124,9 @@ export const getOrderByIdService = async (orderId: number) => {
     .from(productImages)
     .where(and(inArray(productImages.productId, replacementProductIds), eq(productImages.isMain, true)));
 
-  // Attach returns and replacements (with main images) to the order items
+  // Attach returns and replacements with main images to the order items
+  const isAssignedToOrigin = !!order.originStationId;
+
   const itemsWithReplacements = order.items.map((item: any) => {
     const itemReturns = returnRecords.filter((r) => r.orderItemId === item.id);
     const replacements = itemReturns
@@ -1133,6 +1135,7 @@ export const getOrderByIdService = async (orderId: number) => {
           .filter((ri) => ri.replacementForReturnId === r.returnId)
           .map((ri) => ({
             ...ri,
+            isAssignedToOrigin: isAssignedToOrigin,
             product: {
               productId: ri.productId,
               productImage: replacementImages.find(img => img.productId === ri.productId)?.imageUrl || null,
@@ -1141,7 +1144,7 @@ export const getOrderByIdService = async (orderId: number) => {
       )
       .flat();
 
-    return { ...item, returns: itemReturns, replacements };
+    return { ...item, isAssignedToOrigin: isAssignedToOrigin, returns: itemReturns, replacements };
   });
 
   return { ...order, items: itemsWithReplacements };
