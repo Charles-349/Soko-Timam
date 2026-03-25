@@ -1550,7 +1550,7 @@ export const assignOriginStationServiceEx = async (
     message: "Origin station assigned successfully",
     orderId: item.orderId,
     orderItemId,
-    stationId,
+    stationId,//CUSTOMER,DESTINATION
   };
 };                                                                                                                                         
 
@@ -2308,14 +2308,25 @@ export const getOrdersByStationIdService = async (stationId: number) => {
 
 export const getOrdersByOriginStationIdService = async (stationId: number) => {
   const ordersList = await db.query.orders.findMany({
-    where: eq(orders.originStationId, stationId),
-    with: {
-      items: { with: { product: true } },
-      shipping: true,
-      user: true,
-      payments: true,
-    },
-  });
+  where: (orders, { exists }) =>
+    exists(
+      db
+        .select()
+        .from(orderItems)
+        .where(
+          and(
+            eq(orderItems.orderId, orders.id),
+            eq(orderItems.originStationId, stationId)
+          )
+        )
+    ),
+  with: {
+    items: { with: { product: true } },
+    shipping: true,
+    user: true,
+    payments: true,
+  },
+});
 
   for (const order of ordersList) {
     const itemIds = order.items.map((i: any) => i.id);
