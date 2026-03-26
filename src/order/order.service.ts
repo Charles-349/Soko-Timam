@@ -1873,7 +1873,25 @@ export const getOrderForPickupVerificationService = async (orderId: number) => {
 
   if (!order) throw new Error("Order not found");
 
-  return order.status === "shipped";
+  const itemsWithStatus = order.items.map((item) => {
+    const shipment = order.shipping.find(
+      (s) => s.orderItemId === item.id
+    );
+
+    return {
+      itemId: item.id,
+      productName: item.product.name,
+      shippingStatus: shipment?.status || "unknown",
+      isAtPickupPoint: shipment?.status === "ready_for_pickup",
+    };
+  });
+
+  const allReady = itemsWithStatus.every(i => i.isAtPickupPoint);
+
+  return {
+    isReady: allReady,
+    items: itemsWithStatus,
+  };
 };
 
 
