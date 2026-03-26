@@ -2398,7 +2398,20 @@ export const getOrdersByOriginStationIdService = async (stationId: number) => {
         )
     ),
   with: {
-    items: { with: { product: true } },
+    items: {
+  with: {
+    product: true,
+    shop: {
+      with: {
+        seller: {
+          with: {
+            user: true, 
+          },
+        },
+      },
+    },
+  },
+},
     shipping: true,
     user: true,
     payments: true,
@@ -2417,7 +2430,13 @@ export const getOrdersByOriginStationIdService = async (stationId: number) => {
 
     order.items = order.items.map((item: any) => ({
       ...item,
-      product: { ...item.product, productImage: mainImages.find(img => img.productId === item.productId)?.imageUrl || null }
+      product: { ...item.product, productImage: mainImages.find(img => img.productId === item.productId)?.imageUrl || null },
+      seller: item.shop?.seller?.user
+    ? {
+        id: item.shop.seller.user.id,
+        name: `${item.shop.seller.user.firstname} ${item.shop.seller.user.lastname}`,
+      }
+    : null,
     }));
 
     // Returns for this order's items
