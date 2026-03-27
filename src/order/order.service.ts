@@ -1653,6 +1653,16 @@ export const markOrderAsShippedServiceEx = async (orderItemId: number) => {
   });
   if (!item?.originStationId) throw new Error("Item must be assigned to a station before shipping");
 
+  const isReplacement = !!item?.replacementForReturnId;
+
+ if (
+  itemShipping &&
+  itemShipping.status &&
+  !isReplacement &&
+  ["in_transit", "ready_for_pickup", "delivered"].includes(itemShipping.status)
+ ) {
+  throw new Error("Item already shipped");
+ }
   if (itemShipping) {
     await db
       .update(shipping)
