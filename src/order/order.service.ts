@@ -1125,27 +1125,33 @@ export const getOrderByIdService = async (orderId: number) => {
     .where(and(inArray(productImages.productId, replacementProductIds), eq(productImages.isMain, true)));
 
   // Attach returns and replacements with main images to the order items
-  const isAssignedToOrigin = !!order.originStationId;
-
   const itemsWithReplacements = order.items.map((item: any) => {
-    const itemReturns = returnRecords.filter((r) => r.orderItemId === item.id);
-    const replacements = itemReturns
-      .map((r) =>
-        replacementItems
-          .filter((ri) => ri.replacementForReturnId === r.returnId)
-          .map((ri) => ({
-            ...ri,
-            isAssignedToOrigin: isAssignedToOrigin,
-            product: {
-              productId: ri.productId,
-              productImage: replacementImages.find(img => img.productId === ri.productId)?.imageUrl || null,
-            },
-          }))
-      )
-      .flat();
+  const isAssignedToOrigin = !!item.originStationId;
 
-    return { ...item, isAssignedToOrigin: isAssignedToOrigin, returns: itemReturns, replacements };
-  });
+  const itemReturns = returnRecords.filter((r) => r.orderItemId === item.id);
+
+  const replacements = itemReturns
+    .map((r) =>
+      replacementItems
+        .filter((ri) => ri.replacementForReturnId === r.returnId)
+        .map((ri) => ({
+          ...ri,
+          product: {
+            productId: ri.productId,
+            productImage:
+              replacementImages.find((img) => img.productId === ri.productId)?.imageUrl || null,
+          },
+        }))
+    )
+    .flat();
+
+  return {
+    ...item,
+    isAssignedToOrigin,
+    returns: itemReturns,
+    replacements,
+  };
+});
 
   return { ...order, items: itemsWithReplacements };
 };
