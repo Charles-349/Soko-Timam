@@ -2401,38 +2401,38 @@ export const getOrdersByStationIdService = async (stationId: number) => {
 
 export const getOrdersByOriginStationIdService = async (stationId: number) => {
   const ordersList = await db.query.orders.findMany({
-  where: (orders, { exists }) =>
-    exists(
-      db
-        .select()
-        .from(orderItems)
-        .where(
-          and(
-            eq(orderItems.orderId, orders.id),
-            eq(orderItems.originStationId, stationId)
+    where: (orders, { exists }) =>
+      exists(
+        db
+          .select()
+          .from(orderItems)
+          .where(
+            and(
+              eq(orderItems.orderId, orders.id),
+              eq(orderItems.originStationId, stationId)
+            )
           )
-        )
-    ),
-  with: {
-    items: {
-  with: {
-    product: true,
-    shop: {
-      with: {
-        seller: {
-          with: {
-            user: true, 
+      ),
+    with: {
+      items: {
+        with: {
+          product: true,
+          shop: {
+            with: {
+              seller: {
+                with: {
+                  user: true,
+                },
+              },
+            },
           },
         },
       },
+      shipping: true,
+      user: true,
+      payments: true,
     },
-  },
-},
-    shipping: true,
-    user: true,
-    payments: true,
-  },
-});
+  });
 
   for (const order of ordersList) {
     const itemIds = order.items.map((i: any) => i.id);
@@ -2440,20 +2440,17 @@ export const getOrdersByOriginStationIdService = async (stationId: number) => {
 
     // Main product images
     const mainImages = await db
-      .select({ productId: productImages.productId, imageUrl: productImages.imageUrl })
+      .select({
+        productId: productImages.productId,
+        imageUrl: productImages.imageUrl,
+      })
       .from(productImages)
-      .where(and(inArray(productImages.productId, productIds), eq(productImages.isMain, true)));
-
-    order.items = order.items.map((item: any) => ({
-      ...item,
-      product: { ...item.product, productImage: mainImages.find(img => img.productId === item.productId)?.imageUrl || null },
-      seller: item.shop?.seller?.user
-    ? {
-        id: item.shop.seller.user.id,
-        name: `${item.shop.seller.user.firstname} ${item.shop.seller.user.lastname}`,
-      }
-    : null,
-    }));
+      .where(
+        and(
+          inArray(productImages.productId, productIds),
+          eq(productImages.isMain, true)
+        )
+      );
 
     // Returns for this order's items
     const returnRecords = await db
@@ -2477,29 +2474,79 @@ export const getOrdersByOriginStationIdService = async (stationId: number) => {
         replacementForReturnId: orderItems.replacementForReturnId,
       })
       .from(orderItems)
-      .where(inArray(orderItems.replacementForReturnId, returnRecords.map(r => r.returnId).filter(Boolean)));
+      .where(
+        inArray(
+          orderItems.replacementForReturnId,
+          returnRecords.map((r) => r.returnId).filter(Boolean)
+        )
+      );
 
     // Main images for replacement products
-    const replacementProductIds = replacementItems.map((ri: any) => ri.productId);
-    const replacementImages = await db
-      .select({ productId: productImages.productId, imageUrl: productImages.imageUrl })
-      .from(productImages)
-      .where(and(inArray(productImages.productId, replacementProductIds), eq(productImages.isMain, true)));
+    const replacementProductIds = replacementItems.map(
+      (ri: any) => ri.productId
+    );
 
-    // Attach returns and replacements
+    const replacementImages = await db
+      .select({
+        productId: productImages.productId,
+        imageUrl: productImages.imageUrl,
+      })
+      .from(productImages)
+      .where(
+        and(
+          inArray(productImages.productId, replacementProductIds),
+          eq(productImages.isMain, true)
+        )
+      );
+
+    // Final item transformation
     order.items = order.items.map((item: any) => {
-      const itemReturns = returnRecords.filter(r => r.orderItemId === item.id);
-      const returnsWithReplacements = itemReturns.map(r => ({
+      const itemShipment = order.shipping.find(
+        (shipment: any) => shipment.orderItemId === item.id
+      );
+
+      const shippingStatus = itemShipment?.status ?? "not_shipped";
+
+      const isShipped = !!itemShipment &&
+        ["in_transit", "delivered", "ready_for_pickup"].includes(
+          itemShipment.status
+        );
+
+      const itemReturns = returnRecords.filter(
+        (r) => r.orderItemId === item.id
+      );
+
+      const returnsWithReplacements = itemReturns.map((r) => ({
         ...r,
         replacements: replacementItems
-          .filter(ri => ri.replacementForReturnId === r.returnId)
-          .map(ri => ({
+          .filter((ri) => ri.replacementForReturnId === r.returnId)
+          .map((ri) => ({
             ...ri,
-            productImage: replacementImages.find(img => img.productId === ri.productId)?.imageUrl || null,
-          }))
+            productImage:
+              replacementImages.find(
+                (img) => img.productId === ri.productId
+              )?.imageUrl || null,
+          })),
       }));
 
-      return { ...item, returns: returnsWithReplacements };
+      return {
+        ...item,
+        isShipped,
+        shippingStatus,
+        product: {
+          ...item.product,
+          productImage:
+            mainImages.find((img) => img.productId === item.productId)
+              ?.imageUrl || null,
+        },
+        seller: item.shop?.seller?.user
+          ? {
+              id: item.shop.seller.user.id,
+              name: `${item.shop.seller.user.firstname} ${item.shop.seller.user.lastname}`,
+            }
+          : null,
+        returns: returnsWithReplacements,
+      };
     });
   }
 
