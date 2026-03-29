@@ -128,7 +128,7 @@ const order = (app: Express) => {
   });
 
     //Mark Order as Ready for Pickup
-  app.route("/orders/:id/ready-for-pickup").post(async (req, res, next) => {
+  app.route("/order/:id/ready-for-pickup").post(async (req, res, next) => {
     try {
       await markOrderReadyForPickupController(req, res);
     } catch (error) {
