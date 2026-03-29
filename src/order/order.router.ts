@@ -137,7 +137,7 @@ const order = (app: Express) => {
   });
 
    //Mark Order as Delivered
-  app.route("/orders/:id/deliver").post(async (req, res, next) => {
+  app.route("/order/:id/deliver").post(async (req, res, next) => {
     try {
       await markOrderAsDeliveredController(req, res);
     } catch (error) {
