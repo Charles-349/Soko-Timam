@@ -662,42 +662,171 @@ export const assignOriginStationServiceEx = async (
 };
 
 
+// export const markOrderAsShippedServiceEx = async (orderItemId: number) => {
+//   const order = await getOrderForShipping(orderItemId);
+//   if (!order) throw new Error("Order not found");
+
+//   if (!order.items || order.items.length === 0) {
+//     throw new Error("Order has no items");
+//   }
+
+//   const existingShipping = await db.query.shipping.findMany({
+//     where: eq(shipping.orderId, order.id),
+//   });
+
+//   const itemShipping = existingShipping.find(
+//     (s) => s.orderItemId === orderItemId
+//   );
+
+//   const item = await db.query.orderItems.findFirst({
+//     where: eq(orderItems.id, orderItemId),
+//   });
+//   if (!item?.originStationId) throw new Error("Item must be assigned to a station before shipping");
+
+//   const isReplacement = !!item?.replacementForReturnId;
+
+//  if (
+//   itemShipping &&
+//   itemShipping.status &&
+//   !isReplacement &&
+//   ["in_transit", "ready_for_pickup", "delivered"].includes(itemShipping.status)
+//  ) {
+//   throw new Error("Item already shipped");
+//  }
+//   if (itemShipping) {
+//     await db
+//       .update(shipping)
+//       .set({ status: "in_transit" })
+//       .where(eq(shipping.id, itemShipping.id));
+//   } else {
+//     await db.insert(shipping).values({
+//       orderId: order.id,
+//       orderItemId,
+//       status: "in_transit",
+//       originStationId: item.originStationId,
+//     });
+//   }
+
+//   const allShippingRecords = await db.query.shipping.findMany({
+//     where: eq(shipping.orderId, order.id),
+//   });
+
+//   const shippedItemIds = new Set(
+//     allShippingRecords
+//       .filter((s) => s.status === "in_transit" || s.status === "delivered")
+//       .map((s) => s.orderItemId)
+//       .filter((id): id is number => !!id)
+//   );
+
+//   const shippedCount = shippedItemIds.size;
+//   const totalItems = order.items.length;
+
+//   let newOrderStatus: typeof order.status;
+//   if (shippedCount === 0) newOrderStatus = "at_station";
+//   else if (shippedCount < totalItems) newOrderStatus = "processing";
+//   else newOrderStatus = "shipped";
+
+//   await db
+//     .update(orders)
+//     .set({ status: newOrderStatus, updatedAt: new Date() })
+//     .where(eq(orders.id, order.id));
+
+//   return {
+//     message: `Item shipped. Order now ${newOrderStatus}`,
+//     orderId: order.id,
+//     orderItemId,
+//   };
+// };
+
+
+// export const markOrderAsReadyForPickupService = async (orderId: number) => {
+//   const order = await db.query.orders.findFirst({
+//     where: eq(orders.id, orderId),
+//     with: {
+//       shipping: true,
+//       items: true,
+//       user: true
+//     }
+//   });
+
+//   if (!order) throw new Error("Order not found");
+
+//   // Ensure all items have at least one shipping record marked in_transit 
+//   const allShippingRecords = await db.query.shipping.findMany({
+//     where: eq(shipping.orderId, order.id)
+//   });
+
+//   const shippedCount = allShippingRecords.filter(
+//     (s) => s.status === "in_transit" 
+//   ).length;
+
+//   if (shippedCount < order.items.length) {
+//     throw new Error("Cannot mark ready for pickup: not all items have been shipped");
+//   }
+
+//   const pickupCode = crypto.randomBytes(3).toString("hex").toUpperCase();
+
+//   let shippingRecord = order.shipping?.[0];
+
+//   if (shippingRecord) {
+//     await db.update(shipping)
+//       .set({ status: "ready_for_pickup", pickupCode })
+//       .where(eq(shipping.id, shippingRecord.id));
+//   } else {
+//     const inserted = await db.insert(shipping)
+//       .values({
+//         orderId: order.id,
+//         status: "ready_for_pickup",
+//         originStationId: order.originStationId || 0,
+//         pickupCode
+//       })
+//       .returning();
+
+//     shippingRecord = inserted[0];
+//   }
+
+//   if (order.user?.email) {
+//     await sendEmail(
+//       order.user.email,
+//       "Your Order is Ready for Pickup",
+//       `Hi ${order.user.firstname}, your order #${order.id} is ready for pickup. Pickup code: ${pickupCode}`,
+//       `<p>Hi ${order.user.firstname},</p>
+//        <p>Your order <strong>#${order.id}</strong> is ready for pickup.</p>
+//        <p><strong>Pickup Code:</strong> ${pickupCode}</p>
+//        <p>Please present this code at the pickup station.</p>`
+//     );
+//   }
+
+//   return {
+//     message: "Order marked as ready for pickup",
+//     orderId: order.id,
+//   };
+// };
+
+
 export const markOrderAsShippedServiceEx = async (orderItemId: number) => {
   const order = await getOrderForShipping(orderItemId);
   if (!order) throw new Error("Order not found");
 
-  if (!order.items || order.items.length === 0) {
-    throw new Error("Order has no items");
+  const item = order.items.find(i => i.id === orderItemId);
+  if (!item) throw new Error("Order item not found");
+  if (!item.originStationId) throw new Error("Item must be assigned to a station before shipping");
+
+  const isReplacement = !!item.replacementForReturnId;
+
+  // Check for existing shipping for this item only
+  const existingShipping = await db.query.shipping.findFirst({
+    where: eq(shipping.orderItemId, orderItemId),
+  });
+
+  if (existingShipping && !isReplacement && existingShipping.status && ["in_transit", "ready_for_pickup", "delivered"].includes(existingShipping.status)) {
+    throw new Error("Item already shipped");
   }
 
-  const existingShipping = await db.query.shipping.findMany({
-    where: eq(shipping.orderId, order.id),
-  });
-
-  const itemShipping = existingShipping.find(
-    (s) => s.orderItemId === orderItemId
-  );
-
-  const item = await db.query.orderItems.findFirst({
-    where: eq(orderItems.id, orderItemId),
-  });
-  if (!item?.originStationId) throw new Error("Item must be assigned to a station before shipping");
-
-  const isReplacement = !!item?.replacementForReturnId;
-
- if (
-  itemShipping &&
-  itemShipping.status &&
-  !isReplacement &&
-  ["in_transit", "ready_for_pickup", "delivered"].includes(itemShipping.status)
- ) {
-  throw new Error("Item already shipped");
- }
-  if (itemShipping) {
-    await db
-      .update(shipping)
+  if (existingShipping) {
+    await db.update(shipping)
       .set({ status: "in_transit" })
-      .where(eq(shipping.id, itemShipping.id));
+      .where(eq(shipping.id, existingShipping.id));
   } else {
     await db.insert(shipping).values({
       orderId: order.id,
@@ -707,27 +836,24 @@ export const markOrderAsShippedServiceEx = async (orderItemId: number) => {
     });
   }
 
+  // Update order status based on items shipped
   const allShippingRecords = await db.query.shipping.findMany({
     where: eq(shipping.orderId, order.id),
   });
 
   const shippedItemIds = new Set(
     allShippingRecords
-      .filter((s) => s.status === "in_transit" || s.status === "delivered")
-      .map((s) => s.orderItemId)
+      .filter(s => s.status === "in_transit" || s.status === "delivered")
+      .map(s => s.orderItemId)
       .filter((id): id is number => !!id)
   );
 
-  const shippedCount = shippedItemIds.size;
-  const totalItems = order.items.length;
-
   let newOrderStatus: typeof order.status;
-  if (shippedCount === 0) newOrderStatus = "at_station";
-  else if (shippedCount < totalItems) newOrderStatus = "processing";
+  if (shippedItemIds.size === 0) newOrderStatus = "at_station";
+  else if (shippedItemIds.size < order.items.length) newOrderStatus = "processing";
   else newOrderStatus = "shipped";
 
-  await db
-    .update(orders)
+  await db.update(orders)
     .set({ status: newOrderStatus, updatedAt: new Date() })
     .where(eq(orders.id, order.id));
 
@@ -738,51 +864,32 @@ export const markOrderAsShippedServiceEx = async (orderItemId: number) => {
   };
 };
 
-
+// Mark order ready for pickup: create one shipping per item if not exists
 export const markOrderAsReadyForPickupService = async (orderId: number) => {
   const order = await db.query.orders.findFirst({
     where: eq(orders.id, orderId),
-    with: {
-      shipping: true,
-      items: true,
-      user: true
-    }
+    with: { shipping: true, items: true, user: true }
   });
-
   if (!order) throw new Error("Order not found");
-
-  // Ensure all items have at least one shipping record marked in_transit 
-  const allShippingRecords = await db.query.shipping.findMany({
-    where: eq(shipping.orderId, order.id)
-  });
-
-  const shippedCount = allShippingRecords.filter(
-    (s) => s.status === "in_transit" 
-  ).length;
-
-  if (shippedCount < order.items.length) {
-    throw new Error("Cannot mark ready for pickup: not all items have been shipped");
-  }
 
   const pickupCode = crypto.randomBytes(3).toString("hex").toUpperCase();
 
-  let shippingRecord = order.shipping?.[0];
+  for (const item of order.items) {
+    const itemShipping = order.shipping.find(s => s.orderItemId === item.id);
 
-  if (shippingRecord) {
-    await db.update(shipping)
-      .set({ status: "ready_for_pickup", pickupCode })
-      .where(eq(shipping.id, shippingRecord.id));
-  } else {
-    const inserted = await db.insert(shipping)
-      .values({
+    if (itemShipping) {
+      await db.update(shipping)
+        .set({ status: "ready_for_pickup", pickupCode })
+        .where(eq(shipping.id, itemShipping.id));
+    } else {
+      await db.insert(shipping).values({
         orderId: order.id,
+        orderItemId: item.id,
         status: "ready_for_pickup",
-        originStationId: order.originStationId || 0,
+        originStationId: item.originStationId || 0,
         pickupCode
-      })
-      .returning();
-
-    shippingRecord = inserted[0];
+      });
+    }
   }
 
   if (order.user?.email) {
@@ -797,10 +904,7 @@ export const markOrderAsReadyForPickupService = async (orderId: number) => {
     );
   }
 
-  return {
-    message: "Order marked as ready for pickup",
-    orderId: order.id,
-  };
+  return { message: "Order marked as ready for pickup", orderId: order.id };
 };
 
 
