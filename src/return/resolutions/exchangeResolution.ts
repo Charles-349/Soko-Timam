@@ -29,6 +29,8 @@ export const exchangeResolution = async (returnRecord: any) => {
   if (!customer) throw new Error("Customer not found");
 
   //ALWAYS create new replacement order
+  const sanitizeInt = (val: any) =>
+  val === "" || val === undefined ? null : val;
   const replacementOrderResult = await db.insert(orders).values({
     userId: order.userId,
     status: "paid",
@@ -36,8 +38,8 @@ export const exchangeResolution = async (returnRecord: any) => {
     replacementOfOrderId: order.id,
     isReplacement: true,
     originStationId: order.originStationId,
-    pickupStationId: order.pickupStationId,
-    pickupAgentId: order.pickupAgentId,
+    pickupStationId: sanitizeInt(order.pickupStationId),
+    pickupAgentId: sanitizeInt(order.pickupAgentId),
     createdAt: new Date(),
     updatedAt: new Date(),
   }).returning();
@@ -71,8 +73,8 @@ export const exchangeResolution = async (returnRecord: any) => {
       recipientPhone: customer.phone ?? null,
       estimatedDelivery: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
       originStationId: order.originStationId,
-      pickupStationId: order.pickupStationId || null,
-      pickupAgentId: order.pickupAgentId || null,
+      pickupStationId: sanitizeInt(order.pickupStationId),
+      pickupAgentId: sanitizeInt(order.pickupAgentId),
       type: "replacement",
       status: "preparing",
       createdAt: new Date(),

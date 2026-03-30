@@ -21,6 +21,88 @@ const calculateTotalAmount = async (orderId: number) => {
 };
 
 // Create or update unpaid order
+// export const createOrUpdateOrderService = async (
+//   userId: number,
+//   items: { productId: number; quantity: number }[],
+//   pickupStationId?: number | null,
+//   pickupAgentId?: number | null
+// ) => {
+//   let existingOrder = await db.query.orders.findFirst({
+//     where: and(eq(orders.userId, userId), eq(orders.paymentStatus, "unpaid")),
+//   });
+
+//   const sanitizeInt = (val: any) =>
+//   val === "" || val === undefined ? null : val;
+
+//   if (!existingOrder) {
+//     const insertResult = await db
+//       .insert(orders)
+//       .values({
+//         userId,
+//         paymentStatus: "unpaid",
+//         status: "pending",
+//         totalAmount: "0",
+//         pickupStationId: sanitizeInt(pickupStationId),
+//         pickupAgentId: sanitizeInt(pickupAgentId),
+//         originStationId: null,
+//       })
+//       .returning();
+
+//     const newOrder = Array.isArray(insertResult) ? insertResult[0] : undefined;
+//     if (!newOrder) throw new Error("Failed to create new order");
+//     existingOrder = newOrder;
+//   } else {
+//     await db
+//       .update(orders)
+//       .set({
+//         pickupStationId: pickupStationId ?? existingOrder.pickupStationId,
+//         pickupAgentId: pickupAgentId ?? existingOrder.pickupAgentId,
+//       })
+//       .where(eq(orders.id, existingOrder.id));
+//   }
+
+//   for (const { productId, quantity } of items) {
+//     const product = await db.query.products.findFirst({ where: eq(products.id, productId) });
+//     if (!product) throw new Error(`Product with ID ${productId} not found`);
+
+//     if (!existingOrder) {
+//       throw new Error("Order could not be created or found");
+//     }
+
+//     const existingItem = await db.query.orderItems.findFirst({
+//       where: and(eq(orderItems.orderId, existingOrder.id), eq(orderItems.productId, productId)),
+//     });
+
+//     if (existingItem) {
+//       await db
+//         .update(orderItems)
+//         .set({ quantity: existingItem.quantity + quantity, price: product.price })
+//         .where(eq(orderItems.id, existingItem.id));
+//     } else {
+//       await db.insert(orderItems).values({
+//         orderId: existingOrder.id,
+//         productId,
+//         shopId: product.shopId,
+//         quantity,
+//         price: product.price,
+//       });
+//     }
+//   }
+
+//   if (!existingOrder) {
+//     throw new Error("Order could not be created or found");
+//   }
+//   const totalAmount = await calculateTotalAmount(existingOrder.id);
+
+//   return {
+//     message: "Order updated successfully",
+//     orderId: existingOrder.id,
+//     totalAmount,
+//     pickupStationId: existingOrder.pickupStationId ?? pickupStationId ?? null,
+//     pickupAgentId: existingOrder.pickupAgentId ?? pickupAgentId ?? null,
+//   };
+// };
+
 export const createOrUpdateOrderService = async (
   userId: number,
   items: { productId: number; quantity: number }[],
@@ -31,6 +113,7 @@ export const createOrUpdateOrderService = async (
     where: and(eq(orders.userId, userId), eq(orders.paymentStatus, "unpaid")),
   });
 
+  // CREATE NEW ORDER
   if (!existingOrder) {
     const insertResult = await db
       .insert(orders)
@@ -45,35 +128,56 @@ export const createOrUpdateOrderService = async (
       })
       .returning();
 
-    const newOrder = Array.isArray(insertResult) ? insertResult[0] : undefined;
+    const newOrder = insertResult[0];
     if (!newOrder) throw new Error("Failed to create new order");
+
     existingOrder = newOrder;
   } else {
+    // UPDATE EXISTING ORDER
     await db
       .update(orders)
       .set({
-        pickupStationId: pickupStationId ?? existingOrder.pickupStationId,
-        pickupAgentId: pickupAgentId ?? existingOrder.pickupAgentId,
+        pickupStationId:
+          pickupStationId !== undefined
+            ? pickupStationId
+            : existingOrder.pickupStationId,
+
+        pickupAgentId:
+          pickupAgentId !== undefined
+            ? pickupAgentId
+            : existingOrder.pickupAgentId,
       })
       .where(eq(orders.id, existingOrder.id));
   }
 
-  for (const { productId, quantity } of items) {
-    const product = await db.query.products.findFirst({ where: eq(products.id, productId) });
-    if (!product) throw new Error(`Product with ID ${productId} not found`);
+  if (!existingOrder) {
+    throw new Error("Order could not be created or found");
+  }
 
-    if (!existingOrder) {
-      throw new Error("Order could not be created or found");
+  // ADD / UPDATE ITEMS
+  for (const { productId, quantity } of items) {
+    const product = await db.query.products.findFirst({
+      where: eq(products.id, productId),
+    });
+
+    if (!product) {
+      throw new Error(`Product with ID ${productId} not found`);
     }
 
     const existingItem = await db.query.orderItems.findFirst({
-      where: and(eq(orderItems.orderId, existingOrder.id), eq(orderItems.productId, productId)),
+      where: and(
+        eq(orderItems.orderId, existingOrder.id),
+        eq(orderItems.productId, productId)
+      ),
     });
 
     if (existingItem) {
       await db
         .update(orderItems)
-        .set({ quantity: existingItem.quantity + quantity, price: product.price })
+        .set({
+          quantity: existingItem.quantity + quantity,
+          price: product.price,
+        })
         .where(eq(orderItems.id, existingItem.id));
     } else {
       await db.insert(orderItems).values({
@@ -86,17 +190,23 @@ export const createOrUpdateOrderService = async (
     }
   }
 
-  if (!existingOrder) {
-    throw new Error("Order could not be created or found");
-  }
+  // RECALCULATE TOTAL
   const totalAmount = await calculateTotalAmount(existingOrder.id);
 
   return {
     message: "Order updated successfully",
     orderId: existingOrder.id,
     totalAmount,
-    pickupStationId: existingOrder.pickupStationId ?? pickupStationId ?? null,
-    pickupAgentId: existingOrder.pickupAgentId ?? pickupAgentId ?? null,
+
+    pickupStationId:
+      pickupStationId !== undefined
+        ? pickupStationId
+        : existingOrder.pickupStationId ?? null,
+
+    pickupAgentId:
+      pickupAgentId !== undefined
+        ? pickupAgentId
+        : existingOrder.pickupAgentId ?? null,
   };
 };
 

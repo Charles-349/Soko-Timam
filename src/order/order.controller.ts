@@ -19,33 +19,101 @@ import {
 } from "./order.service";
 
 //Create or Update Order
+// export const createOrderController = async (req: Request, res: Response) => {
+//   try {
+//     const {
+//       userId,
+//       items,
+//       pickupStationId,
+//       pickupAgentId,
+//     } = req.body;
+
+//     if (!userId || !items || !Array.isArray(items) || items.length === 0) {
+//       return res.status(400).json({
+//         message: "User ID and at least one item are required",
+//       });
+//     }
+
+//    // Helper to safely convert to nullable number
+// const toNullableInt = (v: any): number | null => {
+//   if (v === undefined || v === null || v === "" || Number(v) <= 0) return null;
+//   return Number(v);
+// };
+
+// const cleanPickupStationId = toNullableInt(pickupStationId);
+// const cleanPickupAgentId = toNullableInt(pickupAgentId);
+
+//     const data = await createOrUpdateOrderService(
+//       userId,
+//       items,
+//       cleanPickupStationId,
+//       cleanPickupAgentId
+//     );
+
+//     return res.status(200).json({
+//       message: "Order created or updated successfully",
+//       data,
+//     });
+//   } catch (error: any) {
+//     console.error("Create/Update Order Error:", error);
+
+//     return res.status(500).json({
+//       message: error.message || "Failed to create or update order",
+//     });
+//   }
+// };
+
 export const createOrderController = async (req: Request, res: Response) => {
   try {
-    const {
-      userId,
-      items,
-      pickupStationId,
-      pickupAgentId,
-    } = req.body;
+    const { userId, items, pickupStationId, pickupAgentId } = req.body;
 
-    if (!userId || !items || !Array.isArray(items) || items.length === 0) {
+    // Validate userId
+    const parsedUserId = Number(userId);
+    if (!parsedUserId || parsedUserId <= 0) {
       return res.status(400).json({
-        message: "User ID and at least one item are required",
+        message: "Valid userId is required",
       });
     }
 
-   // Helper to safely convert to nullable number
-const toNullableInt = (v: any): number | null => {
-  if (v === undefined || v === null || v === "" || Number(v) <= 0) return null;
-  return Number(v);
-};
+    // Validate items
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({
+        message: "At least one item is required",
+      });
+    }
 
-const cleanPickupStationId = toNullableInt(pickupStationId);
-const cleanPickupAgentId = toNullableInt(pickupAgentId);
+    for (const item of items) {
+      if (
+        !item.productId ||
+        Number(item.productId) <= 0 ||
+        !item.quantity ||
+        Number(item.quantity) <= 0
+      ) {
+        return res.status(400).json({
+          message: "Each item must have valid productId and quantity",
+        });
+      }
+    }
+
+    //Safe sanitizer
+    const toNullableInt = (v: any): number | null => {
+      if (v === undefined || v === null || v === "") return null;
+
+      const n = Number(v);
+      if (Number.isNaN(n) || n <= 0) return null;
+
+      return n;
+    };
+
+    const cleanPickupStationId = toNullableInt(pickupStationId);
+    const cleanPickupAgentId = toNullableInt(pickupAgentId);
 
     const data = await createOrUpdateOrderService(
-      userId,
-      items,
+      parsedUserId,
+      items.map((i: any) => ({
+        productId: Number(i.productId),
+        quantity: Number(i.quantity),
+      })),
       cleanPickupStationId,
       cleanPickupAgentId
     );
@@ -62,7 +130,6 @@ const cleanPickupAgentId = toNullableInt(pickupAgentId);
     });
   }
 };
-
 
 //Get All Orders
 export const getAllOrdersController = async (_req: Request, res: Response) => {
