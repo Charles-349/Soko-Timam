@@ -6,14 +6,9 @@ import {
   orders,
   orderItems,
   shops,
-  sellers,
   shipping,
 } from "../Drizzle/schema";
-import {
-  debitSellerWalletService,
-  creditSellerWalletService,
-} from "../wallet/wallet.service";
-import { paySellerViaMpesa } from "../payment/payment.service";
+
 import { processBulkReturns } from "./processors/bulkReturnProcessor";
 import { resolveReturn } from "./resolutions/resolveReturn";
 
@@ -156,6 +151,21 @@ export const createReturnService = async ({
   return returnRecords;
 };
 
+
+export const processReturnRefundService = async (returnIds: number[]) => {
+  if (!returnIds.length) throw new Error("No return IDs provided");
+
+  // Use the unified resolver 
+  return processBulkReturns(returnIds, resolveReturn);
+};
+
+export const processReturnExchangeService = async (returnIds: number[]) => {
+  if (!returnIds.length) throw new Error("No return IDs provided");
+
+  // Use the unified resolver 
+  return processBulkReturns(returnIds, resolveReturn);
+};
+
 export const reviewReturnService = async ({
   returnId,
   action, 
@@ -206,18 +216,18 @@ export const reviewReturnService = async ({
   if (!resolutionType)
     throw new Error("Resolution type required for approval");
 
-  const refundAmount = Number(returnRecord.refundAmount || 0);
+  // const refundAmount = Number(returnRecord.refundAmount || 0);
 
-  // Increase locked escrow amount
-  await db
-    .update(orders)
-    .set({
-      escrowLockedAmount: sql`
-        ${orders.escrowLockedAmount} + ${refundAmount}
-      `,
-      updatedAt: new Date(),
-    })
-    .where(eq(orders.id, returnRecord.orderId));
+  // // Increase locked escrow amount
+  // await db
+  //   .update(orders)
+  //   .set({
+  //     escrowLockedAmount: sql`
+  //       ${orders.escrowLockedAmount} + ${refundAmount}
+  //     `,
+  //     updatedAt: new Date(),
+  //   })
+  //   .where(eq(orders.id, returnRecord.orderId));
 
   await db
     .update(returns)
@@ -230,270 +240,31 @@ export const reviewReturnService = async ({
     })
     .where(eq(returns.id, returnId));
 
-  return { message: "Return approved" };
+    //ensure fresh state
+  const [updatedReturn] = await db
+  .select()
+  .from(returns)
+  .where(eq(returns.id, returnId));
+
+    if (!updatedReturn || updatedReturn.status !== "approved") {
+    throw new Error("Return not properly approved");
+    }
+
+    let result;
+    if (resolutionType === "exchange") {
+      await processReturnExchangeService([returnId]);
+    } else if (resolutionType === "refund") {
+      await processReturnRefundService([returnId]);
+    } else if (resolutionType === "store_credit") {
+      await processReturnRefundService([returnId]);
+
+    if (!result?.[0]?.success) {
+    throw new Error(result?.[0]?.error || "Return processing failed");
+    }
+    }
+
+  return { message: "Return approved and processed" };
 };
-
-// PROCESS RETURN REFUNDS
-// export const processReturnRefundService = async (
-//   returnIds: number[]
-// ) => {
-//   if (!returnIds.length)
-//     throw new Error("No return IDs provided");
-
-//   const results: Array<{
-//     returnId: number;
-//     success: boolean;
-//     refundRecord?: any;
-//     payoutResult?: any;
-//     error?: string;
-//   }> = [];
-
-//   for (const returnId of returnIds) {
-//     const [returnRecord] = await db
-//       .select()
-//       .from(returns)
-//       .where(eq(returns.id, returnId));
-
-//     if (!returnRecord)
-//       throw new Error(`Return ID ${returnId} not found`);
-
-//     if (
-//       !returnRecord.refundAmount ||
-//       Number(returnRecord.refundAmount) <= 0
-//     )
-//       throw new Error(
-//         `No refundable amount for return ID ${returnId}`
-//       );
-
-//     if (returnRecord.status !== "approved")
-//       throw new Error(
-//         `Return ID ${returnId} is not approved for refund`
-//       );
-//     const sellerId = returnRecord.sellerId;
-//     const refundAmount = Number(returnRecord.refundAmount);
-    
-//     const [refundRecord] = await db
-//       .insert(refunds)
-//       .values({
-//         returnId,
-//         amount: refundAmount.toFixed(2),
-//         status: "pending",
-//         attempts: 0,
-//         createdAt: new Date(),
-//       })
-//       .returning();
-
-//     try {
-//       //Debit seller escrow balance
-//       await debitSellerWalletService({
-//         sellerId,
-//         amount: refundAmount,
-//         note: `Refund for return ID ${returnId}`,
-//       });
-
-//       //Get seller phone
-//       const [seller] = await db
-//         .select()
-//         .from(sellers)
-//         .where(eq(sellers.id, sellerId));
-
-//       const phone = seller?.phone || "";
-
-//       //Payout via M-Pesa
-//       const payoutResult = await paySellerViaMpesa(
-//         refundRecord.id,
-//         phone,
-//         refundAmount
-//       );
-
-//       //Update refund record
-//       await db
-//         .update(refunds)
-//         .set({
-//           status: "completed",
-//           externalTransactionId:
-//             payoutResult.externalTransactionId,
-//           updatedAt: new Date(),
-//         })
-//         .where(eq(refunds.id, refundRecord.id));
-
-//       //Update return status
-//       await db
-//         .update(returns)
-//         .set({
-//           status: "refunded",
-//           processedAt: new Date(),
-//         })
-//         .where(eq(returns.id, returnId));
-
-//       //Reduce locked escrow amount
-//       await db
-//         .update(orders)
-//         .set({
-//           escrowLockedAmount: sql`
-//             ${orders.escrowLockedAmount} - ${refundAmount}
-//           `,
-//           updatedAt: new Date(),
-//         })
-//         .where(eq(orders.id, returnRecord.orderId));
-
-//       //Check if fully unlocked
-//       const [order] = await db
-//         .select()
-//         .from(orders)
-//         .where(eq(orders.id, returnRecord.orderId));
-
-//       if (Number(order.escrowLockedAmount) <= 0) {
-//         await db
-//           .update(orders)
-//           .set({
-//             isEscrowLocked: false,
-//             escrowLockedAmount: "0",
-//             updatedAt: new Date(),
-//           })
-//           .where(eq(orders.id, order.id));
-//       }
-
-//       results.push({
-//         returnId,
-//         success: true,
-//         refundRecord,
-//         payoutResult,
-//       });
-//     } catch (err: any) {
-//       //Rollback escrow debit if payout fails
-//       await creditSellerWalletService({
-//         sellerId,
-//         amount: refundAmount,
-//         note: `Refund rollback for return ID ${returnId}`,
-//       });
-
-//       await db
-//         .update(refunds)
-//         .set({
-//           status: "failed",
-//           updatedAt: new Date(),
-//         })
-//         .where(eq(refunds.id, refundRecord.id));
-
-//       results.push({
-//         returnId,
-//         success: false,
-//         error: err.message,
-//       });
-//     }
-//   }
-
-//   return results;
-// };
-
-export const processReturnRefundService = async (returnIds: number[]) => {
-  if (!returnIds.length) throw new Error("No return IDs provided");
-
-  // Use the unified resolver 
-  return processBulkReturns(returnIds, resolveReturn);
-};
-
-//PROCESS EXCHANGE
-// export const processReturnExchangeService = async (
-//   returnIds: number[]
-// ) => {
-
-//   if (!returnIds.length)
-//     throw new Error("No return IDs provided");
-
-//   const results: Array<{
-//     returnId: number;
-//     success: boolean;
-//     replacementItem?: any;
-//     error?: string;
-//   }> = [];
-
-//   for (const returnId of returnIds) {
-
-//     try {
-
-//       const [returnRecord] = await db
-//         .select()
-//         .from(returns)
-//         .where(eq(returns.id, returnId));
-
-//       if (!returnRecord)
-//         throw new Error(`Return ID ${returnId} not found`);
-
-//       if (returnRecord.status !== "approved")
-//         throw new Error(`Return ID ${returnId} must be approved first`);
-
-//       if (returnRecord.resolutionType !== "exchange")
-//         throw new Error(`Return ID ${returnId} is not exchange`);
-
-//       const [originalItem] = await db
-//         .select()
-//         .from(orderItems)
-//         .where(eq(orderItems.id, returnRecord.orderItemId));
-
-//       if (!originalItem)
-//         throw new Error(`Original order item not found for return ${returnId}`);
-
-//       const replacementItem = (await db
-//         .insert(orderItems)
-//         .values({
-//           orderId: originalItem.orderId,
-//           productId: originalItem.productId,
-//           quantity: returnRecord.quantity,
-//           price: originalItem.price,
-//           shopId: originalItem.shopId,
-//           replacementForReturnId: returnId,
-//         })
-//         .returning())[0];
-
-//       const [shippingRecord] = await db
-//         .insert(shipping)
-//         .values({
-//           orderId: originalItem.orderId,
-//           type: "replacement",
-//           status: "preparing",
-//           createdAt: new Date(),
-//         })
-//         .returning();
-
-//       await db
-//         .update(returns)
-//         .set({
-//           status: "exchanged",
-//           processedAt: new Date(),
-//           replacementShipmentId: shippingRecord.id,
-//           updatedAt: new Date(),
-//         })
-//         .where(eq(returns.id, returnId));
-
-//       results.push({
-//         returnId,
-//         success: true,
-//         replacementItem,
-//       });
-
-//     } catch (err: any) {
-
-//       results.push({
-//         returnId,
-//         success: false,
-//         error: err.message,
-//       });
-
-//     }
-//   }
-
-//   return results;
-// };
-
-export const processReturnExchangeService = async (returnIds: number[]) => {
-  if (!returnIds.length) throw new Error("No return IDs provided");
-
-  // Use the unified resolver 
-  return processBulkReturns(returnIds, resolveReturn);
-};
-
 
 //shippment delivery service
 export const handleReplacementShipmentDeliveredService = async (
