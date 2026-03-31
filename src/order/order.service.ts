@@ -219,113 +219,111 @@ export const createOrUpdateOrderService = async (
   pickupStationId?: number | null,
   pickupAgentId?: number | null
 ) => {
-  return await db.transaction(async (tx) => {
-    let existingOrder = await tx.query.orders.findFirst({
-      where: and(eq(orders.userId, userId), eq(orders.paymentStatus, "unpaid")),
+  let existingOrder = await db.query.orders.findFirst({
+    where: and(eq(orders.userId, userId), eq(orders.paymentStatus, "unpaid")),
+  });
+
+  // CREATE NEW ORDER
+  if (!existingOrder) {
+    const insertResult = await db
+      .insert(orders)
+      .values({
+        userId,
+        paymentStatus: "unpaid",
+        status: "pending",
+        totalAmount: "0",
+        pickupStationId: pickupStationId ?? null,
+        pickupAgentId: pickupAgentId ?? null,
+      })
+      .returning();
+
+    const newOrder = insertResult[0];
+    if (!newOrder) throw new Error("Failed to create new order");
+
+    existingOrder = newOrder;
+  } else {
+    // UPDATE EXISTING ORDER
+    await db
+      .update(orders)
+      .set({
+        pickupStationId:
+          pickupStationId !== undefined
+            ? pickupStationId
+            : existingOrder.pickupStationId,
+
+        pickupAgentId:
+          pickupAgentId !== undefined
+            ? pickupAgentId
+            : existingOrder.pickupAgentId,
+      })
+      .where(eq(orders.id, existingOrder.id));
+  }
+
+  if (!existingOrder) {
+    throw new Error("Order could not be created or found");
+  }
+
+  // ADD / UPDATE ITEMS
+  for (const { productId, quantity } of items) {
+    const product = await db.query.products.findFirst({
+      where: eq(products.id, productId),
     });
 
-    // CREATE NEW ORDER
-    if (!existingOrder) {
-      const insertResult = await tx
-        .insert(orders)
-        .values({
-          userId,
-          paymentStatus: "unpaid",
-          status: "pending",
-          totalAmount: "0",
-          pickupStationId: pickupStationId ?? null,
-          pickupAgentId: pickupAgentId ?? null,
-        })
-        .returning();
+    if (!product) {
+      throw new Error(`Product with ID ${productId} not found`);
+    }
 
-      const newOrder = insertResult[0];
-      if (!newOrder) throw new Error("Failed to create new order");
+    const existingItem = await db.query.orderItems.findFirst({
+      where: and(
+        eq(orderItems.orderId, existingOrder.id),
+        eq(orderItems.productId, productId)
+      ),
+    });
 
-      existingOrder = newOrder;
-    } else {
-      // UPDATE EXISTING ORDER
-      await tx
-        .update(orders)
+    if (existingItem) {
+      await db
+        .update(orderItems)
         .set({
-          pickupStationId:
-            pickupStationId !== undefined
-              ? pickupStationId
-              : existingOrder.pickupStationId,
-
-          pickupAgentId:
-            pickupAgentId !== undefined
-              ? pickupAgentId
-              : existingOrder.pickupAgentId,
-        })
-        .where(eq(orders.id, existingOrder.id));
-    }
-
-    if (!existingOrder) {
-      throw new Error("Order could not be created or found");
-    }
-
-    // ADD / UPDATE ITEMS
-    for (const { productId, quantity } of items) {
-      const product = await tx.query.products.findFirst({
-        where: eq(products.id, productId),
-      });
-
-      if (!product) {
-        throw new Error(`Product with ID ${productId} not found`);
-      }
-
-      const existingItem = await tx.query.orderItems.findFirst({
-        where: and(
-          eq(orderItems.orderId, existingOrder.id),
-          eq(orderItems.productId, productId)
-        ),
-      });
-
-      if (existingItem) {
-        await tx
-          .update(orderItems)
-          .set({
-            quantity: existingItem.quantity + quantity,
-            price: product.price,
-          })
-          .where(eq(orderItems.id, existingItem.id));
-      } else {
-        await tx.insert(orderItems).values({
-          orderId: existingOrder.id,
-          productId,
-          shopId: product.shopId,
-          quantity,
+          quantity: existingItem.quantity + quantity,
           price: product.price,
-          originStationId: null,
-        });
-      }
+        })
+        .where(eq(orderItems.id, existingItem.id));
+    } else {
+      await db.insert(orderItems).values({
+        orderId: existingOrder.id,
+        productId,
+        shopId: product.shopId,
+        quantity,
+        price: product.price,
+        originStationId: null,
+      });
     }
+  }
 
-    // RECALCULATE TOTAL
-    const totalAmount = await calculateTotalAmount(existingOrder.id);
+  // RECALCULATE TOTAL
+  const totalAmount = await calculateTotalAmount(existingOrder.id);
 
-    //persist total in DB
-    await tx
-      .update(orders)
-      .set({ totalAmount })
-      .where(eq(orders.id, existingOrder.id));
+  // persist total in DB
+  await db
+    .update(orders)
+    .set({ totalAmount })
+    .where(eq(orders.id, existingOrder.id));
 
-    return {
-      message: "Order updated successfully",
-      orderId: existingOrder.id,
-      totalAmount,
+  return {
+    message: "Order updated successfully",
+    orderId: existingOrder.id,
+    totalAmount,
 
-      pickupStationId:
-        pickupStationId !== undefined
-          ? pickupStationId
-          : existingOrder.pickupStationId ?? null,
+    pickupStationId:
+      pickupStationId !== undefined
+        ? pickupStationId
+        : existingOrder.pickupStationId ?? null,
 
-      pickupAgentId:
-        pickupAgentId !== undefined
-          ? pickupAgentId
-          : existingOrder.pickupAgentId ?? null,
-    };
-  });
+    pickupAgentId:
+      pickupAgentId !== undefined
+        ? pickupAgentId
+        : existingOrder.pickupAgentId ?? null,
+  };
 };
 
 // Get all orders
