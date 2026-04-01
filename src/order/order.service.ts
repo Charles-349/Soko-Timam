@@ -1202,6 +1202,157 @@ const buildOrderMap = (rows: any[]) => {
 
 
 
+// export const getOrdersByAgentIdService = async (agentId: number) => {
+//   const sellerUser = alias(users, "sellerUser");
+//   const replacementItems = alias(orderItems, "replacementItems");
+//   const replacementProductImages = alias(productImages, "replacementProductImages");
+
+//   const rows = await db
+//     .select({
+//       orderId: orders.id,
+//       userId: orders.userId,
+//       status: orders.status,
+//       totalAmount: orders.totalAmount,
+//       paymentStatus: orders.paymentStatus,
+//       createdAt: orders.createdAt,
+//       updatedAt: orders.updatedAt,
+
+//       customerId: users.id,
+//       customerName: users.firstname,
+
+//       shopId: shops.id,
+//       shopName: shops.name,
+
+//       sellerId: sellers.id,
+//       sellerName: sellerUser.firstname,
+
+//       itemId: orderItems.id,
+//       quantity: orderItems.quantity,
+//       price: orderItems.price,
+
+//       productId: products.id,
+//       productName: products.name,
+//       productDescription: products.description,
+//       productImage: productImages.imageUrl,
+
+//       shippingStatus: shipping.status,
+//       recipientName: shipping.recipientName,
+//       recipientPhone: shipping.recipientPhone,
+//       estimatedDelivery: shipping.estimatedDelivery,
+
+//       // RETURN INFO
+//       returnId: returns.id,
+//       returnReason: returns.reason,
+//       returnStatus: returns.status,
+
+//       // REPLACEMENT ITEM
+//       replacementItemId: replacementItems.id,
+//       replacementProductId: replacementItems.productId,
+//       replacementQuantity: replacementItems.quantity,
+//       replacementProductImage: replacementProductImages.imageUrl,
+//     })
+//     .from(orders)
+//     .innerJoin(orders, eq(shipping.orderId, orders.id))
+//     .leftJoin(users, eq(orders.userId, users.id))
+//     .leftJoin(orderItems, eq(orderItems.orderId, orders.id))
+//     .leftJoin(products, eq(orderItems.productId, products.id))
+//     .leftJoin(productImages, and(eq(productImages.productId, products.id), eq(productImages.isMain, true)))
+//     .leftJoin(shops, eq(orderItems.shopId, shops.id))
+//     .leftJoin(sellers, eq(shops.sellerId, sellers.id))
+//     .leftJoin(sellerUser, eq(sellers.userId, sellerUser.id))
+
+//     // JOIN RETURNS
+//     .leftJoin(returns, eq(returns.orderItemId, orderItems.id))
+
+//     // JOIN REPLACEMENT ITEMS
+//     .leftJoin(replacementItems as any, eq(replacementItems.replacementForReturnId, returns.id))
+
+//     // JOIN MAIN IMAGE FOR REPLACEMENT ITEMS
+//     .leftJoin(
+//       replacementProductImages as any,
+//       and(
+//         eq(replacementProductImages.productId, replacementItems.productId),
+//         eq(replacementProductImages.isMain, true)
+//       )
+//     )
+
+//     .where(eq(shipping.pickupAgentId, agentId));
+
+//   if (!rows.length) return [];
+
+//   // Build nested structure
+//   const ordersMap: Record<number, any> = {};
+
+//   for (const row of rows) {
+//     if (!ordersMap[row.orderId]) {
+//       ordersMap[row.orderId] = {
+//         id: row.orderId,
+//         userId: row.userId,
+//         status: row.status,
+//         totalAmount: row.totalAmount,
+//         paymentStatus: row.paymentStatus,
+//         createdAt: row.createdAt,
+//         updatedAt: row.updatedAt,
+//         customer: { id: row.customerId, name: row.customerName },
+//         items: [],
+//         shipping: {
+//           status: row.shippingStatus,
+//           recipientName: row.recipientName,
+//           recipientPhone: row.recipientPhone,
+//           estimatedDelivery: row.estimatedDelivery,
+//         },
+//       };
+//     }
+
+//     const order = ordersMap[row.orderId];
+
+//     // Add order item if not exists
+//     let item = order.items.find((i: any) => i.id === row.itemId);
+//     if (!item) {
+//       item = {
+//         id: row.itemId,
+//         quantity: row.quantity,
+//         price: row.price,
+//         product: {
+//           id: row.productId,
+//           name: row.productName,
+//           description: row.productDescription,
+//           productImage: row.productImage,
+//         },
+//         returns: [],
+//       };
+//       order.items.push(item);
+//     }
+
+//     // Add return if exists
+//     if (row.returnId) {
+//       let ret = item.returns.find((r: any) => r.returnId === row.returnId);
+//       if (!ret) {
+//         ret = {
+//           returnId: row.returnId,
+//           reason: row.returnReason,
+//           status: row.returnStatus,
+//           replacements: [],
+//         };
+//         item.returns.push(ret);
+//       }
+
+//       // Add replacement if exists
+//       if (row.replacementItemId) {
+//         ret.replacements.push({
+//           id: row.replacementItemId,
+//           productId: row.replacementProductId,
+//           quantity: row.replacementQuantity,
+//           productImage: row.replacementProductImage,
+//         });
+//       }
+//     }
+//   }
+
+//   return Object.values(ordersMap);
+// };
+
+
 export const getOrdersByAgentIdService = async (agentId: number) => {
   const sellerUser = alias(users, "sellerUser");
   const replacementItems = alias(orderItems, "replacementItems");
@@ -1235,39 +1386,39 @@ export const getOrdersByAgentIdService = async (agentId: number) => {
       productDescription: products.description,
       productImage: productImages.imageUrl,
 
+      shippingId: shipping.id,
       shippingStatus: shipping.status,
       recipientName: shipping.recipientName,
       recipientPhone: shipping.recipientPhone,
       estimatedDelivery: shipping.estimatedDelivery,
+      pickupCode: shipping.pickupCode,
 
-      // RETURN INFO
       returnId: returns.id,
       returnReason: returns.reason,
       returnStatus: returns.status,
 
-      // REPLACEMENT ITEM
       replacementItemId: replacementItems.id,
       replacementProductId: replacementItems.productId,
       replacementQuantity: replacementItems.quantity,
       replacementProductImage: replacementProductImages.imageUrl,
     })
-    .from(shipping)
-    .innerJoin(orders, eq(shipping.orderId, orders.id))
+    .from(orders)
+    .innerJoin(shipping, eq(shipping.orderId, orders.id)) 
     .leftJoin(users, eq(orders.userId, users.id))
     .leftJoin(orderItems, eq(orderItems.orderId, orders.id))
     .leftJoin(products, eq(orderItems.productId, products.id))
-    .leftJoin(productImages, and(eq(productImages.productId, products.id), eq(productImages.isMain, true)))
+    .leftJoin(
+      productImages,
+      and(eq(productImages.productId, products.id), eq(productImages.isMain, true))
+    )
     .leftJoin(shops, eq(orderItems.shopId, shops.id))
     .leftJoin(sellers, eq(shops.sellerId, sellers.id))
     .leftJoin(sellerUser, eq(sellers.userId, sellerUser.id))
-
-    // JOIN RETURNS
     .leftJoin(returns, eq(returns.orderItemId, orderItems.id))
-
-    // JOIN REPLACEMENT ITEMS
-    .leftJoin(replacementItems as any, eq(replacementItems.replacementForReturnId, returns.id))
-
-    // JOIN MAIN IMAGE FOR REPLACEMENT ITEMS
+    .leftJoin(
+      replacementItems as any,
+      eq(replacementItems.replacementForReturnId, returns.id)
+    )
     .leftJoin(
       replacementProductImages as any,
       and(
@@ -1275,15 +1426,14 @@ export const getOrdersByAgentIdService = async (agentId: number) => {
         eq(replacementProductImages.isMain, true)
       )
     )
-
     .where(eq(shipping.pickupAgentId, agentId));
 
   if (!rows.length) return [];
 
-  // Build nested structure
   const ordersMap: Record<number, any> = {};
 
   for (const row of rows) {
+    //ORDER LEVEL
     if (!ordersMap[row.orderId]) {
       ordersMap[row.orderId] = {
         id: row.orderId,
@@ -1293,22 +1443,36 @@ export const getOrdersByAgentIdService = async (agentId: number) => {
         paymentStatus: row.paymentStatus,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
-        customer: { id: row.customerId, name: row.customerName },
-        items: [],
-        shipping: {
-          status: row.shippingStatus,
-          recipientName: row.recipientName,
-          recipientPhone: row.recipientPhone,
-          estimatedDelivery: row.estimatedDelivery,
+        customer: {
+          id: row.customerId,
+          name: row.customerName,
         },
+        items: [],
+        shipping: [],
       };
     }
 
     const order = ordersMap[row.orderId];
 
-    // Add order item if not exists
+    //SHIPPING 
+    if (
+      row.shippingId &&
+      !order.shipping.find((s: any) => s.id === row.shippingId)
+    ) {
+      order.shipping.push({
+        id: row.shippingId,
+        status: row.shippingStatus,
+        recipientName: row.recipientName,
+        recipientPhone: row.recipientPhone,
+        estimatedDelivery: row.estimatedDelivery,
+        pickupCode: row.pickupCode,
+      });
+    }
+
+    //ITEMS
     let item = order.items.find((i: any) => i.id === row.itemId);
-    if (!item) {
+
+    if (!item && row.itemId) {
       item = {
         id: row.itemId,
         quantity: row.quantity,
@@ -1321,12 +1485,14 @@ export const getOrdersByAgentIdService = async (agentId: number) => {
         },
         returns: [],
       };
+
       order.items.push(item);
     }
 
-    // Add return if exists
-    if (row.returnId) {
+    //RETURNS
+    if (row.returnId && item) {
       let ret = item.returns.find((r: any) => r.returnId === row.returnId);
+
       if (!ret) {
         ret = {
           returnId: row.returnId,
@@ -1337,8 +1503,11 @@ export const getOrdersByAgentIdService = async (agentId: number) => {
         item.returns.push(ret);
       }
 
-      // Add replacement if exists
-      if (row.replacementItemId) {
+      //REPLACEMENTS 
+      if (
+        row.replacementItemId &&
+        !ret.replacements.find((r: any) => r.id === row.replacementItemId)
+      ) {
         ret.replacements.push({
           id: row.replacementItemId,
           productId: row.replacementProductId,
@@ -1352,7 +1521,6 @@ export const getOrdersByAgentIdService = async (agentId: number) => {
   return Object.values(ordersMap);
 };
 
-
 export const getStationsAndAgentsService = async () => {
   const stationList = await db.select({ id: stations.id, name: stations.name, county: stations.county, area: stations.area, address: stations.address, isStation: sql<boolean>`true`.as("isStation") }).from(stations).where(eq(stations.isActive, true));
   const agentList = await db.select({ id: agents.id, name: users.firstname, county: agents.county, area: agents.area, address: agents.address, isStation: sql<boolean>`false`.as("isStation") }).from(agents).innerJoin(users, eq(agents.userId, users.id)).where(eq(agents.isActive, true));
@@ -1361,72 +1529,218 @@ export const getStationsAndAgentsService = async () => {
 
 
 
+// export const getOrdersByStationIdService = async (stationId: number) => {
+//   const sellerUser = alias(users, "sellerUser");
+//   const replacementItems = alias(orderItems, "replacementItems");
+//   const replacementProductImages = alias(productImages, "replacementProductImages");
+
+//   // Fetch flat rows
+//   const rows = await db.select({
+//     orderId: orders.id,
+//     userId: orders.userId,
+//     status: orders.status,
+//     totalAmount: orders.totalAmount,
+//     paymentStatus: orders.paymentStatus,
+//     createdAt: orders.createdAt,
+//     updatedAt: orders.updatedAt,
+
+//     customerId: users.id,
+//     customerName: users.firstname,
+
+//     shopId: shops.id,
+//     shopName: shops.name,
+
+//     sellerId: sellers.id,
+//     sellerName: sellerUser.firstname,
+
+//     itemId: orderItems.id,
+//     quantity: orderItems.quantity,
+//     price: orderItems.price,
+
+//     productId: products.id,
+//     productName: products.name,
+//     productDescription: products.description,
+//     productImage: productImages.imageUrl,
+
+//     shippingStatus: shipping.status,
+//     recipientName: shipping.recipientName,
+//     recipientPhone: shipping.recipientPhone,
+//     estimatedDelivery: shipping.estimatedDelivery,
+
+//     // RETURN INFO
+//     returnId: returns.id,
+//     returnReason: returns.reason,
+//     returnStatus: returns.status,
+
+//     // REPLACEMENT ITEM
+//     replacementItemId: replacementItems.id,
+//     replacementProductId: replacementItems.productId,
+//     replacementQuantity: replacementItems.quantity,
+//     replacementProductImage: replacementProductImages.imageUrl,
+//   })
+//     .from(shipping)
+//     .innerJoin(orders, eq(shipping.orderId, orders.id))
+//     .leftJoin(users, eq(orders.userId, users.id))
+//     .leftJoin(orderItems, eq(orderItems.orderId, orders.id))
+//     .leftJoin(products, eq(orderItems.productId, products.id))
+//     .leftJoin(productImages, and(eq(productImages.productId, products.id), eq(productImages.isMain, true)))
+//     .leftJoin(shops, eq(orderItems.shopId, shops.id))
+//     .leftJoin(sellers, eq(shops.sellerId, sellers.id))
+//     .leftJoin(sellerUser, eq(sellers.userId, sellerUser.id))
+
+//     // JOIN RETURNS
+//     .leftJoin(returns, eq(returns.orderItemId, orderItems.id))
+
+//     // JOIN REPLACEMENT ITEMS
+//     .leftJoin(replacementItems as any, eq(replacementItems.replacementForReturnId, returns.id))
+
+//     // JOIN MAIN IMAGE FOR REPLACEMENT ITEMS
+//     .leftJoin(
+//       replacementProductImages as any,
+//       and(
+//         eq(replacementProductImages.productId, replacementItems.productId),
+//         eq(replacementProductImages.isMain, true)
+//       )
+//     )
+
+//     .where(eq(shipping.pickupStationId, stationId));
+
+//   if (!rows.length) return [];
+
+//   // Build nested structure
+//   const ordersMap: Record<number, any> = {};
+
+//   for (const row of rows) {
+//     if (!ordersMap[row.orderId]) {
+//       ordersMap[row.orderId] = {
+//         id: row.orderId,
+//         userId: row.userId,
+//         status: row.status,
+//         totalAmount: row.totalAmount,
+//         paymentStatus: row.paymentStatus,
+//         createdAt: row.createdAt,
+//         updatedAt: row.updatedAt,
+//         customer: { id: row.customerId, name: row.customerName },
+//         items: [],
+//         shipping: {
+//           status: row.shippingStatus,
+//           recipientName: row.recipientName,
+//           recipientPhone: row.recipientPhone,
+//           estimatedDelivery: row.estimatedDelivery,
+//         },
+//       };
+//     }
+
+//     const order = ordersMap[row.orderId];
+
+//     // Add order item if not exists
+//     let item = order.items.find((i: any) => i.id === row.itemId);
+//     if (!item) {
+//       item = {
+//         id: row.itemId,
+//         quantity: row.quantity,
+//         price: row.price,
+//         product: {
+//           id: row.productId,
+//           name: row.productName,
+//           description: row.productDescription,
+//           productImage: row.productImage,
+//         },
+//         returns: [],
+//       };
+//       order.items.push(item);
+//     }
+
+//     // Add return if exists
+//     if (row.returnId) {
+//       let ret = item.returns.find((r: any) => r.returnId === row.returnId);
+//       if (!ret) {
+//         ret = {
+//           returnId: row.returnId,
+//           reason: row.returnReason,
+//           status: row.returnStatus,
+//           replacements: [],
+//         };
+//         item.returns.push(ret);
+//       }
+
+//       // Add replacement if exists
+//       if (row.replacementItemId) {
+//         ret.replacements.push({
+//           id: row.replacementItemId,
+//           productId: row.replacementProductId,
+//           quantity: row.replacementQuantity,
+//           productImage: row.replacementProductImage,
+//         });
+//       }
+//     }
+//   }
+
+//   return Object.values(ordersMap);
+// };
+
 export const getOrdersByStationIdService = async (stationId: number) => {
   const sellerUser = alias(users, "sellerUser");
   const replacementItems = alias(orderItems, "replacementItems");
   const replacementProductImages = alias(productImages, "replacementProductImages");
 
-  // Fetch flat rows
-  const rows = await db.select({
-    orderId: orders.id,
-    userId: orders.userId,
-    status: orders.status,
-    totalAmount: orders.totalAmount,
-    paymentStatus: orders.paymentStatus,
-    createdAt: orders.createdAt,
-    updatedAt: orders.updatedAt,
+  const rows = await db
+    .select({
+      orderId: orders.id,
+      userId: orders.userId,
+      status: orders.status,
+      totalAmount: orders.totalAmount,
+      paymentStatus: orders.paymentStatus,
+      createdAt: orders.createdAt,
+      updatedAt: orders.updatedAt,
 
-    customerId: users.id,
-    customerName: users.firstname,
+      customerId: users.id,
+      customerName: users.firstname,
 
-    shopId: shops.id,
-    shopName: shops.name,
+      shopId: shops.id,
+      shopName: shops.name,
 
-    sellerId: sellers.id,
-    sellerName: sellerUser.firstname,
+      sellerId: sellers.id,
+      sellerName: sellerUser.firstname,
 
-    itemId: orderItems.id,
-    quantity: orderItems.quantity,
-    price: orderItems.price,
+      itemId: orderItems.id,
+      quantity: orderItems.quantity,
+      price: orderItems.price,
 
-    productId: products.id,
-    productName: products.name,
-    productDescription: products.description,
-    productImage: productImages.imageUrl,
+      productId: products.id,
+      productName: products.name,
+      productDescription: products.description,
+      productImage: productImages.imageUrl,
 
-    shippingStatus: shipping.status,
-    recipientName: shipping.recipientName,
-    recipientPhone: shipping.recipientPhone,
-    estimatedDelivery: shipping.estimatedDelivery,
+      shippingId: shipping.id,
+      shippingStatus: shipping.status,
+      recipientName: shipping.recipientName,
+      recipientPhone: shipping.recipientPhone,
+      estimatedDelivery: shipping.estimatedDelivery,
 
-    // RETURN INFO
-    returnId: returns.id,
-    returnReason: returns.reason,
-    returnStatus: returns.status,
+      returnId: returns.id,
+      returnReason: returns.reason,
+      returnStatus: returns.status,
 
-    // REPLACEMENT ITEM
-    replacementItemId: replacementItems.id,
-    replacementProductId: replacementItems.productId,
-    replacementQuantity: replacementItems.quantity,
-    replacementProductImage: replacementProductImages.imageUrl,
-  })
-    .from(shipping)
-    .innerJoin(orders, eq(shipping.orderId, orders.id))
+      replacementItemId: replacementItems.id,
+      replacementProductId: replacementItems.productId,
+      replacementQuantity: replacementItems.quantity,
+      replacementProductImage: replacementProductImages.imageUrl,
+    })
+    .from(orders)
+    .innerJoin(shipping, eq(shipping.orderId, orders.id))
     .leftJoin(users, eq(orders.userId, users.id))
     .leftJoin(orderItems, eq(orderItems.orderId, orders.id))
     .leftJoin(products, eq(orderItems.productId, products.id))
-    .leftJoin(productImages, and(eq(productImages.productId, products.id), eq(productImages.isMain, true)))
+    .leftJoin(
+      productImages,
+      and(eq(productImages.productId, products.id), eq(productImages.isMain, true))
+    )
     .leftJoin(shops, eq(orderItems.shopId, shops.id))
     .leftJoin(sellers, eq(shops.sellerId, sellers.id))
     .leftJoin(sellerUser, eq(sellers.userId, sellerUser.id))
-
-    // JOIN RETURNS
     .leftJoin(returns, eq(returns.orderItemId, orderItems.id))
-
-    // JOIN REPLACEMENT ITEMS
     .leftJoin(replacementItems as any, eq(replacementItems.replacementForReturnId, returns.id))
-
-    // JOIN MAIN IMAGE FOR REPLACEMENT ITEMS
     .leftJoin(
       replacementProductImages as any,
       and(
@@ -1434,15 +1748,14 @@ export const getOrdersByStationIdService = async (stationId: number) => {
         eq(replacementProductImages.isMain, true)
       )
     )
-
     .where(eq(shipping.pickupStationId, stationId));
 
   if (!rows.length) return [];
 
-  // Build nested structure
   const ordersMap: Record<number, any> = {};
 
   for (const row of rows) {
+    // ORDER LEVEL
     if (!ordersMap[row.orderId]) {
       ordersMap[row.orderId] = {
         id: row.orderId,
@@ -1454,20 +1767,26 @@ export const getOrdersByStationIdService = async (stationId: number) => {
         updatedAt: row.updatedAt,
         customer: { id: row.customerId, name: row.customerName },
         items: [],
-        shipping: {
-          status: row.shippingStatus,
-          recipientName: row.recipientName,
-          recipientPhone: row.recipientPhone,
-          estimatedDelivery: row.estimatedDelivery,
-        },
+        shipping: [],
       };
     }
 
     const order = ordersMap[row.orderId];
 
-    // Add order item if not exists
+    // SHIPPING 
+    if (row.shippingId && !order.shipping.find((s: any) => s.id === row.shippingId)) {
+      order.shipping.push({
+        id: row.shippingId,
+        status: row.shippingStatus,
+        recipientName: row.recipientName,
+        recipientPhone: row.recipientPhone,
+        estimatedDelivery: row.estimatedDelivery,
+      });
+    }
+
+    // ITEMS
     let item = order.items.find((i: any) => i.id === row.itemId);
-    if (!item) {
+    if (!item && row.itemId) {
       item = {
         id: row.itemId,
         quantity: row.quantity,
@@ -1483,8 +1802,8 @@ export const getOrdersByStationIdService = async (stationId: number) => {
       order.items.push(item);
     }
 
-    // Add return if exists
-    if (row.returnId) {
+    // RETURNS
+    if (row.returnId && item) {
       let ret = item.returns.find((r: any) => r.returnId === row.returnId);
       if (!ret) {
         ret = {
@@ -1496,8 +1815,8 @@ export const getOrdersByStationIdService = async (stationId: number) => {
         item.returns.push(ret);
       }
 
-      // Add replacement if exists
-      if (row.replacementItemId) {
+      // REPLACEMENTS 
+      if (row.replacementItemId && !ret.replacements.find((r: any) => r.id === row.replacementItemId)) {
         ret.replacements.push({
           id: row.replacementItemId,
           productId: row.replacementProductId,
