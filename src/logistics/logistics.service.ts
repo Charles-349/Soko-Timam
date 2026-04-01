@@ -259,8 +259,26 @@ export const getShippingsByAgentIdService = async (agentId: number) => {
 };
 
 //Get shippings with related order by station id
+// export const getShippingsByStationIdService = async (stationId: number) => {
+//   return await db.query.shipping.findMany({
+//     where: or(
+//       eq(shipping.originStationId, stationId),
+//       eq(shipping.pickupStationId, stationId)
+//     ),
+//     with: {
+//       order: {
+//         with: {
+//           items: true,
+//           payments: true,
+//           user: true,
+//         },
+//       },
+//     },
+//   });
+// };
+
 export const getShippingsByStationIdService = async (stationId: number) => {
-  return await db.query.shipping.findMany({
+  const shippings = await db.query.shipping.findMany({
     where: or(
       eq(shipping.originStationId, stationId),
       eq(shipping.pickupStationId, stationId)
@@ -275,61 +293,16 @@ export const getShippingsByStationIdService = async (stationId: number) => {
       },
     },
   });
+
+  // Deduplicate by orderId
+  const uniqueShippings = Object.values(
+    shippings.reduce((acc, s) => {
+      if (s.order && typeof s.order === "object" && "id" in s.order && !acc[s.order.id]) {
+        acc[s.order.id] = s;
+      }
+      return acc;
+    }, {} as Record<number, typeof shippings[0]>)
+  );
+
+  return uniqueShippings;
 };
-
-
-// export const getShippingsByStationIdService = async (stationId: number) => {
-//   const rows = await db
-//     .select({
-//       shippingId: shipping.id,
-//       status: shipping.status,
-//       recipientName: shipping.recipientName,
-//       recipientPhone: shipping.recipientPhone,
-//       estimatedDelivery: shipping.estimatedDelivery,
-
-//       orderId: orders.id,
-//       orderStatus: orders.status,
-//       totalAmount: orders.totalAmount,
-//       paymentStatus: orders.paymentStatus,
-//       createdAt: orders.createdAt,
-//       updatedAt: orders.updatedAt,
-
-//       customerId: users.id,
-//       customerName: users.firstname,
-//     })
-//     .from(shipping)
-//     .innerJoin(orders, eq(shipping.orderId, orders.id))
-//     .leftJoin(users, eq(orders.userId, users.id))
-//     .where(
-//       or(eq(shipping.originStationId, stationId), eq(shipping.pickupStationId, stationId))
-//     );
-
-//   if (!rows.length) return [];
-
-//   const shippingsMap: Record<number, any> = {};
-
-//   for (const row of rows) {
-//     if (!shippingsMap[row.shippingId]) {
-//       shippingsMap[row.shippingId] = {
-//         id: row.shippingId,
-//         status: row.status,
-//         recipientName: row.recipientName,
-//         recipientPhone: row.recipientPhone,
-//         estimatedDelivery: row.estimatedDelivery,
-//         order: {
-//           id: row.orderId,
-//           status: row.orderStatus,
-//           totalAmount: row.totalAmount,
-//           paymentStatus: row.paymentStatus,
-//           createdAt: row.createdAt,
-//           updatedAt: row.updatedAt,
-//           customer: { id: row.customerId, name: row.customerName },
-//           items: [],
-//           payments: [],
-//         },
-//       };
-//     }
-//   }
-
-//   return Object.values(shippingsMap);
-// };
