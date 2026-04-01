@@ -411,27 +411,97 @@ export const handleReplacementShipmentDeliveredService = async (
 };
 
 // GET RETURNS 
-export const getReturnsService = async (filters?: { status?: ReturnRow["status"]; sellerId?: number }) => {
+// export const getReturnsService = async (filters?: { status?: ReturnRow["status"]; sellerId?: number }) => {
+//   const conditions: (ReturnType<typeof eq> | ReturnType<typeof and>)[] = [];
+//   if (filters?.status) conditions.push(eq(returns.status, filters.status));
+//   if (filters?.sellerId) conditions.push(eq(returns.sellerId, filters.sellerId));
+
+//   return await db.query.returns.findMany({
+//     where: conditions.length ? and(...conditions) : undefined,
+//     with: { orderItem: true },
+//     orderBy: (r, { desc }) => [desc(r.createdAt)],
+//   });
+// };
+
+
+export const getReturnsService = async (filters?: { 
+  status?: ReturnRow["status"]; 
+  sellerId?: number 
+}) => {
   const conditions: (ReturnType<typeof eq> | ReturnType<typeof and>)[] = [];
-  if (filters?.status) conditions.push(eq(returns.status, filters.status));
-  if (filters?.sellerId) conditions.push(eq(returns.sellerId, filters.sellerId));
+
+  if (filters?.status) {
+    conditions.push(eq(returns.status, filters.status));
+  }
+
+  if (filters?.sellerId) {
+    conditions.push(eq(returns.sellerId, filters.sellerId));
+  }
 
   return await db.query.returns.findMany({
     where: conditions.length ? and(...conditions) : undefined,
-    with: { orderItem: true },
+
+    with: {
+      orderItem: {
+        with: {
+          product: {
+            with: {
+              images: {
+                where: (img, { eq }) => eq(img.isMain, true), 
+              },
+            },
+          },
+        },
+      },
+    },
+
     orderBy: (r, { desc }) => [desc(r.createdAt)],
   });
 };
 
 //GET SINGLE RETURN WITH REFUNDS
+// export const getReturnByIdService = async (returnId: number) => {
+//   const returnRecord = await db.query.returns.findFirst({
+//     where: eq(returns.id, returnId),
+//     with: { orderItem: true },
+//   });
+//   if (!returnRecord) throw new Error("Return not found");
+
+//   const refundRecords = await db.select().from(refunds).where(eq(refunds.returnId, returnId));
+
+//   return { ...returnRecord, refunds: refundRecords };
+// };
+
 export const getReturnByIdService = async (returnId: number) => {
   const returnRecord = await db.query.returns.findFirst({
     where: eq(returns.id, returnId),
-    with: { orderItem: true },
+
+    with: {
+      orderItem: {
+        with: {
+          product: {
+            with: {
+              images: {
+                where: (img, { eq }) => eq(img.isMain, true), 
+              },
+            },
+          },
+        },
+      },
+    },
   });
-  if (!returnRecord) throw new Error("Return not found");
 
-  const refundRecords = await db.select().from(refunds).where(eq(refunds.returnId, returnId));
+  if (!returnRecord) {
+    throw new Error("Return not found");
+  }
 
-  return { ...returnRecord, refunds: refundRecords };
+  const refundRecords = await db
+    .select()
+    .from(refunds)
+    .where(eq(refunds.returnId, returnId));
+
+  return {
+    ...returnRecord,
+    refunds: refundRecords,
+  };
 };
