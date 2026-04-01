@@ -675,58 +675,6 @@ export const getOrderForShipping = async (
   };
 };
 
-// Assign origin station (handles returns/exchanges)
-// export const assignOriginStationServiceEx = async (
-//   orderItemId: number,
-//   stationId: number
-// ) => {
-//   const item = await db.query.orderItems.findFirst({
-//   where: eq(orderItems.id, orderItemId),
-//   with: {
-//     order: {
-//       with: {
-//         user: true,
-//         shipping: {
-//           with: {
-//             pickupStation: true, 
-//           },
-//         },
-//       },
-//     },
-//   },
-// });
-
-//   if (!item) throw new Error("Order item not found");
-
-//   //Validate payment at order level
-//   if (item.order.paymentStatus !== "paid") {
-//     throw new Error("Only paid orders can be assigned an origin station");
-//   }
-
-//   //Prevent double assignment 
-//   if (item.originStationId) {
-//     throw new Error("Item already assigned to a station");
-//   }
-
-//   await db
-//     .update(orderItems)
-//     .set({
-//       originStationId: stationId,
-//     })
-//     .where(eq(orderItems.id, orderItemId));
-
-//   return {
-//     message: "Origin station assigned successfully",
-//     orderId: item.orderId,
-//     orderItemId,
-//     stationId,
-//     customer: item.order.user ? { id: item.order.user.id, name: item.order.user.firstname } : null,
-//      pickupStation: item.order.shipping[0]?.pickupStation
-//       ? { id: item.order.shipping[0].pickupStation.id, name: item.order.shipping[0].pickupStation.name }
-//       : null,
-//   };
-// };     
-
 export const assignOriginStationServiceEx = async (
   orderItemId: number,
   stationId: number
@@ -757,24 +705,110 @@ export const assignOriginStationServiceEx = async (
     throw new Error("Item already assigned to a station");
   }
 
+  //Assign station
   await db
     .update(orderItems)
     .set({ originStationId: stationId })
     .where(eq(orderItems.id, orderItemId));
 
-  const shipment = item.order.shipping.find(
-    s => s.orderItemId === orderItemId
+  //Check if shipment already exists
+  let shipment = item.order.shipping.find(
+    (s) => s.orderItemId === orderItemId
   );
 
+  const isReplacement = !!item.replacementForReturnId;
+
+  //Create shipment if not exists
+  if (!shipment) {
+    const [newShipment] = await db.insert(shipping).values({
+      orderId: item.orderId,
+      orderItemId: orderItemId,
+      originStationId: stationId,
+      pickupStationId: item.order.pickupStationId || null,
+      pickupAgentId: item.order.pickupAgentId || null,
+      type: isReplacement ? "replacement" : "standard",
+      status: "preparing",
+      recipientName: `${item.order.user.firstname} ${item.order.user.lastname}`,
+      recipientPhone: item.order.user.phone ?? null,
+      estimatedDelivery: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+      createdAt: new Date(),
+    })
+    .returning();
+
+    shipment = newShipment;
+
+      // If replacement, update the return record with the shipment ID
+    if (isReplacement) {
+      await db.update(returns)
+        .set({ replacementShipmentId: shipment.id })
+        .where(eq(returns.id, item.replacementForReturnId));
+    }
+  }
+
   return {
-    message: "Origin station assigned successfully",
+    message: "Origin station assigned and shipment created",
     orderId: item.orderId,
     orderItemId,
     stationId,
-    customer: item.order.user ? { id: item.order.user.id, name: `${item.order.user.firstname} ${item.order.user.lastname}` } : null,
+    shipmentId: shipment?.id,
+    customer: item.order.user
+      ? {
+          id: item.order.user.id,
+          name: `${item.order.user.firstname} ${item.order.user.lastname}`,
+        }
+      : null,
     destination: shipment?.pickupStation || null,
   };
 };
+
+// export const assignOriginStationServiceEx = async (
+//   orderItemId: number,
+//   stationId: number
+// ) => {
+//   const item = await db.query.orderItems.findFirst({
+//     where: eq(orderItems.id, orderItemId),
+//     with: {
+//       order: {
+//         with: {
+//           user: true,
+//           shipping: {
+//             with: {
+//               pickupStation: true,
+//             },
+//           },
+//         },
+//       },
+//     },
+//   });
+
+//   if (!item) throw new Error("Order item not found");
+
+//   if (item.order.paymentStatus !== "paid") {
+//     throw new Error("Only paid orders can be assigned an origin station");
+//   }
+
+//   if (item.originStationId) {
+//     throw new Error("Item already assigned to a station");
+//   }
+
+//   await db
+//     .update(orderItems)
+//     .set({ originStationId: stationId })
+//     .where(eq(orderItems.id, orderItemId));
+
+//   const shipment = item.order.shipping.find(
+//     s => s.orderItemId === orderItemId
+//   );
+
+//   return {
+//     message: "Origin station assigned successfully",
+//     orderId: item.orderId,
+//     orderItemId,
+//     stationId,
+//     customer: item.order.user ? { id: item.order.user.id, name: `${item.order.user.firstname} ${item.order.user.lastname}` } : null,
+//     destination: shipment?.pickupStation || null,
+//   };
+// };
 
 
 export const markOrderAsShippedServiceEx = async (orderItemId: number) => {

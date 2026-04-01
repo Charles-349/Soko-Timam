@@ -41,7 +41,7 @@ export const exchangeResolution = async (returnRecord: any) => {
     totalAmount: "0",
     replacementOfOrderId: order.id,
     isReplacement: true,
-    originStationId: originalItem.originStationId,
+    originStationId: null,
     pickupStationId: sanitizeInt(order.pickupStationId),
     pickupAgentId: sanitizeInt(order.pickupAgentId),
     createdAt: new Date(),
@@ -60,7 +60,7 @@ export const exchangeResolution = async (returnRecord: any) => {
       quantity: returnRecord.quantity,
       price: originalItem.price,
       shopId: originalItem.shopId,
-      originStationId: originalItem.originStationId,
+      originStationId: null,
       replacementForReturnId: returnRecord.id,
     })
     .returning();
@@ -68,30 +68,30 @@ export const exchangeResolution = async (returnRecord: any) => {
   const replacementItem = replacementResult[0];
   if (!replacementItem) throw new Error("Replacement item creation failed");
 
-  //Create shipment 
-  const [shipment] = await db
-    .insert(shipping)
-    .values({
-      orderId: replacementOrder.id,
-      orderItemId: replacementItem.id,
-      recipientName: `${customer.firstname} ${customer.lastname}`,
-      recipientPhone: customer.phone ?? null,
-      estimatedDelivery: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
-      originStationId: originalItem.originStationId,
-      pickupStationId: sanitizeInt(order.pickupStationId),
-      pickupAgentId: sanitizeInt(order.pickupAgentId),
-      type: "replacement",
-      status: "preparing",
-      createdAt: new Date(),
-    })
-    .returning();
+  // //Create shipment 
+  // const [shipment] = await db
+  //   .insert(shipping)
+  //   .values({
+  //     orderId: replacementOrder.id,
+  //     orderItemId: replacementItem.id,
+  //     recipientName: `${customer.firstname} ${customer.lastname}`,
+  //     recipientPhone: customer.phone ?? null,
+  //     estimatedDelivery: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+  //     originStationId: originalItem.originStationId,
+  //     pickupStationId: sanitizeInt(order.pickupStationId),
+  //     pickupAgentId: sanitizeInt(order.pickupAgentId),
+  //     type: "replacement",
+  //     status: "preparing",
+  //     createdAt: new Date(),
+  //   })
+  //   .returning();
 
   //Update return record
   await db
     .update(returns)
     .set({
       status: "exchanged",
-      replacementShipmentId: shipment.id,
+      replacementShipmentId: null,
       processedAt: new Date(),
       updatedAt: new Date(),
     })

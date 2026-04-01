@@ -590,18 +590,18 @@ export const handleMpesaCallback = async (
     updatedAt: new Date(),
   }).where(eq(orders.id, orderId));
 
-  // AUTO CREATE SHIPPING
-  await db.insert(shipping).values({
-    orderId,
-    recipientName: `${customer.firstname} ${customer.lastname}`,
-    recipientPhone: customer.phone ?? null,
-    estimatedDelivery: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
-    originStationId: order.originStationId,
-    pickupStationId: order.pickupStationId || null,
-    pickupAgentId: order.pickupAgentId || null,
-    status: "preparing",
-    createdAt: new Date(),
-  });
+  // // AUTO CREATE SHIPPING
+  // await db.insert(shipping).values({
+  //   orderId,
+  //   recipientName: `${customer.firstname} ${customer.lastname}`,
+  //   recipientPhone: customer.phone ?? null,
+  //   estimatedDelivery: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+  //   originStationId: order.originStationId,
+  //   pickupStationId: order.pickupStationId || null,
+  //   pickupAgentId: order.pickupAgentId || null,
+  //   status: "preparing",
+  //   createdAt: new Date(),
+  // });
 
   // DELETE USER CART
   await db.delete(carts).where(eq(carts.userId, order.userId));
