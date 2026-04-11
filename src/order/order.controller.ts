@@ -16,6 +16,7 @@ import {
   markOrderAsDeliveredServiceEx,
   getOrderForPickupVerificationService,
   markOrderAsReadyForPickupService,
+  markReturnAsReceivedService,
 } from "./order.service";
 
 //Create or Update Order
@@ -324,6 +325,32 @@ export const markOrderAsDeliveredController = async (req: Request, res: Response
   } catch (error: any) {
     console.error("Error marking order as delivered:", error.message || error);
     return res.status(500).json({ message: error.message || "Something went wrong" });
+  }
+};
+
+
+// Mark Return as Received 
+export const markReturnAsReceivedController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const orderItemId = Number(req.params.id);
+
+    if (isNaN(orderItemId)) {
+      return res.status(400).json({ message: "Invalid order item ID" });
+    }
+
+    const result = await markReturnAsReceivedService(orderItemId);
+
+    return res.status(200).json(result);
+
+  } catch (error: any) {
+    console.error("Error marking return as received:", error.message || error);
+
+    return res.status(500).json({
+      message: error.message || "Something went wrong",
+    });
   }
 };
 

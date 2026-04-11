@@ -16,6 +16,7 @@ import {
   markOrderReadyForPickupController,
   markOrderAsDeliveredController,
   getOrderForPickupVerificationController,
+  markReturnAsReceivedController,
 } from "./order.controller";
 import { adminRoleAuth, customerRoleAuth } from "../middleware/bearAuth";
 
@@ -140,6 +141,15 @@ const order = (app: Express) => {
   app.route("/order/:id/deliver").post(async (req, res, next) => {
     try {
       await markOrderAsDeliveredController(req, res);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  //mark return as received by station manager
+  app.route("/return/:id/mark-received").post(async (req, res, next) => {
+    try {
+      await markReturnAsReceivedController(req, res);
     } catch (error) {
       next(error);
     }

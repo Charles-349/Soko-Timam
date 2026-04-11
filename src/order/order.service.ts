@@ -20,89 +20,6 @@ const calculateTotalAmount = async (orderId: number) => {
   return total;
 };
 
-// Create or update unpaid order
-// export const createOrUpdateOrderService = async (
-//   userId: number,
-//   items: { productId: number; quantity: number }[],
-//   pickupStationId?: number | null,
-//   pickupAgentId?: number | null
-// ) => {
-//   let existingOrder = await db.query.orders.findFirst({
-//     where: and(eq(orders.userId, userId), eq(orders.paymentStatus, "unpaid")),
-//   });
-
-//   const sanitizeInt = (val: any) =>
-//   val === "" || val === undefined ? null : val;
-
-//   if (!existingOrder) {
-//     const insertResult = await db
-//       .insert(orders)
-//       .values({
-//         userId,
-//         paymentStatus: "unpaid",
-//         status: "pending",
-//         totalAmount: "0",
-//         pickupStationId: sanitizeInt(pickupStationId),
-//         pickupAgentId: sanitizeInt(pickupAgentId),
-//         originStationId: null,
-//       })
-//       .returning();
-
-//     const newOrder = Array.isArray(insertResult) ? insertResult[0] : undefined;
-//     if (!newOrder) throw new Error("Failed to create new order");
-//     existingOrder = newOrder;
-//   } else {
-//     await db
-//       .update(orders)
-//       .set({
-//         pickupStationId: pickupStationId ?? existingOrder.pickupStationId,
-//         pickupAgentId: pickupAgentId ?? existingOrder.pickupAgentId,
-//       })
-//       .where(eq(orders.id, existingOrder.id));
-//   }
-
-//   for (const { productId, quantity } of items) {
-//     const product = await db.query.products.findFirst({ where: eq(products.id, productId) });
-//     if (!product) throw new Error(`Product with ID ${productId} not found`);
-
-//     if (!existingOrder) {
-//       throw new Error("Order could not be created or found");
-//     }
-
-//     const existingItem = await db.query.orderItems.findFirst({
-//       where: and(eq(orderItems.orderId, existingOrder.id), eq(orderItems.productId, productId)),
-//     });
-
-//     if (existingItem) {
-//       await db
-//         .update(orderItems)
-//         .set({ quantity: existingItem.quantity + quantity, price: product.price })
-//         .where(eq(orderItems.id, existingItem.id));
-//     } else {
-//       await db.insert(orderItems).values({
-//         orderId: existingOrder.id,
-//         productId,
-//         shopId: product.shopId,
-//         quantity,
-//         price: product.price,
-//       });
-//     }
-//   }
-
-//   if (!existingOrder) {
-//     throw new Error("Order could not be created or found");
-//   }
-//   const totalAmount = await calculateTotalAmount(existingOrder.id);
-
-//   return {
-//     message: "Order updated successfully",
-//     orderId: existingOrder.id,
-//     totalAmount,
-//     pickupStationId: existingOrder.pickupStationId ?? pickupStationId ?? null,
-//     pickupAgentId: existingOrder.pickupAgentId ?? pickupAgentId ?? null,
-//   };
-// };
-
 export const createOrUpdateOrderService = async (
   userId: number,
   items: { productId: number; quantity: number }[],
@@ -619,7 +536,10 @@ type OrderWithRelations = {
   user: any;
   status: string;
   originStationId?: number | null;
+  pickupStationId?: number | null;
+  pickupAgentId?: number | null; 
   paymentStatus?: string;
+  
 };
 export const getOrderForShipping = async (
   orderItemId: number
@@ -663,11 +583,12 @@ export const getOrderForShipping = async (
     where: eq(users.id, order.userId),
   });
 
-  // Return directly using TSShipping, no null coercion
   return {
     id: order.id,
     status: order.status,
     originStationId: order.originStationId ?? null,
+    pickupStationId: order.pickupStationId ?? null,
+    pickupAgentId: order.pickupAgentId ?? null,
     paymentStatus: order.paymentStatus ?? undefined,
     items,
     shipping: shippingRecords, 
@@ -761,52 +682,80 @@ export const assignOriginStationServiceEx = async (
   };
 };
 
-// export const assignOriginStationServiceEx = async (
-//   orderItemId: number,
-//   stationId: number
-// ) => {
-//   const item = await db.query.orderItems.findFirst({
-//     where: eq(orderItems.id, orderItemId),
-//     with: {
-//       order: {
-//         with: {
-//           user: true,
-//           shipping: {
-//             with: {
-//               pickupStation: true,
-//             },
-//           },
-//         },
-//       },
-//     },
+
+// export const markOrderAsShippedServiceEx = async (orderItemId: number) => {
+//   const order = await getOrderForShipping(orderItemId);
+//   if (!order) throw new Error("Order not found");
+
+//   if (!order.items || order.items.length === 0) {
+//     throw new Error("Order has no items");
+//   }
+
+//   const existingShipping = await db.query.shipping.findMany({
+//     where: eq(shipping.orderId, order.id),
 //   });
 
-//   if (!item) throw new Error("Order item not found");
-
-//   if (item.order.paymentStatus !== "paid") {
-//     throw new Error("Only paid orders can be assigned an origin station");
-//   }
-
-//   if (item.originStationId) {
-//     throw new Error("Item already assigned to a station");
-//   }
-
-//   await db
-//     .update(orderItems)
-//     .set({ originStationId: stationId })
-//     .where(eq(orderItems.id, orderItemId));
-
-//   const shipment = item.order.shipping.find(
-//     s => s.orderItemId === orderItemId
+//   const itemShipping = existingShipping.find(
+//     (s) => s.orderItemId === orderItemId
 //   );
 
+//   const item = await db.query.orderItems.findFirst({
+//     where: eq(orderItems.id, orderItemId),
+//   });
+//   if (!item?.originStationId) throw new Error("Item must be assigned to a station before shipping");
+
+//   const isReplacement = !!item?.replacementForReturnId;
+
+//  if (
+//   itemShipping &&
+//   itemShipping.status &&
+//   !isReplacement &&
+//   ["in_transit", "ready_for_pickup", "delivered"].includes(itemShipping.status)
+//  ) {
+//   throw new Error("Item already shipped");
+//  }
+//   if (itemShipping) {
+//     await db
+//       .update(shipping)
+//       .set({ status: "in_transit" })
+//       .where(eq(shipping.id, itemShipping.id));
+//   } else {
+//     await db.insert(shipping).values({
+//       orderId: order.id,
+//       orderItemId,
+//       status: "in_transit",
+//       originStationId: item.originStationId,
+//     });
+//   }
+
+//   const allShippingRecords = await db.query.shipping.findMany({
+//     where: eq(shipping.orderId, order.id),
+//   });
+
+//   const shippedItemIds = new Set(
+//     allShippingRecords
+//       .filter((s) => s.status === "in_transit" || s.status === "delivered")
+//       .map((s) => s.orderItemId)
+//       .filter((id): id is number => !!id)
+//   );
+
+//   const shippedCount = shippedItemIds.size;
+//   const totalItems = order.items.length;
+
+//   let newOrderStatus: typeof order.status;
+//   if (shippedCount === 0) newOrderStatus = "at_station";
+//   else if (shippedCount < totalItems) newOrderStatus = "processing";
+//   else newOrderStatus = "shipped";
+
+//   await db
+//     .update(orders)
+//     .set({ status: newOrderStatus, updatedAt: new Date() })
+//     .where(eq(orders.id, order.id));
+
 //   return {
-//     message: "Origin station assigned successfully",
-//     orderId: item.orderId,
+//     message: `Item shipped. Order now ${newOrderStatus}`,
+//     orderId: order.id,
 //     orderItemId,
-//     stationId,
-//     customer: item.order.user ? { id: item.order.user.id, name: `${item.order.user.firstname} ${item.order.user.lastname}` } : null,
-//     destination: shipment?.pickupStation || null,
 //   };
 // };
 
@@ -819,29 +768,54 @@ export const markOrderAsShippedServiceEx = async (orderItemId: number) => {
     throw new Error("Order has no items");
   }
 
+  const item = await db.query.orderItems.findFirst({
+    where: eq(orderItems.id, orderItemId),
+  });
+  if (!item) throw new Error("Order item not found");
+
+  //Detect type
+  const returnRecord = await db.query.returns.findFirst({
+    where: eq(returns.orderItemId, orderItemId),
+  });
+
+  const isReturn = !!returnRecord && !item.replacementForReturnId;
+  const isReplacement = !!item.replacementForReturnId;
+
+  const shippingType = isReturn
+    ? "return"
+    : isReplacement
+    ? "replacement"
+    : "standard";
+
+  //Validation
+  if (!isReturn && !item.originStationId) {
+    throw new Error("Item must be assigned to a station before shipping");
+  }
+
   const existingShipping = await db.query.shipping.findMany({
     where: eq(shipping.orderId, order.id),
   });
 
   const itemShipping = existingShipping.find(
-    (s) => s.orderItemId === orderItemId
+    (s) => s.orderItemId === orderItemId && s.type === shippingType
   );
 
-  const item = await db.query.orderItems.findFirst({
-    where: eq(orderItems.id, orderItemId),
-  });
-  if (!item?.originStationId) throw new Error("Item must be assigned to a station before shipping");
+  if (
+    itemShipping &&
+    itemShipping.status &&
+    isReplacement &&
+    ["in_transit", "ready_for_pickup", "delivered"].includes(itemShipping.status)
+  ) {
+    throw new Error("Item already shipped");
+  }
 
-  const isReplacement = !!item?.replacementForReturnId;
+  //CREATE / UPDATE SHIPPING
+const pickupLocationStationId = order.pickupStationId ?? null;
+const pickupLocationAgentId = order.pickupAgentId ?? null;
 
- if (
-  itemShipping &&
-  itemShipping.status &&
-  !isReplacement &&
-  ["in_transit", "ready_for_pickup", "delivered"].includes(itemShipping.status)
- ) {
-  throw new Error("Item already shipped");
- }
+if (!pickupLocationStationId && !pickupLocationAgentId) {
+  throw new Error("Order has no pickup location assigned");
+}
   if (itemShipping) {
     await db
       .update(shipping)
@@ -851,18 +825,54 @@ export const markOrderAsShippedServiceEx = async (orderItemId: number) => {
     await db.insert(shipping).values({
       orderId: order.id,
       orderItemId,
+      type: shippingType,
       status: "in_transit",
-      originStationId: item.originStationId,
+
+      //Direction handling
+     originStationId: isReturn
+     ? pickupLocationStationId
+     : item.originStationId,
+
+      pickupStationId: isReturn
+      ? item.originStationId
+      : pickupLocationStationId,
+
+      pickupAgentId: isReturn
+      ? null
+      : pickupLocationAgentId,
     });
   }
 
+  //RETURN FLOW 
+  if (isReturn && returnRecord) {
+    await db
+      .update(returns)
+      .set({
+        status: "in_transit",
+        updatedAt: new Date(),
+      })
+      .where(eq(returns.id, returnRecord.id));
+
+    return {
+      message: "Return shipment in transit",
+      orderId: order.id,
+      orderItemId,
+      type: "return",
+    };
+  }
+
+  //NORMAL / REPLACEMENT FLOW
   const allShippingRecords = await db.query.shipping.findMany({
     where: eq(shipping.orderId, order.id),
   });
 
   const shippedItemIds = new Set(
     allShippingRecords
-      .filter((s) => s.status === "in_transit" || s.status === "delivered")
+      .filter(
+        (s) =>
+          s.type !== "return" &&
+          (s.status === "in_transit" || s.status === "delivered")
+      )
       .map((s) => s.orderItemId)
       .filter((id): id is number => !!id)
   );
@@ -871,6 +881,7 @@ export const markOrderAsShippedServiceEx = async (orderItemId: number) => {
   const totalItems = order.items.length;
 
   let newOrderStatus: typeof order.status;
+
   if (shippedCount === 0) newOrderStatus = "at_station";
   else if (shippedCount < totalItems) newOrderStatus = "processing";
   else newOrderStatus = "shipped";
@@ -884,73 +895,9 @@ export const markOrderAsShippedServiceEx = async (orderItemId: number) => {
     message: `Item shipped. Order now ${newOrderStatus}`,
     orderId: order.id,
     orderItemId,
+    type: shippingType,
   };
 };
-
-
-// export const markOrderAsReadyForPickupService = async (orderId: number) => {
-//   const order = await db.query.orders.findFirst({
-//     where: eq(orders.id, orderId),
-//     with: {
-//       shipping: true,
-//       items: true,
-//       user: true
-//     }
-//   });
-
-//   if (!order) throw new Error("Order not found");
-
-//   // Ensure all items have at least one shipping record marked in_transit 
-//   const allShippingRecords = await db.query.shipping.findMany({
-//     where: eq(shipping.orderId, order.id)
-//   });
-
-//   const shippedCount = allShippingRecords.filter(
-//     (s) => s.status === "in_transit" 
-//   ).length;
-
-//   if (shippedCount < order.items.length) {
-//     throw new Error("Cannot mark ready for pickup: not all items have been shipped");
-//   }
-
-//   const pickupCode = crypto.randomBytes(3).toString("hex").toUpperCase();
-
-//   let shippingRecord = order.shipping?.[0];
-
-//   if (shippingRecord) {
-//     await db.update(shipping)
-//       .set({ status: "ready_for_pickup", pickupCode })
-//       .where(eq(shipping.id, shippingRecord.id));
-//   } else {
-//     const inserted = await db.insert(shipping)
-//       .values({
-//         orderId: order.id,
-//         status: "ready_for_pickup",
-//         originStationId: order.originStationId || 0,
-//         pickupCode
-//       })
-//       .returning();
-
-//     shippingRecord = inserted[0];
-//   }
-
-//   if (order.user?.email) {
-//     await sendEmail(
-//       order.user.email,
-//       "Your Order is Ready for Pickup",
-//       `Hi ${order.user.firstname}, your order #${order.id} is ready for pickup. Pickup code: ${pickupCode}`,
-//       `<p>Hi ${order.user.firstname},</p>
-//        <p>Your order <strong>#${order.id}</strong> is ready for pickup.</p>
-//        <p><strong>Pickup Code:</strong> ${pickupCode}</p>
-//        <p>Please present this code at the pickup station.</p>`
-//     );
-//   }
-
-//   return {
-//     message: "Order marked as ready for pickup",
-//     orderId: order.id,
-//   };
-// };
 
 export const markOrderAsReadyForPickupService = async (orderId: number) => {
   const order = await db.query.orders.findFirst({
@@ -1018,50 +965,6 @@ export const markOrderAsReadyForPickupService = async (orderId: number) => {
   };
 };
 
-// // Mark order ready for pickup: create one shipping per item if not exists
-// export const markOrderAsReadyForPickupService = async (orderId: number) => {
-//   const order = await db.query.orders.findFirst({
-//     where: eq(orders.id, orderId),
-//     with: { shipping: true, items: true, user: true }
-//   });
-//   if (!order) throw new Error("Order not found");
-
-//   const pickupCode = crypto.randomBytes(3).toString("hex").toUpperCase();
-
-//   for (const item of order.items) {
-//     const itemShipping = order.shipping.find(s => s.orderItemId === item.id);
-
-//     if (itemShipping) {
-//       await db.update(shipping)
-//         .set({ status: "ready_for_pickup", pickupCode })
-//         .where(eq(shipping.id, itemShipping.id));
-//     } else {
-//       await db.insert(shipping).values({
-//         orderId: order.id,
-//         orderItemId: item.id,
-//         status: "ready_for_pickup",
-//         originStationId: item.originStationId || 0,
-//         pickupCode
-//       });
-//     }
-//   }
-
-//   if (order.user?.email) {
-//     await sendEmail(
-//       order.user.email,
-//       "Your Order is Ready for Pickup",
-//       `Hi ${order.user.firstname}, your order #${order.id} is ready for pickup. Pickup code: ${pickupCode}`,
-//       `<p>Hi ${order.user.firstname},</p>
-//        <p>Your order <strong>#${order.id}</strong> is ready for pickup.</p>
-//        <p><strong>Pickup Code:</strong> ${pickupCode}</p>
-//        <p>Please present this code at the pickup station.</p>`
-//     );
-//   }
-
-//   return { message: "Order marked as ready for pickup", orderId: order.id };
-// };
-
-
 // Mark order delivered
 export const markOrderAsDeliveredServiceEx = async (
   orderId: number,
@@ -1089,7 +992,7 @@ export const markOrderAsDeliveredServiceEx = async (
     throw new Error("Order is not ready for pickup");
 
   const now = new Date();
-  const returnWindowDays = 7;
+  const returnWindowDays = 3;
 
   const returnWindowEnds = new Date(
     now.getTime() + returnWindowDays * 24 * 60 * 60 * 1000
@@ -1117,6 +1020,55 @@ export const markOrderAsDeliveredServiceEx = async (
   return {
     message: "Order successfully delivered",
     orderId: order.id
+  };
+};
+
+export const markReturnAsReceivedService = async (
+  orderItemId: number
+) => {
+  const returnRecord = await db.query.returns.findFirst({
+    where: eq(returns.orderItemId, orderItemId),
+  });
+
+  if (!returnRecord) throw new Error("Return not found");
+
+  if (returnRecord.status !== "approved") {
+    throw new Error("Return not in transit or not approved");
+  }
+
+  const shippingRecord = await db.query.shipping.findFirst({
+    where: eq(shipping.orderItemId, orderItemId),
+  });
+
+  if (!shippingRecord) {
+    throw new Error("Shipping record not found");
+  }
+
+  const now = new Date();
+
+  //update shipping
+  await db
+    .update(shipping)
+    .set({
+      status: "delivered",
+      deliveredAt: now,
+    })
+    .where(eq(shipping.id, shippingRecord.id));
+
+  //update return
+  await db
+    .update(returns)
+    .set({
+      status: "received",
+      processedAt: now,
+      updatedAt: now,
+    })
+    .where(eq(returns.id, returnRecord.id));
+
+  return {
+    message: "Return successfully received",
+    orderItemId,
+    returnId: returnRecord.id,
   };
 };
 
@@ -1352,175 +1304,6 @@ export const getOrdersByAgentIdService = async (agentId: number) => {
   return Object.values(ordersMap);
 };
 
-
-// export const getOrdersByAgentIdService = async (agentId: number) => {
-//   const sellerUser = alias(users, "sellerUser");
-//   const replacementItems = alias(orderItems, "replacementItems");
-//   const replacementProductImages = alias(productImages, "replacementProductImages");
-
-//   const rows = await db
-//     .select({
-//       orderId: orders.id,
-//       userId: orders.userId,
-//       status: orders.status,
-//       totalAmount: orders.totalAmount,
-//       paymentStatus: orders.paymentStatus,
-//       createdAt: orders.createdAt,
-//       updatedAt: orders.updatedAt,
-
-//       customerId: users.id,
-//       customerName: users.firstname,
-
-//       shopId: shops.id,
-//       shopName: shops.name,
-
-//       sellerId: sellers.id,
-//       sellerName: sellerUser.firstname,
-
-//       itemId: orderItems.id,
-//       quantity: orderItems.quantity,
-//       price: orderItems.price,
-
-//       productId: products.id,
-//       productName: products.name,
-//       productDescription: products.description,
-//       productImage: productImages.imageUrl,
-
-//       shippingId: shipping.id,
-//       shippingStatus: shipping.status,
-//       recipientName: shipping.recipientName,
-//       recipientPhone: shipping.recipientPhone,
-//       estimatedDelivery: shipping.estimatedDelivery,
-//       pickupCode: shipping.pickupCode,
-
-//       returnId: returns.id,
-//       returnReason: returns.reason,
-//       returnStatus: returns.status,
-
-//       replacementItemId: replacementItems.id,
-//       replacementProductId: replacementItems.productId,
-//       replacementQuantity: replacementItems.quantity,
-//       replacementProductImage: replacementProductImages.imageUrl,
-//     })
-//     .from(orders)
-//     .innerJoin(shipping, eq(shipping.orderId, orders.id)) 
-//     .leftJoin(users, eq(orders.userId, users.id))
-//     .leftJoin(orderItems, eq(orderItems.orderId, orders.id))
-//     .leftJoin(products, eq(orderItems.productId, products.id))
-//     .leftJoin(
-//       productImages,
-//       and(eq(productImages.productId, products.id), eq(productImages.isMain, true))
-//     )
-//     .leftJoin(shops, eq(orderItems.shopId, shops.id))
-//     .leftJoin(sellers, eq(shops.sellerId, sellers.id))
-//     .leftJoin(sellerUser, eq(sellers.userId, sellerUser.id))
-//     .leftJoin(returns, eq(returns.orderItemId, orderItems.id))
-//     .leftJoin(
-//       replacementItems as any,
-//       eq(replacementItems.replacementForReturnId, returns.id)
-//     )
-//     .leftJoin(
-//       replacementProductImages as any,
-//       and(
-//         eq(replacementProductImages.productId, replacementItems.productId),
-//         eq(replacementProductImages.isMain, true)
-//       )
-//     )
-//     .where(eq(shipping.pickupAgentId, agentId));
-
-//   if (!rows.length) return [];
-
-//   const ordersMap: Record<number, any> = {};
-
-//   for (const row of rows) {
-//     //ORDER LEVEL
-//     if (!ordersMap[row.orderId]) {
-//       ordersMap[row.orderId] = {
-//         id: row.orderId,
-//         userId: row.userId,
-//         status: row.status,
-//         totalAmount: row.totalAmount,
-//         paymentStatus: row.paymentStatus,
-//         createdAt: row.createdAt,
-//         updatedAt: row.updatedAt,
-//         customer: {
-//           id: row.customerId,
-//           name: row.customerName,
-//         },
-//         items: [],
-//         shipping: [],
-//       };
-//     }
-
-//     const order = ordersMap[row.orderId];
-
-//     //SHIPPING 
-//     if (
-//       row.shippingId &&
-//       !order.shipping.find((s: any) => s.id === row.shippingId)
-//     ) {
-//       order.shipping.push({
-//         id: row.shippingId,
-//         status: row.shippingStatus,
-//         recipientName: row.recipientName,
-//         recipientPhone: row.recipientPhone,
-//         estimatedDelivery: row.estimatedDelivery,
-//         pickupCode: row.pickupCode,
-//       });
-//     }
-
-//     //ITEMS
-//     let item = order.items.find((i: any) => i.id === row.itemId);
-
-//     if (!item && row.itemId) {
-//       item = {
-//         id: row.itemId,
-//         quantity: row.quantity,
-//         price: row.price,
-//         product: {
-//           id: row.productId,
-//           name: row.productName,
-//           description: row.productDescription,
-//           productImage: row.productImage,
-//         },
-//         returns: [],
-//       };
-
-//       order.items.push(item);
-//     }
-
-//     //RETURNS
-//     if (row.returnId && item) {
-//       let ret = item.returns.find((r: any) => r.returnId === row.returnId);
-
-//       if (!ret) {
-//         ret = {
-//           returnId: row.returnId,
-//           reason: row.returnReason,
-//           status: row.returnStatus,
-//           replacements: [],
-//         };
-//         item.returns.push(ret);
-//       }
-
-//       //REPLACEMENTS 
-//       if (
-//         row.replacementItemId &&
-//         !ret.replacements.find((r: any) => r.id === row.replacementItemId)
-//       ) {
-//         ret.replacements.push({
-//           id: row.replacementItemId,
-//           productId: row.replacementProductId,
-//           quantity: row.replacementQuantity,
-//           productImage: row.replacementProductImage,
-//         });
-//       }
-//     }
-//   }
-
-//   return Object.values(ordersMap);
-// };
-
 export const getStationsAndAgentsService = async () => {
   const stationList = await db.select({ id: stations.id, name: stations.name, county: stations.county, area: stations.area, address: stations.address, isStation: sql<boolean>`true`.as("isStation") }).from(stations).where(eq(stations.isActive, true));
   const agentList = await db.select({ id: agents.id, name: users.firstname, county: agents.county, area: agents.area, address: agents.address, isStation: sql<boolean>`false`.as("isStation") }).from(agents).innerJoin(users, eq(agents.userId, users.id)).where(eq(agents.isActive, true));
@@ -1678,157 +1461,6 @@ export const getOrdersByStationIdService = async (stationId: number) => {
 
   return Object.values(ordersMap);
 };
-
-// export const getOrdersByStationIdService = async (stationId: number) => {
-//   const sellerUser = alias(users, "sellerUser");
-//   const replacementItems = alias(orderItems, "replacementItems");
-//   const replacementProductImages = alias(productImages, "replacementProductImages");
-
-//   const rows = await db
-//     .select({
-//       orderId: orders.id,
-//       userId: orders.userId,
-//       status: orders.status,
-//       totalAmount: orders.totalAmount,
-//       paymentStatus: orders.paymentStatus,
-//       createdAt: orders.createdAt,
-//       updatedAt: orders.updatedAt,
-
-//       customerId: users.id,
-//       customerName: users.firstname,
-
-//       shopId: shops.id,
-//       shopName: shops.name,
-
-//       sellerId: sellers.id,
-//       sellerName: sellerUser.firstname,
-
-//       itemId: orderItems.id,
-//       quantity: orderItems.quantity,
-//       price: orderItems.price,
-
-//       productId: products.id,
-//       productName: products.name,
-//       productDescription: products.description,
-//       productImage: productImages.imageUrl,
-
-//       shippingId: shipping.id,
-//       shippingStatus: shipping.status,
-//       recipientName: shipping.recipientName,
-//       recipientPhone: shipping.recipientPhone,
-//       estimatedDelivery: shipping.estimatedDelivery,
-
-//       returnId: returns.id,
-//       returnReason: returns.reason,
-//       returnStatus: returns.status,
-
-//       replacementItemId: replacementItems.id,
-//       replacementProductId: replacementItems.productId,
-//       replacementQuantity: replacementItems.quantity,
-//       replacementProductImage: replacementProductImages.imageUrl,
-//     })
-//     .from(orders)
-//     .innerJoin(shipping, eq(shipping.orderId, orders.id))
-//     .leftJoin(users, eq(orders.userId, users.id))
-//     .leftJoin(orderItems, eq(orderItems.orderId, orders.id))
-//     .leftJoin(products, eq(orderItems.productId, products.id))
-//     .leftJoin(
-//       productImages,
-//       and(eq(productImages.productId, products.id), eq(productImages.isMain, true))
-//     )
-//     .leftJoin(shops, eq(orderItems.shopId, shops.id))
-//     .leftJoin(sellers, eq(shops.sellerId, sellers.id))
-//     .leftJoin(sellerUser, eq(sellers.userId, sellerUser.id))
-//     .leftJoin(returns, eq(returns.orderItemId, orderItems.id))
-//     .leftJoin(replacementItems as any, eq(replacementItems.replacementForReturnId, returns.id))
-//     .leftJoin(
-//       replacementProductImages as any,
-//       and(
-//         eq(replacementProductImages.productId, replacementItems.productId),
-//         eq(replacementProductImages.isMain, true)
-//       )
-//     )
-//     .where(eq(shipping.pickupStationId, stationId));
-
-//   if (!rows.length) return [];
-
-//   const ordersMap: Record<number, any> = {};
-
-//   for (const row of rows) {
-//     // ORDER LEVEL
-//     if (!ordersMap[row.orderId]) {
-//       ordersMap[row.orderId] = {
-//         id: row.orderId,
-//         userId: row.userId,
-//         status: row.status,
-//         totalAmount: row.totalAmount,
-//         paymentStatus: row.paymentStatus,
-//         createdAt: row.createdAt,
-//         updatedAt: row.updatedAt,
-//         customer: { id: row.customerId, name: row.customerName },
-//         items: [],
-//         shipping: [],
-//       };
-//     }
-
-//     const order = ordersMap[row.orderId];
-
-//     // SHIPPING 
-//     if (row.shippingId && !order.shipping.find((s: any) => s.id === row.shippingId)) {
-//       order.shipping.push({
-//         id: row.shippingId,
-//         status: row.shippingStatus,
-//         recipientName: row.recipientName,
-//         recipientPhone: row.recipientPhone,
-//         estimatedDelivery: row.estimatedDelivery,
-//       });
-//     }
-
-//     // ITEMS
-//     let item = order.items.find((i: any) => i.id === row.itemId);
-//     if (!item && row.itemId) {
-//       item = {
-//         id: row.itemId,
-//         quantity: row.quantity,
-//         price: row.price,
-//         product: {
-//           id: row.productId,
-//           name: row.productName,
-//           description: row.productDescription,
-//           productImage: row.productImage,
-//         },
-//         returns: [],
-//       };
-//       order.items.push(item);
-//     }
-
-//     // RETURNS
-//     if (row.returnId && item) {
-//       let ret = item.returns.find((r: any) => r.returnId === row.returnId);
-//       if (!ret) {
-//         ret = {
-//           returnId: row.returnId,
-//           reason: row.returnReason,
-//           status: row.returnStatus,
-//           replacements: [],
-//         };
-//         item.returns.push(ret);
-//       }
-
-//       // REPLACEMENTS 
-//       if (row.replacementItemId && !ret.replacements.find((r: any) => r.id === row.replacementItemId)) {
-//         ret.replacements.push({
-//           id: row.replacementItemId,
-//           productId: row.replacementProductId,
-//           quantity: row.replacementQuantity,
-//           productImage: row.replacementProductImage,
-//         });
-//       }
-//     }
-//   }
-
-//   return Object.values(ordersMap);
-// };
 
 export const getOrdersByOriginStationIdService = async (stationId: number) => {
   const ordersList = await db.query.orders.findMany({
