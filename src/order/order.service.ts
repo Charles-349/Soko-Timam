@@ -761,6 +761,160 @@ export const assignOriginStationServiceEx = async (
 // };
 
 
+// export const markOrderAsShippedServiceEx = async (orderItemId: number) => {
+//   const order = await getOrderForShipping(orderItemId);
+//   if (!order) throw new Error("Order not found");
+
+//   if (!order.items || order.items.length === 0) {
+//     throw new Error("Order has no items");
+//   }
+
+//   const item = await db.query.orderItems.findFirst({
+//     where: eq(orderItems.id, orderItemId),
+//   });
+//   if (!item) throw new Error("Order item not found");
+
+//   //Detect type
+//   const returnRecord = await db.query.returns.findFirst({
+//     where: eq(returns.orderItemId, orderItemId),
+//   });
+
+//   const isReturn = !!returnRecord && !item.replacementForReturnId;
+//   const isReplacement = !!item.replacementForReturnId;
+
+//   const shippingType = isReturn
+//     ? "return"
+//     : isReplacement
+//     ? "replacement"
+//     : "standard";
+
+//   //Validation
+//   if (!isReturn && !item.originStationId) {
+//     throw new Error("Item must be assigned to a station before shipping");
+//   }
+
+//   const existingShipping = await db.query.shipping.findMany({
+//     where: eq(shipping.orderId, order.id),
+//   });
+
+//   const itemShipping = existingShipping.find(
+//     (s) => s.orderItemId === orderItemId && s.type === shippingType
+//   );
+
+//   if (
+//     itemShipping &&
+//     itemShipping.status &&
+//     ["in_transit", "ready_for_pickup", "delivered"].includes(itemShipping.status)
+//   ) {
+//     throw new Error("Item already shipped");
+//   }
+
+//   //CREATE / UPDATE SHIPPING
+// const pickupLocationStationId = order.pickupStationId ?? null;
+// const pickupLocationAgentId = order.pickupAgentId ?? null;
+
+// if (!pickupLocationStationId && !pickupLocationAgentId) {
+//   throw new Error("Order has no pickup location assigned");
+// }
+
+// //Resolve origin 
+// let originStationId: number | null;
+
+// if (isReturn) {
+//   originStationId =
+//     pickupLocationStationId ?? item.originStationId ?? null;
+// } else {
+//   originStationId = item.originStationId ?? null;
+// }
+
+// //HARD VALIDATION
+// if (!originStationId) {
+//   throw new Error("Origin station is required for shipping");
+// }
+
+// if (itemShipping) {
+//   await db
+//     .update(shipping)
+//     .set({ status: "in_transit" })
+//     .where(eq(shipping.id, itemShipping.id));
+// } else {
+//   await db.insert(shipping).values({
+//     orderId: order.id,
+//     orderItemId,
+//     type: shippingType,
+//     status: "in_transit",
+
+//     //ALWAYS VALID NOW
+//     originStationId,
+
+//     // DESTINATION
+//     pickupStationId: isReturn
+//       ? item.originStationId
+//       : pickupLocationStationId ?? null,
+
+//     pickupAgentId: isReturn
+//       ? null
+//       : pickupLocationAgentId ?? null,
+//   });
+// }
+
+//   //RETURN FLOW 
+//   if (isReturn && returnRecord) {
+//     await db
+//       .update(returns)
+//       .set({
+//         status: "in_transit",
+//         updatedAt: new Date(),
+//       })
+//       .where(eq(returns.id, returnRecord.id));
+
+//     return {
+//       message: "Return shipment in transit",
+//       orderId: order.id,
+//       orderItemId,
+//       type: "return",
+//     };
+//   }
+
+//   //NORMAL / REPLACEMENT FLOW
+//   const allShippingRecords = await db.query.shipping.findMany({
+//     where: eq(shipping.orderId, order.id),
+//   });
+
+//   const shippedItemIds = new Set(
+//     allShippingRecords
+//       .filter(
+//         (s) =>
+//           s.type !== "return" &&
+//           (s.status === "in_transit" || s.status === "delivered")
+//       )
+//       .map((s) => s.orderItemId)
+//       .filter((id): id is number => !!id)
+//   );
+
+//   const shippedCount = shippedItemIds.size;
+//   const totalItems = order.items.length;
+
+//   let newOrderStatus: typeof order.status;
+
+//   if (shippedCount === 0) newOrderStatus = "at_station";
+//   else if (shippedCount < totalItems) newOrderStatus = "processing";
+//   else newOrderStatus = "shipped";
+
+//   await db
+//     .update(orders)
+//     .set({ status: newOrderStatus, updatedAt: new Date() })
+//     .where(eq(orders.id, order.id));
+
+//   return {
+//     message: `Item shipped. Order now ${newOrderStatus}`,
+//     orderId: order.id,
+//     orderItemId,
+//     type: shippingType,
+//   };
+// };
+
+
 export const markOrderAsShippedServiceEx = async (orderItemId: number) => {
   const order = await getOrderForShipping(orderItemId);
   if (!order) throw new Error("Order not found");
@@ -774,7 +928,7 @@ export const markOrderAsShippedServiceEx = async (orderItemId: number) => {
   });
   if (!item) throw new Error("Order item not found");
 
-  //Detect type
+  // Detect type
   const returnRecord = await db.query.returns.findFirst({
     where: eq(returns.orderItemId, orderItemId),
   });
@@ -782,46 +936,69 @@ export const markOrderAsShippedServiceEx = async (orderItemId: number) => {
   const isReturn = !!returnRecord && !item.replacementForReturnId;
   const isReplacement = !!item.replacementForReturnId;
 
-  const shippingType = isReturn
-    ? "return"
-    : isReplacement
-    ? "replacement"
-    : "standard";
+  const shippingType: "standard" | "replacement" | "return" =
+    isReturn ? "return" : isReplacement ? "replacement" : "standard";
 
-  //Validation
+  // Validate origin for normal/replacement
   if (!isReturn && !item.originStationId) {
     throw new Error("Item must be assigned to a station before shipping");
   }
 
-  const existingShipping = await db.query.shipping.findMany({
-    where: eq(shipping.orderId, order.id),
-  });
+  // Pickup location (can be station OR agent)
+  const pickupStationId = order.pickupStationId ?? null;
+  const pickupAgentId = order.pickupAgentId ?? null;
 
-  const itemShipping = existingShipping.find(
-    (s) => s.orderItemId === orderItemId && s.type === shippingType
-  );
-
-  if (
-    itemShipping &&
-    itemShipping.status &&
-    isReplacement &&
-    ["in_transit", "ready_for_pickup", "delivered"].includes(itemShipping.status)
-  ) {
-    throw new Error("Item already shipped");
+  if (!pickupStationId && !pickupAgentId) {
+    throw new Error("Order has no pickup location assigned");
   }
 
-  //CREATE / UPDATE SHIPPING
-const pickupLocationStationId = order.pickupStationId ?? null;
-const pickupLocationAgentId = order.pickupAgentId ?? null;
+  // Find existing shipping for THIS item + type
+  const existingShipping = await db.query.shipping.findFirst({
+    where: and(
+      eq(shipping.orderId, order.id),
+      eq(shipping.orderItemId, orderItemId),
+      eq(shipping.type, shippingType)
+    ),
+  });
 
-if (!pickupLocationStationId && !pickupLocationAgentId) {
-  throw new Error("Order has no pickup location assigned");
+  // Prevent duplicate shipping
+ if (
+  existingShipping &&
+  existingShipping.status &&
+  ["in_transit", "ready_for_pickup", "delivered"].includes(existingShipping.status)
+) {
+  return {
+    message: "Item already in transit",
+    orderId: order.id,
+    orderItemId,
+    type: shippingType,
+  };
 }
-  if (itemShipping) {
+
+  // Resolve origin
+  let originStationId: number | null;
+
+  if (isReturn) {
+    // Return starts from customer pickup location
+    originStationId = pickupStationId ?? item.originStationId ?? null;
+  } else {
+    originStationId = item.originStationId ?? null;
+  }
+
+  if (!originStationId) {
+    throw new Error("Origin station is required for shipping");
+  }
+
+  const now = new Date();
+
+  // CREATE or UPDATE shipping
+  if (existingShipping) {
     await db
       .update(shipping)
-      .set({ status: "in_transit" })
-      .where(eq(shipping.id, itemShipping.id));
+      .set({
+        status: "in_transit",
+      })
+      .where(eq(shipping.id, existingShipping.id));
   } else {
     await db.insert(shipping).values({
       orderId: order.id,
@@ -829,28 +1006,24 @@ if (!pickupLocationStationId && !pickupLocationAgentId) {
       type: shippingType,
       status: "in_transit",
 
-      //Direction handling
-     originStationId: isReturn
-     ? pickupLocationStationId
-     : item.originStationId,
+      originStationId,
 
+      // Destination
       pickupStationId: isReturn
-      ? item.originStationId
-      : pickupLocationStationId,
+        ? item.originStationId ?? null
+        : pickupStationId,
 
-      pickupAgentId: isReturn
-      ? null
-      : pickupLocationAgentId,
+      pickupAgentId: isReturn ? null : pickupAgentId,
     });
   }
 
-  //RETURN FLOW 
+  // RETURN FLOW
   if (isReturn && returnRecord) {
     await db
       .update(returns)
       .set({
-        status: "in_transit",
-        updatedAt: new Date(),
+        status: "in_transit", 
+        updatedAt: now,
       })
       .where(eq(returns.id, returnRecord.id));
 
@@ -862,7 +1035,7 @@ if (!pickupLocationStationId && !pickupLocationAgentId) {
     };
   }
 
-  //NORMAL / REPLACEMENT FLOW
+  // NORMAL / REPLACEMENT FLOW
   const allShippingRecords = await db.query.shipping.findMany({
     where: eq(shipping.orderId, order.id),
   });
@@ -872,7 +1045,8 @@ if (!pickupLocationStationId && !pickupLocationAgentId) {
       .filter(
         (s) =>
           s.type !== "return" &&
-          (s.status === "in_transit" || s.status === "delivered")
+          s.status &&
+          ["in_transit", "delivered"].includes(s.status)
       )
       .map((s) => s.orderItemId)
       .filter((id): id is number => !!id)
@@ -889,7 +1063,10 @@ if (!pickupLocationStationId && !pickupLocationAgentId) {
 
   await db
     .update(orders)
-    .set({ status: newOrderStatus, updatedAt: new Date() })
+    .set({
+      status: newOrderStatus,
+      updatedAt: now,
+    })
     .where(eq(orders.id, order.id));
 
   return {

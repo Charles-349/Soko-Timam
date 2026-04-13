@@ -1,0 +1,1 @@
+ALTER TYPE "public"."shipping_type" ADD VALUE 'return';

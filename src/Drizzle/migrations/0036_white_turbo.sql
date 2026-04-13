@@ -1,0 +1,1 @@
+ALTER TYPE "public"."return_status" ADD VALUE 'in_transit' BEFORE 'closed';

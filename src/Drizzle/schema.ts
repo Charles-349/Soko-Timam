@@ -21,6 +21,7 @@ export const ReturnStatusEnum = pgEnum("return_status", [
   "received",
   "refunded",
   "exchanged",
+  "in_transit",
   "closed"
   
 ]);  
