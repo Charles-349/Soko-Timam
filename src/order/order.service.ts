@@ -1251,17 +1251,142 @@ export const markOrderAsDeliveredServiceEx = async (
 // };
 
 
-export const markReturnAsReceivedService = async (
-  orderItemId: number
-) => {
+// export const markReturnAsReceivedService = async (
+//   orderItemId: number
+// ) => {
+//   const returnRecord = await db.query.returns.findFirst({
+//     where: eq(returns.orderItemId, orderItemId),
+//   });
+
+//   if (!returnRecord) throw new Error("Return not found");
+
+//   if (returnRecord.status !== "in_transit" && returnRecord.status !== "approved") {
+//     throw new Error("Return must be approved or in_transit before receiving");
+//   }
+
+//   const shippingRecord = await db.query.shipping.findFirst({
+//     where: eq(shipping.orderItemId, orderItemId),
+//   });
+
+//   if (!shippingRecord) {
+//     throw new Error("Shipping record not found");
+//   }
+
+//   const now = new Date();
+
+//   //Update shipping 
+//   await db.update(shipping)
+//     .set({
+//       status: "delivered",
+//       deliveredAt: now,
+//     })
+//     .where(eq(shipping.id, shippingRecord.id));
+
+//   //Update return 
+//   await db.update(returns)
+//     .set({
+//       status: "received",
+//       processedAt: now,
+//       updatedAt: now,
+//     })
+//     .where(eq(returns.id, returnRecord.id));
+
+//   //process resolution 
+//   let result;
+
+//   switch (returnRecord.resolutionType) {
+//     case "exchange":
+//       result = await processReturnExchangeService([returnRecord.id]);
+//       break;
+
+//     case "refund":
+//       result = await processReturnRefundService([returnRecord.id]);
+//       break;
+
+//     case "store_credit":
+//       result = await processReturnRefundService([returnRecord.id]);
+//       break;
+
+//     default:
+//       throw new Error("Invalid resolution type");
+//   }
+
+//   if (!result?.[0]?.success) {
+//     throw new Error(result?.[0]?.error || "Return processing failed");
+//   }
+
+  // // Fetch order and seller
+  // const orderItem = await db.query.orderItems.findFirst({
+  //   where: eq(orderItems.id, orderItemId),
+  // });
+
+  // if (!orderItem) throw new Error("Order item not found");
+
+  // const order = await db.query.orders.findFirst({
+  //   where: eq(orders.id, orderItem.orderId),
+  //   with: { user: true },
+  // });
+
+  // const seller = await db.query.sellers.findFirst({
+  //   with: { user: true },
+  // });
+
+  // // CUSTOMER EMAIL
+  // if (order?.user?.email) {
+  //   await sendEmail(
+  //     order.user.email,
+  //     "Return Received Successfully",
+  //     `Hello ${order.user.firstname}, your returned item has been received. We are now processing your ${returnRecord.resolutionType}. Regards.`,
+  //     `
+  //       <p>Hello ${order.user.firstname},</p>
+  //       <p>Your returned item has been successfully received.</p>
+  //       <p>We are now processing your <b>${returnRecord.resolutionType}</b>.</p>
+  //       <p>We will update you once completed.</p>
+  //       <br/>
+  //       <p>Regards,<br/>Sokotimam Support Team</p>
+  //     `
+  //   );
+  // }
+
+  // // SELLER EMAIL
+  // if (seller?.user && typeof seller.user === 'object' && !Array.isArray(seller.user) && 'email' in seller.user && seller.user.email) {
+  //   await sendEmail(
+  //     seller.user.email,
+  //     "Return Item Received",
+  //     `A returned item for order #${returnRecord.orderId} has been received and is now being processed. Kindly pick it from your original drop off station where you had dropped it.`,
+  //     `
+  //       <p>Hello ${seller.fullname},</p>
+  //       <p>A returned item for order <b>#${returnRecord.orderId}</b> has been received at the station.</p>
+  //       <p>Kindly pick it from your original drop off station where you had dropped it.</p>
+  //       <p>Resolution type: <b>${returnRecord.resolutionType}</b></p>
+  //       <p>Processing (refund/exchange/store credit) has now started.</p>
+  //       <br/>
+  //       <p>Regards,<br/>Sokotimam Team</p>
+  //     `
+  //   );
+  // }
+
+//   return {
+//     message: "Return received and processed successfully",
+//     orderItemId,
+//     returnId: returnRecord.id,
+//     resolution: returnRecord.resolutionType,
+//   };
+// };
+
+
+export const markReturnAsReceivedService = async (orderItemId: number) => {
   const returnRecord = await db.query.returns.findFirst({
     where: eq(returns.orderItemId, orderItemId),
   });
 
   if (!returnRecord) throw new Error("Return not found");
 
-  if (returnRecord.status !== "approved") {
-    throw new Error("Return must be approved before receiving");
+  
+  const allowedStates = ["approved", "in_transit", "received"];
+
+  if (!allowedStates.includes(returnRecord.status)) {
+    throw new Error(`Return must be approved before receiving`);
   }
 
   const shippingRecord = await db.query.shipping.findFirst({
@@ -1272,9 +1397,25 @@ export const markReturnAsReceivedService = async (
     throw new Error("Shipping record not found");
   }
 
+  const orderItem = await db.query.orderItems.findFirst({
+    where: eq(orderItems.id, orderItemId),
+  });
+
+  if (!orderItem) throw new Error("Order item not found");
+
+  const order = await db.query.orders.findFirst({
+    where: eq(orders.id, orderItem.orderId),
+    with: { user: true },
+  });
+
+  const seller = await db.query.sellers.findFirst({
+    where: eq(sellers.id, returnRecord.sellerId),
+    with: { user: true },
+  });
+
   const now = new Date();
 
-  //Update shipping 
+  //UPDATE SHIPPING 
   await db.update(shipping)
     .set({
       status: "delivered",
@@ -1282,7 +1423,7 @@ export const markReturnAsReceivedService = async (
     })
     .where(eq(shipping.id, shippingRecord.id));
 
-  //Update return 
+  //UPDATE RETURN
   await db.update(returns)
     .set({
       status: "received",
@@ -1291,7 +1432,7 @@ export const markReturnAsReceivedService = async (
     })
     .where(eq(returns.id, returnRecord.id));
 
-  //process resolution 
+  //PROCESS RESOLUTION 
   let result;
 
   switch (returnRecord.resolutionType) {
@@ -1313,6 +1454,41 @@ export const markReturnAsReceivedService = async (
 
   if (!result?.[0]?.success) {
     throw new Error(result?.[0]?.error || "Return processing failed");
+  }
+
+  // CUSTOMER EMAIL
+  if (order?.user?.email) {
+    await sendEmail(
+      order.user.email,
+      "Return Received Successfully",
+      `Hello ${order.user.firstname}, your returned item has been received. We are now processing your ${returnRecord.resolutionType}. Regards.`,
+      `
+        <p>Hello ${order.user.firstname},</p>
+        <p>Your returned item has been successfully received.</p>
+        <p>We are now processing your <b>${returnRecord.resolutionType}</b>.</p>
+        <p>We will update you once completed.</p>
+        <br/>
+        <p>Regards,<br/>Sokotimam Support Team</p>
+      `
+    );
+  }
+
+  // SELLER EMAIL
+  if (seller?.user && typeof seller.user === 'object' && !Array.isArray(seller.user) && 'email' in seller.user && seller.user.email) {
+    await sendEmail(
+      seller.user.email,
+      "Return Item Received",
+      `A returned item for order #${returnRecord.orderId} has been received and is now being processed. Kindly pick it from your original drop off station where you had dropped it.`,
+      `
+        <p>Hello ${seller.fullname},</p>
+        <p>A returned item for order <b>#${returnRecord.orderId}</b> has been received at the station.</p>
+        <p>Kindly pick it from your original drop off station where you had dropped it.</p>
+        <p>Resolution type: <b>${returnRecord.resolutionType}</b></p>
+        <p>Processing (refund/exchange/store credit) has now started.</p>
+        <br/>
+        <p>Regards,<br/>Sokotimam Team</p>
+      `
+    );
   }
 
   return {

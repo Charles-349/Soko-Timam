@@ -11,6 +11,7 @@ import {
 
 import { processBulkReturns } from "./processors/bulkReturnProcessor";
 import { resolveReturn } from "./resolutions/resolveReturn";
+import { sendEmail } from "../mailer/mailer";
 
 // CREATE RETURN REQUEST
 export type ReturnRow = {
@@ -413,6 +414,27 @@ export const reviewReturnService = async ({
     adminNote,
     updatedAt: now,
   }).where(eq(returns.id, returnId));
+
+  const orderRows = await db
+    .select()
+    .from(orders)
+    .where(eq(orders.id, returnRecord.orderId));
+
+  const order = orderRows[0];
+
+  if (order.user?.email) {
+  await sendEmail(
+    order.user.email,
+    "Return Approved - Action Required",
+    `Hi ${order.user.firstname}, your return request for order #${order.id} has been approved. Please take the item back to your original pickup station for processing. Regards, Support Team`,
+    `<p>Hi ${order.user.firstname},</p>
+     <p>Your return request for <strong>Order #${order.id}</strong> has been <strong>approved</strong>.</p>
+     <p>Please take the item back to the original pickup station where you collected it.</p>
+     <p>Our team will receive and process it once it arrives.</p>
+     <br/>
+     <p>Regards,<br/>Support Team</p>`
+  );
+}
 
   return {
     message: "Return approved. Awaiting item return",
