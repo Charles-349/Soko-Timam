@@ -6,6 +6,7 @@ import { sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { sendEmail } from "../mailer/mailer";
 import crypto from "crypto";
+import { processReturnExchangeService, processReturnRefundService } from "../return/return.sevice";
 
 // Helper: Calculate total order amount
 const calculateTotalAmount = async (orderId: number) => {
@@ -1023,6 +1024,56 @@ export const markOrderAsDeliveredServiceEx = async (
   };
 };
 
+// export const markReturnAsReceivedService = async (
+//   orderItemId: number
+// ) => {
+//   const returnRecord = await db.query.returns.findFirst({
+//     where: eq(returns.orderItemId, orderItemId),
+//   });
+
+//   if (!returnRecord) throw new Error("Return not found");
+
+//   if (returnRecord.status !== "approved") {
+//     throw new Error("Return not in transit or not approved");
+//   }
+
+//   const shippingRecord = await db.query.shipping.findFirst({
+//     where: eq(shipping.orderItemId, orderItemId),
+//   });
+
+//   if (!shippingRecord) {
+//     throw new Error("Shipping record not found");
+//   }
+
+//   const now = new Date();
+
+//   //update shipping
+//   await db
+//     .update(shipping)
+//     .set({
+//       status: "delivered",
+//       deliveredAt: now,
+//     })
+//     .where(eq(shipping.id, shippingRecord.id));
+
+//   //update return
+//   await db
+//     .update(returns)
+//     .set({
+//       status: "received",
+//       processedAt: now,
+//       updatedAt: now,
+//     })
+//     .where(eq(returns.id, returnRecord.id));
+
+//   return {
+//     message: "Return successfully received",
+//     orderItemId,
+//     returnId: returnRecord.id,
+//   };
+// };
+
+
 export const markReturnAsReceivedService = async (
   orderItemId: number
 ) => {
@@ -1033,7 +1084,7 @@ export const markReturnAsReceivedService = async (
   if (!returnRecord) throw new Error("Return not found");
 
   if (returnRecord.status !== "approved") {
-    throw new Error("Return not in transit or not approved");
+    throw new Error("Return must be approved before receiving");
   }
 
   const shippingRecord = await db.query.shipping.findFirst({
@@ -1046,18 +1097,16 @@ export const markReturnAsReceivedService = async (
 
   const now = new Date();
 
-  //update shipping
-  await db
-    .update(shipping)
+  //Update shipping 
+  await db.update(shipping)
     .set({
       status: "delivered",
       deliveredAt: now,
     })
     .where(eq(shipping.id, shippingRecord.id));
 
-  //update return
-  await db
-    .update(returns)
+  //Update return 
+  await db.update(returns)
     .set({
       status: "received",
       processedAt: now,
@@ -1065,10 +1114,35 @@ export const markReturnAsReceivedService = async (
     })
     .where(eq(returns.id, returnRecord.id));
 
+  //process resolution 
+  let result;
+
+  switch (returnRecord.resolutionType) {
+    case "exchange":
+      result = await processReturnExchangeService([returnRecord.id]);
+      break;
+
+    case "refund":
+      result = await processReturnRefundService([returnRecord.id]);
+      break;
+
+    case "store_credit":
+      result = await processReturnRefundService([returnRecord.id]);
+      break;
+
+    default:
+      throw new Error("Invalid resolution type");
+  }
+
+  if (!result?.[0]?.success) {
+    throw new Error(result?.[0]?.error || "Return processing failed");
+  }
+
   return {
-    message: "Return successfully received",
+    message: "Return received and processed successfully",
     orderItemId,
     returnId: returnRecord.id,
+    resolution: returnRecord.resolutionType,
   };
 };
 

@@ -266,6 +266,98 @@ export const processReturnExchangeService = async (returnIds: number[]) => {
 //   return { message: "Return approved and processed" };
 // };
 
+// export const reviewReturnService = async ({
+//   returnId,
+//   action,
+//   resolutionType,
+//   refundResponsibility,
+//   adminNote,
+// }: {
+//   returnId: number;
+//   action: "approve" | "reject";
+//   resolutionType?: "refund" | "exchange" | "store_credit";
+//   refundResponsibility?: string;
+//   adminNote?: string;
+// }) => {
+//   const [returnRecord] = await db
+//     .select()
+//     .from(returns)
+//     .where(eq(returns.id, returnId));
+
+//   if (!returnRecord) throw new Error("Return not found");
+//   if (returnRecord.status !== "requested") throw new Error("Return already processed");
+
+//   // REJECT FLOW
+//   if (action === "reject") {
+//     await db
+//       .update(returns)
+//       .set({
+//         status: "rejected",
+//         adminNote,
+//         updatedAt: new Date(),
+//       })
+//       .where(eq(returns.id, returnId));
+
+//     await db
+//       .update(orders)
+//       .set({
+//         isEscrowLocked: false,
+//         escrowLockedAmount: "0",
+//         updatedAt: new Date(),
+//       })
+//       .where(eq(orders.id, returnRecord.orderId));
+
+//     return { message: "Return rejected" };
+//   }
+
+//   // APPROVE FLOW
+//   if (!resolutionType) throw new Error("Resolution type required for approval");
+
+//   await db
+//     .update(returns)
+//     .set({
+//       status: "approved",
+//       resolutionType,
+//       refundResponsibility,
+//       adminNote,
+//       updatedAt: new Date(),
+//     })
+//     .where(eq(returns.id, returnId));
+
+//   // REFRESH RETURN
+//   const [updatedReturn] = await db
+//     .select()
+//     .from(returns)
+//     .where(eq(returns.id, returnId));
+
+//   if (!updatedReturn || updatedReturn.status !== "approved") {
+//     throw new Error("Return not properly approved");
+//   }
+
+//   // PROCESS RETURN RESOLUTION
+//   let result;
+//   switch (resolutionType) {
+//     case "exchange":
+//       result = await processReturnExchangeService([returnId]);
+//       break;
+//     case "refund":
+//       result = await processReturnRefundService([returnId]);
+//       break;
+//     case "store_credit":
+//       result = await processReturnRefundService([returnId]); 
+//       break;
+//     default:
+//       throw new Error("Unsupported resolution type");
+//   }
+
+//   if (!result?.[0]?.success) {
+//     throw new Error(result?.[0]?.error || "Return processing failed");
+//   }
+
+//   return { message: "Return approved and processed" };
+// };
+
+
 export const reviewReturnService = async ({
   returnId,
   action,
@@ -285,76 +377,48 @@ export const reviewReturnService = async ({
     .where(eq(returns.id, returnId));
 
   if (!returnRecord) throw new Error("Return not found");
-  if (returnRecord.status !== "requested") throw new Error("Return already processed");
 
-  // REJECT FLOW
+  if (returnRecord.status !== "requested") {
+    throw new Error("Return already processed");
+  }
+
+  const now = new Date();
+
+  //REJECT FLOW
   if (action === "reject") {
-    await db
-      .update(returns)
-      .set({
-        status: "rejected",
-        adminNote,
-        updatedAt: new Date(),
-      })
-      .where(eq(returns.id, returnId));
+    await db.update(returns).set({
+      status: "rejected",
+      adminNote,
+      updatedAt: now,
+    }).where(eq(returns.id, returnId));
 
-    await db
-      .update(orders)
-      .set({
-        isEscrowLocked: false,
-        escrowLockedAmount: "0",
-        updatedAt: new Date(),
-      })
-      .where(eq(orders.id, returnRecord.orderId));
+    await db.update(orders).set({
+      isEscrowLocked: false,
+      escrowLockedAmount: "0",
+      updatedAt: now,
+    }).where(eq(orders.id, returnRecord.orderId));
 
     return { message: "Return rejected" };
   }
 
-  // APPROVE FLOW
-  if (!resolutionType) throw new Error("Resolution type required for approval");
-
-  await db
-    .update(returns)
-    .set({
-      status: "approved",
-      resolutionType,
-      refundResponsibility,
-      adminNote,
-      updatedAt: new Date(),
-    })
-    .where(eq(returns.id, returnId));
-
-  // REFRESH RETURN
-  const [updatedReturn] = await db
-    .select()
-    .from(returns)
-    .where(eq(returns.id, returnId));
-
-  if (!updatedReturn || updatedReturn.status !== "approved") {
-    throw new Error("Return not properly approved");
+  //APPROVE FLOW 
+  if (!resolutionType) {
+    throw new Error("Resolution type required for approval");
   }
 
-  // PROCESS RETURN RESOLUTION
-  let result;
-  switch (resolutionType) {
-    case "exchange":
-      result = await processReturnExchangeService([returnId]);
-      break;
-    case "refund":
-      result = await processReturnRefundService([returnId]);
-      break;
-    case "store_credit":
-      result = await processReturnRefundService([returnId]); 
-      break;
-    default:
-      throw new Error("Unsupported resolution type");
-  }
+  await db.update(returns).set({
+    status: "approved",
+    resolutionType,
+    refundResponsibility,
+    adminNote,
+    updatedAt: now,
+  }).where(eq(returns.id, returnId));
 
-  if (!result?.[0]?.success) {
-    throw new Error(result?.[0]?.error || "Return processing failed");
-  }
-
-  return { message: "Return approved and processed" };
+  return {
+    message: "Return approved. Awaiting item return",
+    returnId,
+    nextStep: "Ship item back to origin",
+  };
 };
 
 //shippment delivery service
