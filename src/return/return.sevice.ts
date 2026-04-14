@@ -12,6 +12,9 @@ import {
 import { processBulkReturns } from "./processors/bulkReturnProcessor";
 import { resolveReturn } from "./resolutions/resolveReturn";
 import { sendEmail } from "../mailer/mailer";
+import { storeCreditResolution } from "./resolutions/storeCreditResolution";
+import { refundResolution } from "./resolutions/refundResolution";
+import { exchangeResolution } from "./resolutions/exchangeResolution";
 
 // CREATE RETURN REQUEST
 export type ReturnRow = {
@@ -415,26 +418,44 @@ export const reviewReturnService = async ({
     updatedAt: now,
   }).where(eq(returns.id, returnId));
 
-  const orderRows = await db
-    .select()
-    .from(orders)
-    .where(eq(orders.id, returnRecord.orderId));
+  const orderItem = await db.query.orderItems.findFirst({
+      where: eq(orderItems.id, returnRecord.orderItemId),
+    });
+  
+    if (!orderItem) throw new Error("Order item not found");
 
-  const order = orderRows[0];
+  const order = await db.query.orders.findFirst({
+     where: eq(orders.id, orderItem.orderId),
+     with: { user: true },
+   });
 
-  if (order.user?.email) {
-  await sendEmail(
+//   if (order && order.user?.email) {
+//   await sendEmail(
+    // order.user.email,
+    // "Return Approved - Action Required",
+    // `Hi ${order.user.firstname}, your return request for order #${order.id} has been approved. Please take the item back to your original pickup point for processing.`,
+    // `<p>Hi ${order.user.firstname},</p>
+    //  <p>Your return request for <strong>Order #${order.id}</strong> has been <strong>approved</strong>.</p>
+    //  <p>Please take the item back to the original pickup station where you collected it.</p>
+    //  <p>Our team will receive and process it once it arrives.</p>
+    //  <br/>
+    //  <p>Regards,<br/>Sokotimam Support Team</p>`
+//   );
+// }
+
+if (order?.user?.email) {
+    await sendEmail(
     order.user.email,
     "Return Approved - Action Required",
-    `Hi ${order.user.firstname}, your return request for order #${order.id} has been approved. Please take the item back to your original pickup station for processing. Regards, Support Team`,
+    `Hi ${order.user.firstname}, your return request for order #${order.id} has been approved. Please take the item back to your original pickup point for processing.`,
     `<p>Hi ${order.user.firstname},</p>
      <p>Your return request for <strong>Order #${order.id}</strong> has been <strong>approved</strong>.</p>
      <p>Please take the item back to the original pickup station where you collected it.</p>
      <p>Our team will receive and process it once it arrives.</p>
      <br/>
-     <p>Regards,<br/>Support Team</p>`
-  );
-}
+     <p>Regards,<br/>Sokotimam Support Team</p>`
+    );
+  }
 
   return {
     message: "Return approved. Awaiting item return",
@@ -590,4 +611,90 @@ export const getReturnByIdService = async (returnId: number) => {
     ...returnRecord,
     refunds: refundRecords,
   };
+};
+export const processFinalReturnResolution = async (returnId: number) => {
+  const [returnRecord] = await db
+    .select()
+    .from(returns)
+    .where(eq(returns.id, returnId));
+
+  if (!returnRecord) throw new Error("Return not found");
+
+  //Block already finalized states 
+  if (["refunded", "exchanged", "closed"].includes(returnRecord.status)) {
+    throw new Error("Return already resolved");
+  }
+
+  if (returnRecord.status !== "received") {
+    throw new Error("Return must be received before resolution");
+  }
+
+  const now = new Date();
+
+  //prevent double processing
+  const locked = await db
+    .update(returns)
+    .set({
+      status: "processing",
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(returns.id, returnId),
+        eq(returns.status, "received")
+      )
+    )
+    .returning();
+
+  if (!locked.length) {
+    throw new Error("Return is already being processed");
+  }
+
+  try {
+    let data;
+
+    //Execute resolution
+    switch (returnRecord.resolutionType) {
+      case "exchange":
+        data = await exchangeResolution(returnRecord);
+        break;
+
+      case "refund":
+        data = await refundResolution(returnRecord);
+        break;
+
+      case "store_credit":
+        data = await storeCreditResolution(returnRecord);
+        break;
+
+      default:
+        throw new Error("Invalid resolution type");
+    }
+
+    // FINAL STATE 
+    await db
+      .update(returns)
+      .set({
+        status: "closed",
+        updatedAt: now,
+      })
+      .where(eq(returns.id, returnId));
+
+    return {
+      message: "Return resolved successfully",
+      returnId,
+      data,
+    };
+  } catch (error: any) {
+    //Rollback to safe state
+    await db
+      .update(returns)
+      .set({
+        status: "received",
+        updatedAt: now,
+      })
+      .where(eq(returns.id, returnId));
+
+    throw error;
+  }
 };

@@ -751,6 +751,46 @@ export const paySellerViaMpesa = async (
   return { mpesa: response.data, externalTransactionId: reference };
 };
 
+export const payCustomerRefundViaMpesa = async (
+  returnId: number,
+  phone: string,
+  amount: number
+) => {
+  const token = await getB2CAccessToken();
+  const isSandbox = process.env.MPESA_ENV === "sandbox";
+
+  const partyB = isSandbox ? 254708374149 : normalizePhoneNumber(phone);
+  const paymentAmount = isSandbox ? Math.max(10, Math.floor(amount)) : Math.floor(amount);
+
+  const reference = `refund_${returnId}`;
+
+  const payload = {
+    OriginatorConversationID: reference,
+    InitiatorName: process.env.MPESA_INITIATOR,
+    SecurityCredential: process.env.MPESA_SECURITY_CREDENTIAL,
+    CommandID: "BusinessPayment",
+    Amount: paymentAmount,
+    PartyA: Number(process.env.MPESA_B2C_SHORTCODE),
+    PartyB: partyB,
+    Remarks: "Customer Refund",
+    QueueTimeOutURL: process.env.MPESA_TIMEOUT_URL,
+    ResultURL: process.env.MPESA_RESULT_URL,
+  };
+
+  const endpoint = isSandbox
+    ? "https://sandbox.safaricom.co.ke/mpesa/b2c/v3/paymentrequest"
+    : "https://api.safaricom.co.ke/mpesa/b2c/v3/paymentrequest";
+
+  const response = await axios.post(endpoint, payload, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  return {
+    mpesa: response.data,
+    externalTransactionId: reference,
+  };
+};
+
 // GET B2C ACCESS TOKEN
 export const getB2CAccessToken = async () => {
   const key = process.env.MPESA_CONSUMER_KEY!;

@@ -111,6 +111,15 @@ const order = (app: Express) => {
     }
   });
 
+   //mark return as received by station manager
+  app.route("/return/:id/mark-received").post(async (req, res, next) => {
+    try {
+      await markReturnAsReceivedController(req, res);
+    } catch (error) {
+      next(error);
+    }
+  });
+
     app.route("/station_manager/order-items/:id/assign-station").post(async (req, res, next) => {
     try {
       await assignOriginStationController(req, res);
@@ -146,14 +155,6 @@ const order = (app: Express) => {
     }
   });
 
-  //mark return as received by station manager
-  app.route("/return/:id/mark-received").post(async (req, res, next) => {
-    try {
-      await markReturnAsReceivedController(req, res);
-    } catch (error) {
-      next(error);
-    }
-  });
 
   //get order for pickup verification
   app.route("/orders/:orderId/verify").get(async (req, res, next) => {

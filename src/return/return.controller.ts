@@ -7,6 +7,7 @@ import {
   reviewReturnService,
   processReturnExchangeService,
   handleReplacementShipmentDeliveredService,
+  processFinalReturnResolution,
 } from "./return.sevice";
 
 // Create Return Request
@@ -186,5 +187,35 @@ export const getReturnByIdController = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error("Get Return By ID Error:", error);
     return res.status(500).json({ message: error.message });
+  }
+};
+
+
+export const triggerReturnResolutionController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { returnId } = req.params;
+
+    if (!returnId) {
+      return res.status(400).json({
+        message: "Return ID is required",
+      });
+    }
+
+    const result = await processFinalReturnResolution(Number(returnId));
+
+    return res.status(200).json({
+      message: result.message,
+      returnId: result.returnId,
+      data: result.data,
+    });
+
+  } catch (error: any) {
+    console.error("Trigger Return Resolution Error:", error);
+    return res.status(500).json({
+      message: error.message,
+    });
   }
 };

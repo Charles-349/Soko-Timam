@@ -7,6 +7,7 @@ import {
   reviewReturnController,
   processReturnExchangeController,
   handleReplacementShipmentDeliveredController,
+  triggerReturnResolutionController,
 } from "./return.controller";
 import { adminRoleAuth } from "../middleware/bearAuth";
 
@@ -80,6 +81,14 @@ const returnsRouter = (app: Express) => {
       next(error);
     }
   });
+
+  app.route("/returns/:returnId/process-resolution").post(async (req, res, next)=>{
+    try{
+    await triggerReturnResolutionController(req, res);
+    } catch (error) {
+      next(error);
+    }
+  })
 };
 
 export default returnsRouter;

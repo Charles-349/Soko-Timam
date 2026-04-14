@@ -19,6 +19,7 @@ export const ReturnStatusEnum = pgEnum("return_status", [
   "approved",
   "rejected",
   "received",
+  "processing",
   "refunded",
   "exchanged",
   "in_transit",

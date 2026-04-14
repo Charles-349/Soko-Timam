@@ -15,8 +15,11 @@ export const processReturn = async (
   if (!returnRecord)
     throw new Error(`Return ${returnId} not found`);
 
-  if (returnRecord.status !== "approved")
-    throw new Error(`Return ${returnId} must be approved`);
+  const allowedStatuses = ["received"];
+
+if (!allowedStatuses.includes(returnRecord.status)) {
+  throw new Error(`Return ${returnId} must be received before processing`);
+}
 
   const result = await handler(returnRecord);
 

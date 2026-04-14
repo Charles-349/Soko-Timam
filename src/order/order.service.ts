@@ -1383,10 +1383,10 @@ export const markReturnAsReceivedService = async (orderItemId: number) => {
   if (!returnRecord) throw new Error("Return not found");
 
   
-  const allowedStates = ["approved", "in_transit", "received"];
+  const allowedStates = ["in_transit"];
 
   if (!allowedStates.includes(returnRecord.status)) {
-    throw new Error(`Return must be approved before receiving`);
+    throw new Error(`Return must be in transit before receiving`);
   }
 
   const shippingRecord = await db.query.shipping.findFirst({
@@ -1432,30 +1432,6 @@ export const markReturnAsReceivedService = async (orderItemId: number) => {
     })
     .where(eq(returns.id, returnRecord.id));
 
-  //PROCESS RESOLUTION 
-  let result;
-
-  switch (returnRecord.resolutionType) {
-    case "exchange":
-      result = await processReturnExchangeService([returnRecord.id]);
-      break;
-
-    case "refund":
-      result = await processReturnRefundService([returnRecord.id]);
-      break;
-
-    case "store_credit":
-      result = await processReturnRefundService([returnRecord.id]);
-      break;
-
-    default:
-      throw new Error("Invalid resolution type");
-  }
-
-  if (!result?.[0]?.success) {
-    throw new Error(result?.[0]?.error || "Return processing failed");
-  }
-
   // CUSTOMER EMAIL
   if (order?.user?.email) {
     await sendEmail(
@@ -1474,22 +1450,25 @@ export const markReturnAsReceivedService = async (orderItemId: number) => {
   }
 
   // SELLER EMAIL
-  if (seller?.user && typeof seller.user === 'object' && !Array.isArray(seller.user) && 'email' in seller.user && seller.user.email) {
-    await sendEmail(
-      seller.user.email,
-      "Return Item Received",
-      `A returned item for order #${returnRecord.orderId} has been received and is now being processed. Kindly pick it from your original drop off station where you had dropped it.`,
-      `
-        <p>Hello ${seller.fullname},</p>
-        <p>A returned item for order <b>#${returnRecord.orderId}</b> has been received at the station.</p>
-        <p>Kindly pick it from your original drop off station where you had dropped it.</p>
-        <p>Resolution type: <b>${returnRecord.resolutionType}</b></p>
-        <p>Processing (refund/exchange/store credit) has now started.</p>
-        <br/>
-        <p>Regards,<br/>Sokotimam Team</p>
-      `
-    );
-  }
+  const sellerUser = seller ? await db.query.users.findFirst({
+  where: eq(users.id, seller.userId),
+}) : null;
+
+if (sellerUser?.email && seller) {
+  await sendEmail(
+    sellerUser.email,
+    "Return Item Received",
+    `A returned item for order #${returnRecord.orderId} has been received and is being processed.`,
+    `
+      <p>Hello ${seller.fullname},</p>
+      <p>A returned item for order <b>#${returnRecord.orderId}</b> has been received.</p>
+      <p>It is now being processed for <b>${returnRecord.resolutionType}</b>.</p>
+      <p>Please coordinate pickup if required from the original station.</p>
+      <br/>
+      <p>Regards,<br/>Sokotimam Team</p>
+    `
+  );
+}
 
   return {
     message: "Return received and processed successfully",
