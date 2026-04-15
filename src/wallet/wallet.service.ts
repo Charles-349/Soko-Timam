@@ -33,7 +33,7 @@ export const creditSellerWalletService = async ({
   sellerId,
   amount,
   orderId,
-  note = "Order payment (escrow)",
+  note = "Order payment received (held in escrow)",
 }: {
   sellerId: number;
   amount: number;
@@ -51,7 +51,7 @@ export const creditSellerWalletService = async ({
     sellerId,
     amount: amountNum.toString(),
     orderId,
-    type: "credit",
+    type: "payment_received",
     note,
     walletStatus: "completed",
     createdAt: new Date(),
@@ -61,12 +61,12 @@ export const creditSellerWalletService = async ({
 export const releaseEscrowToAvailableService = async (
   sellerId: number,
   amount: number,
-  note = "Escrow settlement release"
+  note = "Escrow funds released to available balance"
 ) => {
   const wallet = await getSellerWalletService(sellerId);
 
   if (Number(wallet.pendingBalance) < amount)
-    throw new Error("Insufficient pending balance");
+    throw new Error("Insufficient escrow balance to release");
 
   await db.update(sellerWallets).set({
     pendingBalance: sql`${sellerWallets.pendingBalance} - ${amount}`,
@@ -76,7 +76,7 @@ export const releaseEscrowToAvailableService = async (
   await db.insert(sellerWalletTransactions).values({
     sellerId,
     amount: amount.toString(),
-    type: "credit",
+    type: "escrow_release",
     note,
     walletStatus: "completed",
     createdAt: new Date(),
@@ -87,7 +87,7 @@ export const releaseEscrowToAvailableService = async (
 export const debitSellerWalletService = async ({
   sellerId,
   amount,
-  note = "Refund debit",
+  note = "Refund issued to customer",
 }: {
   sellerId: number;
   amount: number;
@@ -113,7 +113,7 @@ export const debitSellerWalletService = async ({
   await db.insert(sellerWalletTransactions).values({
     sellerId,
     amount: amount.toString(),
-    type: "debit",
+    type: "refund",
     note,
     walletStatus: "completed",
     createdAt: new Date(),
@@ -138,7 +138,7 @@ export const requestWithdrawalService = async (
     sellerId,
     amount: amount.toString(),
     type: "withdrawal",
-    note: "Withdrawal request",
+    note: "Withdrawal request initiated",
     walletStatus: "pending",
     createdAt: new Date(),
   }).returning();
