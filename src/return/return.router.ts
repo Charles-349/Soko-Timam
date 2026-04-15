@@ -8,8 +8,12 @@ import {
   processReturnExchangeController,
   handleReplacementShipmentDeliveredController,
   triggerReturnResolutionController,
+  getSellerReturnsController,
+  getReturnsByPickupLocationController,
+  getReturnsByOriginStationController,
+  getAllReturnsController,
 } from "./return.controller";
-import { adminRoleAuth } from "../middleware/bearAuth";
+import { adminRoleAuth, checkRoles, stationManagerRoleAuth } from "../middleware/bearAuth";
 
 const returnsRouter = (app: Express) => {
   // Create Return Request
@@ -20,6 +24,35 @@ const returnsRouter = (app: Express) => {
       next(error);
     }
   });
+
+ app.route("/returns/pickup-location").get(
+    checkRoles(["station_manager", "agent"]),
+    async (req, res, next) => {
+      try {
+        await getReturnsByPickupLocationController(req, res);
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
+
+  app
+  .route("/returns/origin-station")
+  .get(stationManagerRoleAuth, async (req, res, next) => {
+    try {
+      await getReturnsByOriginStationController(req, res);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.route("/returns/all").get(checkRoles(["admin", "seller", "station_manager", "agent"]),async (req, res, next) => {
+  try {
+    await getAllReturnsController(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
 
   // REVIEW RETURN REQUEST - Approve or Reject
   app
@@ -89,6 +122,24 @@ const returnsRouter = (app: Express) => {
       next(error);
     }
   })
+
+
+  //get seller returns 
+  app.route("/returns/seller/:sellerId").get(async (req, res, next) => {
+    try {
+      await getSellerReturnsController(req, res);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.route("/returns/pickup-location").get(async (req, res, next) => {
+    try {
+      await getReturnsByPickupLocationController(req, res);
+    } catch (error) {
+      next(error);
+    }
+  });
 };
 
 export default returnsRouter;

@@ -1,5 +1,5 @@
 import db from "../Drizzle/db";
-import { eq, sql, and } from "drizzle-orm";
+import { eq, sql, and, or } from "drizzle-orm";
 import {
   returns,
   refunds,
@@ -7,6 +7,12 @@ import {
   orderItems,
   shops,
   shipping,
+  users,
+  products,
+  agents,
+  stations,
+  sellers,
+  productImages,
 } from "../Drizzle/schema";
 
 import { processBulkReturns } from "./processors/bulkReturnProcessor";
@@ -697,4 +703,273 @@ export const processFinalReturnResolution = async (returnId: number) => {
 
     throw error;
   }
+};
+
+
+export const getSellerReturnsService = async (sellerId: number) => {
+  const rows = await db
+    .select({
+      returnId: returns.id,
+      status: returns.status,
+      reason: returns.reason,
+      resolutionType: returns.resolutionType,
+      refundAmount: returns.refundAmount,
+      createdAt: returns.createdAt,
+
+      orderId: orders.id,
+
+      buyerId: users.id,
+      buyerName: users.firstname,
+      buyerPhone: users.phone,
+
+      productId: products.id,
+      productName: products.name,
+    })
+    .from(returns)
+    .innerJoin(orders, eq(returns.orderId, orders.id))
+    .innerJoin(users, eq(orders.userId, users.id))
+    .innerJoin(orderItems, eq(orderItems.orderId, orders.id))
+    .innerJoin(products, eq(orderItems.productId, products.id))
+    .innerJoin(shops, eq(orderItems.shopId, shops.id))
+    .where(eq(shops.sellerId, sellerId));
+
+  // GROUP manually
+  const grouped = new Map();
+
+  for (const row of rows) {
+    if (!grouped.has(row.returnId)) {
+      grouped.set(row.returnId, {
+        returnId: row.returnId,
+        status: row.status,
+        reason: row.reason,
+        resolutionType: row.resolutionType,
+        refundAmount: row.refundAmount,
+        createdAt: row.createdAt,
+        orderId: row.orderId,
+        buyer: {
+          id: row.buyerId,
+          name: row.buyerName,
+          phone: row.buyerPhone,
+        },
+        items: [],
+      });
+    }
+
+    grouped.get(row.returnId).items.push({
+      productId: row.productId,
+      productName: row.productName,
+    });
+  }
+
+  return Array.from(grouped.values());
+};
+
+
+export const getReturnsByPickupLocationService = async (user: any) => {
+  let condition;
+
+  if (user.role === "station_manager") {
+    // station manager 
+    const [station] = await db
+      .select()
+      .from(stations)
+      .where(eq(stations.managerId, user.id));
+
+    if (!station) {
+      throw new Error("Station not found for this manager");
+    }
+
+    condition = eq(orders.pickupStationId, station.id);
+
+  } else if (user.role === "agent") {
+    // agent
+    const [agent] = await db
+      .select()
+      .from(agents)
+      .where(eq(agents.userId, user.id));
+
+    if (!agent) {
+      throw new Error("Agent not found");
+    }
+
+    condition = eq(orders.pickupAgentId, agent.id);
+
+  } else {
+    throw new Error("Unauthorized role");
+  }
+
+  const pickupReturns = await db
+    .select({
+      returnId: returns.id,
+      status: returns.status,
+      reason: returns.reason,
+      resolutionType: returns.resolutionType,
+      refundAmount: returns.refundAmount,
+      createdAt: returns.createdAt,
+
+      orderId: orders.id,
+
+      pickupStationId: orders.pickupStationId,
+      pickupAgentId: orders.pickupAgentId,
+
+      buyerId: users.id,
+      buyerName: users.firstname,
+      buyerPhone: users.phone,
+
+      productId: products.id,
+      productName: products.name,
+    })
+    .from(returns)
+    .innerJoin(orders, eq(returns.orderId, orders.id))
+    .innerJoin(users, eq(returns.userId, users.id))
+    .innerJoin(orderItems, eq(returns.orderItemId, orderItems.id))
+    .innerJoin(products, eq(orderItems.productId, products.id))
+    .where(condition);
+
+  return pickupReturns;
+};
+
+
+export const getReturnsByOriginStationService = async (user: any) => {
+  if (user.role !== "station_manager") {
+    throw new Error("Unauthorized role");
+  }
+
+  // Get station managed by this user
+  const [station] = await db
+    .select()
+    .from(stations)
+    .where(eq(stations.managerId, user.id));
+
+  if (!station) {
+    throw new Error("Station not found for this manager");
+  }
+
+  const originReturns = await db
+    .select({
+      returnId: returns.id,
+      status: returns.status,
+      reason: returns.reason,
+      resolutionType: returns.resolutionType,
+      refundAmount: returns.refundAmount,
+      createdAt: returns.createdAt,
+
+      orderId: orders.id,
+
+      originStationId: orderItems.originStationId,
+
+      buyerId: users.id,
+      buyerName: users.firstname,
+      buyerPhone: users.phone,
+
+      productId: products.id,
+      productName: products.name,
+    })
+    .from(returns)
+    .innerJoin(orders, eq(returns.orderId, orders.id))
+    .innerJoin(users, eq(returns.userId, users.id))
+    .innerJoin(orderItems, eq(returns.orderItemId, orderItems.id))
+    .innerJoin(products, eq(orderItems.productId, products.id))
+    .where(eq(orderItems.originStationId, station.id));
+
+  return originReturns;
+};
+
+export const getAllReturnsService = async (user: any, query: any) => {
+  const { type, status, resolutionType } = query;
+
+  let condition: any;
+
+  //ROLE-BASED BASE FILTER
+  if (user.role === "seller") {
+    const [seller] = await db
+      .select()
+      .from(sellers)
+      .where(eq(sellers.userId, user.id));
+
+    if (!seller) throw new Error("Seller not found");
+
+    condition = eq(returns.sellerId, seller.id);
+
+  } else if (user.role === "station_manager") {
+    const [station] = await db
+      .select()
+      .from(stations)
+      .where(eq(stations.managerId, user.id));
+
+    if (!station) throw new Error("Station not found");
+
+    if (type === "origin") {
+      condition = eq(orderItems.originStationId, station.id);
+    } else {
+      // default → pickup
+      condition = eq(orders.pickupStationId, station.id);
+    }
+
+  } else if (user.role === "agent") {
+    const [agent] = await db
+      .select()
+      .from(agents)
+      .where(eq(agents.userId, user.id));
+
+    if (!agent) throw new Error("Agent not found");
+
+    condition = eq(orders.pickupAgentId, agent.id);
+
+  } else if (user.role === "admin") {
+    condition = undefined; // admin sees all
+  } else {
+    throw new Error("Unauthorized role");
+  }
+
+  const filters: (ReturnType<typeof eq> | ReturnType<typeof and>)[] = [];
+
+  if (condition) filters.push(condition);
+  if (status) filters.push(eq(returns.status, status));
+  if (resolutionType)
+    filters.push(eq(returns.resolutionType, resolutionType));
+
+  const finalCondition =
+    filters.length > 0 ? and(...filters) : undefined;
+
+  const data = await db
+    .select({
+      returnId: returns.id,
+      status: returns.status,
+      reason: returns.reason,
+      resolutionType: returns.resolutionType,
+      refundAmount: returns.refundAmount,
+      createdAt: returns.createdAt,
+
+      orderId: orders.id,
+
+      sellerId: returns.sellerId,
+
+      pickupStationId: orders.pickupStationId,
+      pickupAgentId: orders.pickupAgentId,
+      originStationId: orderItems.originStationId,
+
+      buyerId: users.id,
+      buyerName: users.firstname,
+      buyerPhone: users.phone,
+
+      productId: products.id,
+      productName: products.name,
+      productImage: productImages.imageUrl,
+    })
+    .from(returns)
+    .innerJoin(orders, eq(returns.orderId, orders.id))
+    .innerJoin(users, eq(returns.userId, users.id))
+    .innerJoin(orderItems, eq(returns.orderItemId, orderItems.id))
+    .innerJoin(products, eq(orderItems.productId, products.id))
+    .leftJoin(
+    productImages,
+    and(
+      eq(productImages.productId, products.id),
+      eq(productImages.isMain, true)
+    )
+    )
+    .where(finalCondition);
+
+  return data;
 };

@@ -8,6 +8,10 @@ import {
   processReturnExchangeService,
   handleReplacementShipmentDeliveredService,
   processFinalReturnResolution,
+  getSellerReturnsService,
+  getReturnsByPickupLocationService,
+  getReturnsByOriginStationService,
+  getAllReturnsService,
 } from "./return.sevice";
 
 // Create Return Request
@@ -214,6 +218,110 @@ export const triggerReturnResolutionController = async (
 
   } catch (error: any) {
     console.error("Trigger Return Resolution Error:", error);
+    return res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
+export const getSellerReturnsController = async (req: Request, res: Response) => {
+  try {
+    const sellerId = Number(req.params.sellerId);
+
+    if (!sellerId) {
+      return res.status(400).json({ message: "Invalid seller id" });
+    }
+
+    const data = await getSellerReturnsService(sellerId);
+
+    return res.status(200).json({
+      message: "Seller returns fetched successfully",
+      count: data.length,
+      data,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      message: error.message || "Failed to fetch seller returns",
+    });
+  }
+};
+
+export const getReturnsByPickupLocationController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const user = (req as any).user;
+
+    const data = await getReturnsByPickupLocationService(user);
+
+     if (!data || data.length === 0) {
+      return res.status(200).json({
+        message: "No returns found for this pickup location",
+      });
+    }
+
+    return res.status(200).json({
+      message: "Pickup location returns fetched successfully",
+      data,
+    });
+
+  } catch (error: any) {
+    return res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
+export const getReturnsByOriginStationController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const user = (req as any).user;
+
+    const data = await getReturnsByOriginStationService(user);
+
+    if (!data || data.length === 0) {
+      return res.status(200).json({
+        message: "No returns found for this origin station",
+      });
+    }
+
+    return res.status(200).json({
+      message: "Origin station returns fetched successfully",
+      data,
+    });
+
+  } catch (error: any) {
+    return res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
+export const getAllReturnsController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const user = (req as any).user;
+    const query = req.query;
+
+    const data = await getAllReturnsService(user, query);
+
+    if (!data || data.length === 0) {
+      return res.status(200).json({
+        message: "No returns found",
+      });
+    }
+
+    return res.status(200).json({
+      message: "Returns fetched successfully",
+      data,
+    });
+
+  } catch (error: any) {
     return res.status(500).json({
       message: error.message,
     });
