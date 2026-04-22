@@ -618,7 +618,101 @@ export const getReturnByIdService = async (returnId: number) => {
     refunds: refundRecords,
   };
 };
-export const processFinalReturnResolution = async (returnId: number) => {
+
+// export const processFinalReturnResolution = async (returnId: number) => {
+//   const [returnRecord] = await db
+//     .select()
+//     .from(returns)
+//     .where(eq(returns.id, returnId));
+
+//   if (!returnRecord) throw new Error("Return not found");
+
+//   //Block already finalized states 
+//   if (["refunded", "exchanged", "closed"].includes(returnRecord.status)) {
+//     throw new Error("Return already resolved");
+//   }
+
+//   if (returnRecord.status !== "received") {
+//     throw new Error("Return must be received before resolution");
+//   }
+
+//   const now = new Date();
+
+//   //prevent double processing
+//   const locked = await db
+//     .update(returns)
+//     .set({
+//       status: "processing",
+//       updatedAt: now,
+//     })
+//     .where(
+//       and(
+//         eq(returns.id, returnId),
+//         eq(returns.status, "received")
+//       )
+//     )
+//     .returning();
+
+//   if (!locked.length) {
+//     throw new Error("Return is already being processed");
+//   }
+
+//   try {
+//     let data;
+
+//     //Execute resolution
+//     switch (returnRecord.resolutionType) {
+//       case "exchange":
+//         data = await exchangeResolution(returnRecord);
+//         break;
+
+//       case "refund":
+//         data = await refundResolution(returnRecord);
+//         break;
+
+//       case "store_credit":
+//         data = await storeCreditResolution(returnRecord);
+//         break;
+
+//       default:
+//         throw new Error("Invalid resolution type");
+//     }
+
+//     // FINAL STATE 
+//     await db
+//       .update(returns)
+//       .set({
+//         status: "closed",
+//         updatedAt: now,
+//       })
+//       .where(eq(returns.id, returnId));
+
+//     return {
+//       message: "Return resolved successfully",
+//       returnId,
+//       data,
+//     };
+//   } catch (error: any) {
+//     //Rollback to safe state
+//     await db
+//       .update(returns)
+//       .set({
+//         status: "received",
+//         updatedAt: now,
+//       })
+//       .where(eq(returns.id, returnId));
+
+//     throw error;
+//   }
+// };
+
+export const processFinalReturnResolution = async (
+  returnId: number,
+  override?: {
+    resolutionType?: "refund" | "exchange" | "store_credit";
+    refundResponsibility?: string;
+  }
+) => {
   const [returnRecord] = await db
     .select()
     .from(returns)
@@ -626,18 +720,19 @@ export const processFinalReturnResolution = async (returnId: number) => {
 
   if (!returnRecord) throw new Error("Return not found");
 
-  //Block already finalized states 
+  // Block already finalized states
   if (["refunded", "exchanged", "closed"].includes(returnRecord.status)) {
     throw new Error("Return already resolved");
   }
 
+  // Must be in received stage
   if (returnRecord.status !== "received") {
     throw new Error("Return must be received before resolution");
   }
 
   const now = new Date();
 
-  //prevent double processing
+  // Prevent double processing 
   const locked = await db
     .update(returns)
     .set({
@@ -657,10 +752,17 @@ export const processFinalReturnResolution = async (returnId: number) => {
   }
 
   try {
-    let data;
+    // FINAL DECISION (supports override)
+    const finalResolutionType =
+      override?.resolutionType ?? returnRecord.resolutionType;
 
-    //Execute resolution
-    switch (returnRecord.resolutionType) {
+    const finalResponsibility =
+      override?.refundResponsibility ?? returnRecord.refundResponsibility;
+
+    let data: any;
+
+    // Execute resolution
+    switch (finalResolutionType) {
       case "exchange":
         data = await exchangeResolution(returnRecord);
         break;
@@ -677,11 +779,14 @@ export const processFinalReturnResolution = async (returnId: number) => {
         throw new Error("Invalid resolution type");
     }
 
-    // FINAL STATE 
+    // Final state update
     await db
       .update(returns)
       .set({
         status: "closed",
+        resolutionType: finalResolutionType,
+        refundResponsibility: finalResponsibility,
+        processedAt: now,
         updatedAt: now,
       })
       .where(eq(returns.id, returnId));
@@ -692,7 +797,7 @@ export const processFinalReturnResolution = async (returnId: number) => {
       data,
     };
   } catch (error: any) {
-    //Rollback to safe state
+    // rollback to safe state
     await db
       .update(returns)
       .set({
