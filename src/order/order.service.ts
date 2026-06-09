@@ -136,11 +136,11 @@ export const createOrUpdateOrderService = async (
 // Get all orders
 export const getAllOrdersService = async () => {
   const ordersList = await db.query.orders.findMany({
-    with: { 
-      user: true, 
-      items: { with: { product: true } }, 
-      payments: true, 
-      shipping: true 
+    with: {
+      user: true,
+      items: { with: { product: true } },
+      payments: true,
+      shipping: true
     },
   });
 
@@ -192,7 +192,7 @@ export const getAllOrdersService = async () => {
       .from(productImages)
       .where(and(inArray(productImages.productId, replacementProductIds), eq(productImages.isMain, true)));
 
-    // Attach returns and replacements (with main images) to each item
+    // Attach returns and replacements with main images to each item
     order.items = order.items.map((item: any) => {
       const itemReturns = returnRecords.filter((r) => r.orderItemId === item.id);
       const replacements = itemReturns
@@ -280,32 +280,32 @@ export const getOrderByIdService = async (orderId: number) => {
 
   // Attach returns and replacements with main images to the order items
   const itemsWithReplacements = order.items.map((item: any) => {
-  const isAssignedToOrigin = !!item.originStationId;
+    const isAssignedToOrigin = !!item.originStationId;
 
-  const itemReturns = returnRecords.filter((r) => r.orderItemId === item.id);
+    const itemReturns = returnRecords.filter((r) => r.orderItemId === item.id);
 
-  const replacements = itemReturns
-    .map((r) =>
-      replacementItems
-        .filter((ri) => ri.replacementForReturnId === r.returnId)
-        .map((ri) => ({
-          ...ri,
-          product: {
-            productId: ri.productId,
-            productImage:
-              replacementImages.find((img) => img.productId === ri.productId)?.imageUrl || null,
-          },
-        }))
-    )
-    .flat();
+    const replacements = itemReturns
+      .map((r) =>
+        replacementItems
+          .filter((ri) => ri.replacementForReturnId === r.returnId)
+          .map((ri) => ({
+            ...ri,
+            product: {
+              productId: ri.productId,
+              productImage:
+                replacementImages.find((img) => img.productId === ri.productId)?.imageUrl || null,
+            },
+          }))
+      )
+      .flat();
 
-  return {
-    ...item,
-    isAssignedToOrigin,
-    returns: itemReturns,
-    replacements,
-  };
-});
+    return {
+      ...item,
+      isAssignedToOrigin,
+      returns: itemReturns,
+      replacements,
+    };
+  });
 
   return { ...order, items: itemsWithReplacements };
 };
@@ -538,9 +538,9 @@ type OrderWithRelations = {
   status: string;
   originStationId?: number | null;
   pickupStationId?: number | null;
-  pickupAgentId?: number | null; 
+  pickupAgentId?: number | null;
   paymentStatus?: string;
-  
+
 };
 export const getOrderForShipping = async (
   orderItemId: number
@@ -592,7 +592,7 @@ export const getOrderForShipping = async (
     pickupAgentId: order.pickupAgentId ?? null,
     paymentStatus: order.paymentStatus ?? undefined,
     items,
-    shipping: shippingRecords, 
+    shipping: shippingRecords,
     user,
   };
 };
@@ -655,11 +655,11 @@ export const assignOriginStationServiceEx = async (
       estimatedDelivery: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
       createdAt: new Date(),
     })
-    .returning();
+      .returning();
 
     shipment = newShipment;
 
-      // If replacement, update the return record with the shipment ID
+    // If replacement, update the return record with the shipment ID
     if (isReplacement) {
       await db.update(returns)
         .set({ replacementShipmentId: shipment.id })
@@ -675,9 +675,9 @@ export const assignOriginStationServiceEx = async (
     shipmentId: shipment?.id,
     customer: item.order.user
       ? {
-          id: item.order.user.id,
-          name: `${item.order.user.firstname} ${item.order.user.lastname}`,
-        }
+        id: item.order.user.id,
+        name: `${item.order.user.firstname} ${item.order.user.lastname}`,
+      }
       : null,
     destination: shipment?.pickupStation || null,
   };
@@ -962,18 +962,18 @@ export const markOrderAsShippedServiceEx = async (orderItemId: number) => {
   });
 
   // Prevent duplicate shipping
- if (
-  existingShipping &&
-  existingShipping.status &&
-  ["in_transit", "ready_for_pickup", "delivered"].includes(existingShipping.status)
-) {
-  return {
-    message: "Item already in transit",
-    orderId: order.id,
-    orderItemId,
-    type: shippingType,
-  };
-}
+  if (
+    existingShipping &&
+    existingShipping.status &&
+    ["in_transit", "ready_for_pickup", "delivered"].includes(existingShipping.status)
+  ) {
+    return {
+      message: "Item already in transit",
+      orderId: order.id,
+      orderItemId,
+      type: shippingType,
+    };
+  }
 
   // Resolve origin
   let originStationId: number | null;
@@ -1022,7 +1022,7 @@ export const markOrderAsShippedServiceEx = async (orderItemId: number) => {
     await db
       .update(returns)
       .set({
-        status: "in_transit", 
+        status: "in_transit",
         updatedAt: now,
       })
       .where(eq(returns.id, returnRecord.id));
@@ -1315,56 +1315,56 @@ export const markOrderAsDeliveredServiceEx = async (
 //     throw new Error(result?.[0]?.error || "Return processing failed");
 //   }
 
-  // // Fetch order and seller
-  // const orderItem = await db.query.orderItems.findFirst({
-  //   where: eq(orderItems.id, orderItemId),
-  // });
+// // Fetch order and seller
+// const orderItem = await db.query.orderItems.findFirst({
+//   where: eq(orderItems.id, orderItemId),
+// });
 
-  // if (!orderItem) throw new Error("Order item not found");
+// if (!orderItem) throw new Error("Order item not found");
 
-  // const order = await db.query.orders.findFirst({
-  //   where: eq(orders.id, orderItem.orderId),
-  //   with: { user: true },
-  // });
+// const order = await db.query.orders.findFirst({
+//   where: eq(orders.id, orderItem.orderId),
+//   with: { user: true },
+// });
 
-  // const seller = await db.query.sellers.findFirst({
-  //   with: { user: true },
-  // });
+// const seller = await db.query.sellers.findFirst({
+//   with: { user: true },
+// });
 
-  // // CUSTOMER EMAIL
-  // if (order?.user?.email) {
-  //   await sendEmail(
-  //     order.user.email,
-  //     "Return Received Successfully",
-  //     `Hello ${order.user.firstname}, your returned item has been received. We are now processing your ${returnRecord.resolutionType}. Regards.`,
-  //     `
-  //       <p>Hello ${order.user.firstname},</p>
-  //       <p>Your returned item has been successfully received.</p>
-  //       <p>We are now processing your <b>${returnRecord.resolutionType}</b>.</p>
-  //       <p>We will update you once completed.</p>
-  //       <br/>
-  //       <p>Regards,<br/>Sokotimam Support Team</p>
-  //     `
-  //   );
-  // }
+// // CUSTOMER EMAIL
+// if (order?.user?.email) {
+//   await sendEmail(
+//     order.user.email,
+//     "Return Received Successfully",
+//     `Hello ${order.user.firstname}, your returned item has been received. We are now processing your ${returnRecord.resolutionType}. Regards.`,
+//     `
+//       <p>Hello ${order.user.firstname},</p>
+//       <p>Your returned item has been successfully received.</p>
+//       <p>We are now processing your <b>${returnRecord.resolutionType}</b>.</p>
+//       <p>We will update you once completed.</p>
+//       <br/>
+//       <p>Regards,<br/>Sokotimam Support Team</p>
+//     `
+//   );
+// }
 
-  // // SELLER EMAIL
-  // if (seller?.user && typeof seller.user === 'object' && !Array.isArray(seller.user) && 'email' in seller.user && seller.user.email) {
-  //   await sendEmail(
-  //     seller.user.email,
-  //     "Return Item Received",
-  //     `A returned item for order #${returnRecord.orderId} has been received and is now being processed. Kindly pick it from your original drop off station where you had dropped it.`,
-  //     `
-  //       <p>Hello ${seller.fullname},</p>
-  //       <p>A returned item for order <b>#${returnRecord.orderId}</b> has been received at the station.</p>
-  //       <p>Kindly pick it from your original drop off station where you had dropped it.</p>
-  //       <p>Resolution type: <b>${returnRecord.resolutionType}</b></p>
-  //       <p>Processing (refund/exchange/store credit) has now started.</p>
-  //       <br/>
-  //       <p>Regards,<br/>Sokotimam Team</p>
-  //     `
-  //   );
-  // }
+// // SELLER EMAIL
+// if (seller?.user && typeof seller.user === 'object' && !Array.isArray(seller.user) && 'email' in seller.user && seller.user.email) {
+//   await sendEmail(
+//     seller.user.email,
+//     "Return Item Received",
+//     `A returned item for order #${returnRecord.orderId} has been received and is now being processed. Kindly pick it from your original drop off station where you had dropped it.`,
+//     `
+//       <p>Hello ${seller.fullname},</p>
+//       <p>A returned item for order <b>#${returnRecord.orderId}</b> has been received at the station.</p>
+//       <p>Kindly pick it from your original drop off station where you had dropped it.</p>
+//       <p>Resolution type: <b>${returnRecord.resolutionType}</b></p>
+//       <p>Processing (refund/exchange/store credit) has now started.</p>
+//       <br/>
+//       <p>Regards,<br/>Sokotimam Team</p>
+//     `
+//   );
+// }
 
 //   return {
 //     message: "Return received and processed successfully",
@@ -1382,7 +1382,7 @@ export const markReturnAsReceivedService = async (orderItemId: number) => {
 
   if (!returnRecord) throw new Error("Return not found");
 
-  
+
   const allowedStates = ["in_transit"];
 
   if (!allowedStates.includes(returnRecord.status)) {
@@ -1451,15 +1451,15 @@ export const markReturnAsReceivedService = async (orderItemId: number) => {
 
   // SELLER EMAIL
   const sellerUser = seller ? await db.query.users.findFirst({
-  where: eq(users.id, seller.userId),
-}) : null;
+    where: eq(users.id, seller.userId),
+  }) : null;
 
-if (sellerUser?.email && seller) {
-  await sendEmail(
-    sellerUser.email,
-    "Return Item Received",
-    `A returned item for order #${returnRecord.orderId} has been received and is being processed.`,
-    `
+  if (sellerUser?.email && seller) {
+    await sendEmail(
+      sellerUser.email,
+      "Return Item Received",
+      `A returned item for order #${returnRecord.orderId} has been received and is being processed.`,
+      `
       <p>Hello ${seller.fullname},</p>
       <p>A returned item for order <b>#${returnRecord.orderId}</b> has been received.</p>
       <p>It is now being processed for <b>${returnRecord.resolutionType}</b>.</p>
@@ -1467,8 +1467,8 @@ if (sellerUser?.email && seller) {
       <br/>
       <p>Regards,<br/>Sokotimam Team</p>
     `
-  );
-}
+    );
+  }
 
   return {
     message: "Return received and processed successfully",
@@ -2010,9 +2010,9 @@ export const getOrdersByOriginStationIdService = async (stationId: number) => {
         },
         seller: item.shop?.seller?.user
           ? {
-              id: item.shop.seller.user.id,
-              name: `${item.shop.seller.user.firstname} ${item.shop.seller.user.lastname}`,
-            }
+            id: item.shop.seller.user.id,
+            name: `${item.shop.seller.user.firstname} ${item.shop.seller.user.lastname}`,
+          }
           : null,
         returns: returnsWithReplacements,
       };
