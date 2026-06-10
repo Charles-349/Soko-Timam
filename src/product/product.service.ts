@@ -19,6 +19,7 @@ export interface ICreateProductInput {
   description?: string;
   price: number;
   stock?: number;
+  weight_kg?: number;
   imageFiles?: Express.Multer.File[]; // multiple files
 }
 
@@ -33,8 +34,7 @@ export const createProductService = async (data: ICreateProductInput) => {
       description: data.description,
       price: data.price.toString(),
       stock: data.stock ?? 0,
-      // sku: data.sku,
-      // status: data.status ?? "active",
+      weight_kg: data.weight_kg !== undefined ? data.weight_kg.toString() : "0",
     })
     .returning();
 

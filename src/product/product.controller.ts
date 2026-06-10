@@ -34,7 +34,7 @@ export const createProduct = async (req: Request, res: Response) => {
     const userId = decoded.id;
 
     // Extract product data from body
-    const { shopId, categoryId, name, description, price, stock, sku, status } = req.body;
+    const { shopId, categoryId, name, description, price, stock, weight_kg } = req.body;
 
     if (!shopId || !categoryId || !name || !price) {
       return res.status(400).json({
@@ -53,6 +53,7 @@ export const createProduct = async (req: Request, res: Response) => {
       description,
       price: Number(price),
       stock: stock ? Number(stock) : 0,
+      weight_kg: weight_kg !== undefined ? Number(weight_kg) : 0,
       imageFiles: files?.images,
     };
 

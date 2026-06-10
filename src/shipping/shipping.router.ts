@@ -1,118 +1,93 @@
-// import { adminRoleAuth } from "../middleware/bearAuth";
-// import {
-//   createShippingController,
-//   getShippingsController,
-//   getShippingByIdController,
-//   updateShippingController,
-//   deleteShippingController,
-//   getShippingByOrderIdController,
-//   getShippingsByStatusController,
-//   getActiveShippingsController,
-//   getCompletedShippingsController,
-//   getShippingsByDateRangeController,
-//   getShippingWithOrderController,
-// } from "./shipping.controller";
-// import { Express } from "express";
+import { Express } from "express";
+import { adminRoleAuth } from "../middleware/bearAuth";
+import {
+  getShippingSettingsController,
+  createShippingSettingsController,
+  updateShippingSettingsController,
+  getShippingDistancesController,
+  getShippingDistanceByIdController,
+  createShippingDistanceController,
+  updateShippingDistanceController,
+  deleteShippingDistanceController,
+  calculateOrderShippingController,
+} from "./shipping.controller";
 
-// const shipping = (app: Express) => {
-//   // Create Shipping
-//   app.route("/shipping").post(async (req, res, next) => {
-//     try {
-//       await createShippingController(req, res);
-//     } catch (error) {
-//       next(error);
-//     }
-//   });
+const shippingAdmin = (app: Express) => {
 
-//   // Get All Shippings (Admin only)
-//   app.route("/shipping").get(adminRoleAuth, async (req, res, next) => {
-//     try {
-//       await getShippingsController(req, res);
-//     } catch (error) {
-//       next(error);
-//     }
-//   });
+  app.route("/shipping-settings").get(adminRoleAuth, async (req, res, next) => {
+    try {
+      await getShippingSettingsController(req, res);
+    } catch (error) {
+      next(error);
+    }
+  });
 
-//   // Get Shipping by ID
-//   app.route("/shipping/:id").get(async (req, res, next) => {
-//     try {
-//       await getShippingByIdController(req, res);
-//     } catch (error) {
-//       next(error);
-//     }
-//   });
+  app.route("/shipping-settings").post(adminRoleAuth, async (req, res, next) => {
+    try {
+      await createShippingSettingsController(req, res);
+    } catch (error) {
+      next(error);
+    }
+  });
 
-//   // Update Shipping by ID
-//   app.route("/shipping/:id").put(async (req, res, next) => {
-//     try {
-//       await updateShippingController(req, res);
-//     } catch (error) {
-//       next(error);
-//     }
-//   });
+  app.route("/shipping-settings/:id").put(adminRoleAuth, async (req, res, next) => {
+    try {
+      await updateShippingSettingsController(req, res);
+    } catch (error) {
+      next(error);
+    }
+  });
 
-//   // Delete Shipping by ID
-//   app.route("/shipping/:id").delete(async (req, res, next) => {
-//     try {
-//       await deleteShippingController(req, res);
-//     } catch (error) {
-//       next(error);
-//     }
-//   });
+  //Shipping Distances (Admin only)
+  app.route("/shipping-distances").get(adminRoleAuth, async (req, res, next) => {
+    try {
+      await getShippingDistancesController(req, res);
+    } catch (error) {
+      next(error);
+    }
+  });
 
-//   // Shipping by Order ID
-//   app.route("/shipping/order/:orderId").get(async (req, res, next) => {
-//     try {
-//       await getShippingByOrderIdController(req, res);
-//     } catch (error) {
-//       next(error);
-//     }
-//   });
+  app.route("/shipping-distances/:id").get(adminRoleAuth, async (req, res, next) => {
+    try {
+      await getShippingDistanceByIdController(req, res);
+    } catch (error) {
+      next(error);
+    }
+  });
 
-//   // Shippings by Status
-//   app.route("/shipping/status/:status").get(async (req, res, next) => {
-//     try {
-//       await getShippingsByStatusController(req, res);
-//     } catch (error) {
-//       next(error);
-//     }
-//   });
+  app.route("/shipping-distances").post(adminRoleAuth, async (req, res, next) => {
+    try {
+      await createShippingDistanceController(req, res);
+    } catch (error) {
+      next(error);
+    }
+  });
 
-//   // Active Shippings
-//   app.route("/shipping/active").get(async (req, res, next) => {
-//     try {
-//       await getActiveShippingsController(req, res);
-//     } catch (error) {
-//       next(error);
-//     }
-//   });
+  app.route("/shipping-distances/:id").put(adminRoleAuth, async (req, res, next) => {
+    try {
+      await updateShippingDistanceController(req, res);
+    } catch (error) {
+      next(error);
+    }
+  });
 
-//   // Completed Shippings
-//   app.route("/shipping/completed").get(async (req, res, next) => {
-//     try {
-//       await getCompletedShippingsController(req, res);
-//     } catch (error) {
-//       next(error);
-//     }
-//   });
+  app.route("/shipping-distances/:id").delete(adminRoleAuth, async (req, res, next) => {
+    try {
+      await deleteShippingDistanceController(req, res);
+    } catch (error) {
+      next(error);
+    }
+  });
 
-//   // Shippings by Date Range
-//   app.route("/shipping/date-range").get(async (req, res, next) => {
-//     try {
-//       await getShippingsByDateRangeController(req, res);
-//     } catch (error) {
-//       next(error);
-//     }
-//   });
+  //Calculate Shipping for Order
+  // GET /order-shipping/:orderId - full shipping breakdown
+  app.route("/order-shipping/:orderId").get(async (req, res, next) => {
+    try {
+      await calculateOrderShippingController(req, res);
+    } catch (error) {
+      next(error);
+    }
+  });
+};
 
-//   // Shipping with related Order
-//   app.route("/shipping/:id/order").get(async (req, res, next) => {
-//     try {
-//       await getShippingWithOrderController(req, res);
-//     } catch (error) {
-//       next(error);
-//     }
-//   });
-// };
-
-// export default shipping;
+export default shippingAdmin;

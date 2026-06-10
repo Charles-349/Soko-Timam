@@ -1,19 +1,19 @@
-import { pgEnum,pgTable, serial, varchar, text, integer, timestamp, boolean, decimal } from "drizzle-orm/pg-core";
+import { pgEnum, pgTable, serial, varchar, text, integer, timestamp, boolean, decimal } from "drizzle-orm/pg-core";
 import { is, relations } from "drizzle-orm";
 
 //ENUMS
-export const RoleEnum = pgEnum("role", ["admin", "seller", "customer", "station_manager", "agent"]); 
+export const RoleEnum = pgEnum("role", ["admin", "seller", "customer", "station_manager", "agent"]);
 export const ShopStatusEnum = pgEnum("status", ["pending", "active", "suspended"]);
-export const OrderStatusEnum = pgEnum("order_status", ["pending", "paid",  "at_station", "processing","shipped", "completed", "cancelled"]);
-export const PaymentStatusEnum = pgEnum("payment_status", ["unpaid", "paid", "failed"]); 
+export const OrderStatusEnum = pgEnum("order_status", ["pending", "paid", "at_station", "processing", "shipped", "completed", "cancelled"]);
+export const PaymentStatusEnum = pgEnum("payment_status", ["unpaid", "paid", "failed"]);
 export const ShippingStatusEnum = pgEnum("shipping_status", [
   "preparing",
   "in_transit",
   "ready_for_pickup",
   "delivered"
-]); 
-export const FlashSalesStatusEnum = pgEnum("flash_sale_status", ["upcoming", "active", "ended"]);  
-export const WalletStatusEnum = pgEnum("wallet_status", ["pending", "completed", "failed", "processing"]);  
+]);
+export const FlashSalesStatusEnum = pgEnum("flash_sale_status", ["upcoming", "active", "ended"]);
+export const WalletStatusEnum = pgEnum("wallet_status", ["pending", "completed", "failed", "processing"]);
 export const ReturnStatusEnum = pgEnum("return_status", [
   "requested",
   "approved",
@@ -24,22 +24,22 @@ export const ReturnStatusEnum = pgEnum("return_status", [
   "exchanged",
   "in_transit",
   "closed"
-  
-]);  
-export const RefundStatusEnum = pgEnum("refund_status", ["pending", "completed", "failed"]);   
-export const SettlementStatusEnum = pgEnum("settlement_status", ["pending", "completed"]); 
-export const ReturnResolutionTypeEnum = pgEnum("return_resolution_type", ["refund", "exchange", "store_credit"]);  
-export const shippingTypeEnum = pgEnum("shipping_type", ["standard", "replacement", "return"]);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+
+]);
+export const RefundStatusEnum = pgEnum("refund_status", ["pending", "completed", "failed"]);
+export const SettlementStatusEnum = pgEnum("settlement_status", ["pending", "completed"]);
+export const ReturnResolutionTypeEnum = pgEnum("return_resolution_type", ["refund", "exchange", "store_credit"]);
+export const shippingTypeEnum = pgEnum("shipping_type", ["standard", "replacement", "return"]);
 
 // USERS
 export const users = pgTable("users", {
-  id: serial("id").primaryKey(),                                                                                                                                                                                                                                                                                                                                 
+  id: serial("id").primaryKey(),
   firstname: varchar("firstname", { length: 255 }).notNull(),
   lastname: varchar("lastname", { length: 255 }).notNull(),
   email: varchar("email", { length: 255 }).notNull().unique(),
   password: varchar("password", { length: 255 }),
   phone: varchar("phone", { length: 20 }),
-  role: RoleEnum("role").default("customer"), 
+  role: RoleEnum("role").default("customer"),
   image_url: varchar("image_url", { length: 255 }).default(
     "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y"
   ),
@@ -51,7 +51,7 @@ export const users = pgTable("users", {
 export const stations = pgTable("stations", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
-  managerId: integer("manager_id") 
+  managerId: integer("manager_id")
     .references(() => users.id)
     .notNull(),
   county: varchar("county", { length: 100 }).notNull(),
@@ -66,7 +66,7 @@ export const stations = pgTable("stations", {
 //AGENTS
 export const agents = pgTable("agents", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id") 
+  userId: integer("user_id")
     .references(() => users.id)
     .notNull(),
   county: varchar("county", { length: 100 }).notNull(),
@@ -135,9 +135,10 @@ export const sellerWallets = pgTable("seller_wallets", {
     .references(() => sellers.id, { onDelete: "cascade" })
     .notNull()
     .unique(),
-  balance :decimal("balance", {
+  balance: decimal("balance", {
     precision: 14,
-    scale: 2,  }).notNull().default("0"),
+    scale: 2,
+  }).notNull().default("0"),
   pendingBalance: decimal("pending_balance", {
     precision: 14,
     scale: 2,
@@ -169,7 +170,7 @@ export const sellerWalletTransactions = pgTable("seller_wallet_transactions", {
   note: text("note"),
   walletStatus: WalletStatusEnum("wallet_status").default("completed"), // pending, completed, failed
   sellerId: integer("seller_id").references(() => sellers.id, { onDelete: "cascade" }).notNull(),
-  updatedAt: timestamp("updated_at").defaultNow(),  
+  updatedAt: timestamp("updated_at").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -187,7 +188,7 @@ export const platformCommissions = pgTable("platform_commissions", {
 export const categories = pgTable("categories", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
-  parentId: integer("parent_id"), 
+  parentId: integer("parent_id"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -200,8 +201,9 @@ export const products = pgTable("products", {
   description: text("description"),
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   stock: integer("stock").notNull().default(0),
-  ImageUrl: text("image_url"),    
-  onFlashSale: boolean("on_flash_sale").default(false),                                                                                                                                                                                                                                                     
+  ImageUrl: text("image_url"),
+  onFlashSale: boolean("on_flash_sale").default(false),
+  weight_kg: decimal("weight_kg", { precision: 10, scale: 3 }).notNull().default("0"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow().notNull()
 
@@ -226,8 +228,8 @@ export const carts = pgTable("carts", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id).notNull(),
   checkoutStatus: varchar("checkout_status", { length: 20 })
-  .notNull()
-  .default("unpaid"),
+    .notNull()
+    .default("unpaid"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -257,12 +259,12 @@ export const orders = pgTable("orders", {
   isEscrowReleased: boolean("is_escrow_released").default(false),
   isEscrowLocked: boolean("is_escrow_locked").default(false),
   escrowLockedAmount: decimal("escrow_locked_amount", {
-  precision: 10,
-  scale: 2,
+    precision: 10,
+    scale: 2,
   }).default("0"),
   escrowReleasedAmount: decimal("escrow_released_amount", {
-  precision: 15,
-  scale: 2,
+    precision: 15,
+    scale: 2,
   }).default("0"),
   pickupStationId: integer("pickup_station_id")
     .references(() => stations.id),
@@ -325,8 +327,8 @@ export const returns = pgTable("returns", {
     scale: 2,
   }),
   refundResponsibility: varchar("refund_responsibility", {
-  length: 30,
-}), // seller_fault | buyer_fault | logistics_fault
+    length: 30,
+  }), // seller_fault | buyer_fault | logistics_fault
   customerNote: text("customer_note"),
   adminNote: text("admin_note"),
   evidenceUrl: text("evidence_url"),
@@ -369,7 +371,7 @@ export const ledger = pgTable("ledger", {
   id: serial("id").primaryKey(),
   sellerId: integer("seller_id")
     .references(() => sellers.id),
-  type: varchar("type", { length: 20 }).notNull(), 
+  type: varchar("type", { length: 20 }).notNull(),
   source: varchar("source", { length: 50 }).notNull(),
   referenceId: integer("reference_id"),
   amount: decimal("amount", {
@@ -395,6 +397,48 @@ export const payments = pgTable("payments", {
   updatedAt: timestamp("updated_at").defaultNow().notNull()
 
 });
+// SHIPPING SETTINGS
+export const shipping_settings = pgTable("shipping_settings", {
+  id: serial("id").primaryKey(),
+  price_per_km: decimal("price_per_km", { precision: 10, scale: 2 }).notNull().default("0"),
+  price_per_kg: decimal("price_per_kg", { precision: 10, scale: 2 }).notNull().default("0"),
+  shipping_percentage: integer("shipping_percentage").notNull().default(0),
+  vat_percentage: integer("vat_percentage").notNull().default(16),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
+// SHIPPING DISTANCES
+export const shipping_distances = pgTable("shipping_distances", {
+  id: serial("id").primaryKey(),
+  from_station_id: integer("from_station_id")
+    .references(() => stations.id)
+    .notNull(),
+  to_station_id: integer("to_station_id")
+    .references(() => stations.id),
+  to_agent_id: integer("to_agent_id")
+    .references(() => agents.id),
+  kilometers: decimal("kilometers", {
+    precision: 10,
+    scale: 2,
+  }).notNull(),
+  cost: decimal("cost", {
+    precision: 10,
+    scale: 2,
+  }).notNull().default("0"),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
+// SHIPPING WEIGHTS (per‑product weight cost)
+export const shipping_weights = pgTable("shipping_weights", {
+  id: serial("id").primaryKey(),
+  product_id: integer("product_id").references(() => products.id).notNull(),
+  weight_kg: decimal("weight_kg", { precision: 10, scale: 3 }).notNull(),
+  cost: decimal("cost", { precision: 10, scale: 2 }).notNull().default("0"),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
 
 //  SHIPPING
 export const shipping = pgTable("shipping", {
@@ -411,7 +455,7 @@ export const shipping = pgTable("shipping", {
   status: ShippingStatusEnum("shipping_status")
     .default("preparing"),
   orderItemId: integer("order_item_id")
-  .references(() => orderItems.id),
+    .references(() => orderItems.id),
   recipientName: varchar("recipient_name", { length: 255 }),
   recipientPhone: varchar("recipient_phone", { length: 20 }),
   pickupCode: varchar("pickup_code", { length: 100 }),
@@ -426,7 +470,7 @@ export const reviews = pgTable("reviews", {
   id: serial("id").primaryKey(),
   productId: integer("product_id").references(() => products.id).notNull(),
   userId: integer("user_id").references(() => users.id).notNull(),
-  rating: integer("rating").notNull(), 
+  rating: integer("rating").notNull(),
   comment: text("comment"),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -457,7 +501,7 @@ export const flashSales = pgTable("flash_sales", {
   endTime: timestamp("end_time", { withTimezone: true }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   flash_sale_status: FlashSalesStatusEnum("flash_sale_status").default("upcoming"), // upcoming, active, ended
-  
+
 });
 
 // NOTIFICATIONS
@@ -503,10 +547,10 @@ export const categoriesRelations = relations(categories, ({ one, many }) => ({
   parent: one(categories, {
     fields: [categories.parentId],
     references: [categories.id],
-    relationName: "parentCategory", 
+    relationName: "parentCategory",
   }),
   children: many(categories, {
-    relationName: "parentCategory", 
+    relationName: "parentCategory",
   }),
   products: many(products),
 }));
@@ -515,7 +559,7 @@ export const categoriesRelations = relations(categories, ({ one, many }) => ({
 export const productsRelations = relations(products, ({ one, many }) => ({
   shop: one(shops, {
     fields: [products.shopId],
-    
+
     references: [shops.id],
   }),
   category: one(categories, {
@@ -690,7 +734,7 @@ export const platformCommissionsRelations = relations(platformCommissions, ({ on
   seller: one(sellers, { fields: [platformCommissions.sellerId], references: [sellers.id] }),
 }));
 
-export const stationsRelations = relations(stations, ({ one}) => ({
+export const stationsRelations = relations(stations, ({ one }) => ({
   manager: one(users, {
     fields: [stations.managerId],
     references: [users.id],
@@ -802,3 +846,11 @@ export type TSStation = typeof stations.$inferSelect;
 export type TIAgent = typeof agents.$inferInsert;
 export type TSAgent = typeof agents.$inferSelect;
 
+export type TIShippingSettings = typeof shipping_settings.$inferInsert;
+export type TSShippingSettings = typeof shipping_settings.$inferSelect;
+
+export type TIShippingDistance = typeof shipping_distances.$inferInsert;
+export type TSShippingDistance = typeof shipping_distances.$inferSelect;
+
+export type TIShippingWeight = typeof shipping_weights.$inferInsert;
+export type TSShippingWeight = typeof shipping_weights.$inferSelect;

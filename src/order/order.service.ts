@@ -1,5 +1,5 @@
-
 import db from "../Drizzle/db";
+import { calculateOrderShipping, findNearestStationToShop } from "../shipping/shipping.service";
 import { eq, and, inArray } from "drizzle-orm";
 import { orders, orderItems, products, payments, shops, shipping, stations, agents, users, sellers, productImages, returns, TSShipping } from "../Drizzle/schema";
 import { sql } from "drizzle-orm";
@@ -120,7 +120,7 @@ export const createOrUpdateOrderService = async (
     message: "Order updated successfully",
     orderId: existingOrder.id,
     totalAmount,
-
+    shippingBreakdown: await calculateOrderShipping(existingOrder.id),
     pickupStationId:
       pickupStationId !== undefined
         ? pickupStationId
@@ -939,9 +939,19 @@ export const markOrderAsShippedServiceEx = async (orderItemId: number) => {
   const shippingType: "standard" | "replacement" | "return" =
     isReturn ? "return" : isReplacement ? "replacement" : "standard";
 
-  // Validate origin for normal/replacement
+  // Validate/resolve origin for normal/replacement
   if (!isReturn && !item.originStationId) {
-    throw new Error("Item must be assigned to a station before shipping");
+    try {
+      const nearestStation = await findNearestStationToShop(item.shopId);
+      item.originStationId = nearestStation.id;
+      // Persist the auto-assigned origin station
+      await db
+        .update(orderItems)
+        .set({ originStationId: nearestStation.id })
+        .where(eq(orderItems.id, orderItemId));
+    } catch (err: any) {
+      throw new Error(`Failed to automatically assign origin station to item: ${err.message}`);
+    }
   }
 
   // Pickup location (can be station OR agent)

@@ -1,176 +1,170 @@
-// import { Request, Response } from "express";
-// import {
-//   createShippingService,
-//   getShippingsService,
-//   getShippingByIdService,
-//   updateShippingService,
-//   deleteShippingService,
-//   getShippingByOrderIdService,
-//   getShippingsByStatusService,
-//   getActiveShippingsService,
-//   getCompletedShippingsService,
-//   getShippingsByDateRangeService,
-//   getShippingWithOrderService,
-// } from "./shipping.service";
+import { Request, Response } from "express";
+import {
+  getShippingSettingsService,
+  createShippingSettingsService,
+  updateShippingSettingsService,
+  getShippingDistancesService,
+  getShippingDistanceByIdService,
+  createShippingDistanceService,
+  updateShippingDistanceService,
+  deleteShippingDistanceService,
+  calculateOrderShipping,
+} from "./shipping.service";
 
-// // CREATE
-// export const createShippingController = async (req: Request, res: Response) => {
-//   try {
-//     const shipping = req.body;
-//     const newShipping = await createShippingService(shipping);
+// SHIPPING SETTINGS
 
-//     return res.status(201).json({
-//       message: "Shipping created successfully",
-//       shipping: newShipping,
-//     });
-//   } catch (error: any) {
-//     return res.status(500).json({ message: error.message });
-//   }
-// };
+export const getShippingSettingsController = async (_req: Request, res: Response) => {
+  try {
+    const settings = await getShippingSettingsService();
+    return res.status(200).json({ message: "Shipping settings retrieved", data: settings });
+  } catch (error: any) {
+    return res.status(500).json({ message: error.message });
+  }
+};
 
-// //READ ALL
-// export const getShippingsController = async (req: Request, res: Response) => {
-//   try {
-//     const shippings = await getShippingsService();
-//     return res.status(200).json({
-//       message: "Shippings retrieved successfully",
-//       shippings,
-//     });
-//   } catch (error: any) {
-//     return res.status(500).json({ message: error.message });
-//   }
-// };
+export const createShippingSettingsController = async (req: Request, res: Response) => {
+  try {
+    const { price_per_km, price_per_kg, shipping_percentage, vat_percentage } = req.body;
 
-// // READ ONE
-// export const getShippingByIdController = async (req: Request, res: Response) => {
-//   try {
-//     const id = parseInt(req.params.id);
-//     const shipping = await getShippingByIdService(id);
+    if (price_per_km === undefined || price_per_kg === undefined || shipping_percentage === undefined) {
+      return res.status(400).json({
+        message: "price_per_km, price_per_kg, and shipping_percentage are required",
+      });
+    }
 
-//     if (!shipping) {
-//       return res.status(404).json({ message: "Shipping not found" });
-//     }
+    const created = await createShippingSettingsService({
+      price_per_km: String(price_per_km),
+      price_per_kg: String(price_per_kg),
+      shipping_percentage: Number(shipping_percentage),
+      vat_percentage: vat_percentage !== undefined ? Number(vat_percentage) : 16,
+    });
 
-//     return res.status(200).json({
-//       message: "Shipping retrieved successfully",
-//       shipping,
-//     });
-//   } catch (error: any) {
-//     return res.status(500).json({ message: error.message });
-//   }
-// };
+    return res.status(201).json({ message: "Shipping settings created", data: created });
+  } catch (error: any) {
+    return res.status(500).json({ message: error.message });
+  }
+};
 
-// // UPDATE
-// export const updateShippingController = async (req: Request, res: Response) => {
-//   try {
-//     const id = parseInt(req.params.id);
-//     const updatedShipping = await updateShippingService(id, req.body);
+export const updateShippingSettingsController = async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ message: "Invalid settings ID" });
 
-//     if (!updatedShipping) {
-//       return res.status(404).json({ message: "Shipping not found" });
-//     }
+    const { price_per_km, price_per_kg, shipping_percentage, vat_percentage } = req.body;
 
-//     return res.status(200).json({ message: "Shipping updated successfully" });
-//   } catch (error: any) {
-//     return res.status(500).json({ message: error.message });
-//   }
-// };
+    const updated = await updateShippingSettingsService(id, {
+      ...(price_per_km !== undefined && { price_per_km: String(price_per_km) }),
+      ...(price_per_kg !== undefined && { price_per_kg: String(price_per_kg) }),
+      ...(shipping_percentage !== undefined && { shipping_percentage: Number(shipping_percentage) }),
+      ...(vat_percentage !== undefined && { vat_percentage: Number(vat_percentage) }),
+    });
 
-// //DELETE
-// export const deleteShippingController = async (req: Request, res: Response) => {
-//   try {
-//     const id = parseInt(req.params.id);
-//     const deletedShipping = await deleteShippingService(id);
+    if (!updated) return res.status(404).json({ message: "Shipping settings not found" });
 
-//     if (!deletedShipping) {
-//       return res.status(404).json({ message: "Shipping not found" });
-//     }
+    return res.status(200).json({ message: updated });
+  } catch (error: any) {
+    return res.status(500).json({ message: error.message });
+  }
+};
 
-//     return res.status(200).json({ message: "Shipping deleted successfully" });
-//   } catch (error: any) {
-//     return res.status(500).json({ message: error.message });
-//   }
-// };
+// SHIPPING DISTANCES
 
-// // Get shipping by Order ID
-// export const getShippingByOrderIdController = async (req: Request, res: Response) => {
-//   try {
-//     const orderId = parseInt(req.params.orderId);
-//     const shipping = await getShippingByOrderIdService(orderId);
+export const getShippingDistancesController = async (_req: Request, res: Response) => {
+  try {
+    const distances = await getShippingDistancesService();
+    return res.status(200).json({ message: "Shipping distances retrieved", data: distances });
+  } catch (error: any) {
+    return res.status(500).json({ message: error.message });
+  }
+};
 
-//     if (!shipping) {
-//       return res.status(404).json({ message: "Shipping not found for this order" });
-//     }
+export const getShippingDistanceByIdController = async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ message: "Invalid distance ID" });
 
-//     return res.status(200).json({ shipping });
-//   } catch (error: any) {
-//     return res.status(500).json({ message: error.message });
-//   }
-// };
+    const distance = await getShippingDistanceByIdService(id);
+    if (!distance) return res.status(404).json({ message: "Distance record not found" });
 
-// // Get shippings by Status
-// export const getShippingsByStatusController = async (req: Request, res: Response) => {
-//   try {
-//     const { status } = req.params;
-//     const shippings = await getShippingsByStatusService(status);
-//     return res.status(200).json({ shippings });
-//   } catch (error: any) {
-//     return res.status(500).json({ message: error.message });
-//   }
-// };
+    return res.status(200).json({ message: "Distance retrieved", data: distance });
+  } catch (error: any) {
+    return res.status(500).json({ message: error.message });
+  }
+};
 
-// // Get active shippings
-// export const getActiveShippingsController = async (req: Request, res: Response) => {
-//   try {
-//     const shippings = await getActiveShippingsService();
-//     return res.status(200).json({ shippings });
-//   } catch (error: any) {
-//     return res.status(500).json({ message: error.message });
-//   }
-// };
+export const createShippingDistanceController = async (req: Request, res: Response) => {
+  try {
+    const { from_station_id, to_station_id, to_agent_id, kilometers } = req.body;
 
-// // Get completed shippings
-// export const getCompletedShippingsController = async (req: Request, res: Response) => {
-//   try {
-//     const shippings = await getCompletedShippingsService();
-//     return res.status(200).json({ shippings });
-//   } catch (error: any) {
-//     return res.status(500).json({ message: error.message });
-//   }
-// };
+    if (!from_station_id || (!to_station_id && !to_agent_id) || !kilometers) {
+      return res.status(400).json({
+        message: "from_station_id, kilometers, and either to_station_id or to_agent_id are required",
+      });
+    }
 
-// // Get shippings by Date Range
-// export const getShippingsByDateRangeController = async (req: Request, res: Response) => {
-//   try {
-//     const { startDate, endDate } = req.query;
+    const created = await createShippingDistanceService({
+      from_station_id: Number(from_station_id),
+      to_station_id: to_station_id ? Number(to_station_id) : undefined,
+      to_agent_id: to_agent_id ? Number(to_agent_id) : undefined,
+      kilometers: String(kilometers),
+    });
 
-//     if (!startDate || !endDate) {
-//       return res.status(400).json({ message: "Start date and end date are required" });
-//     }
+    return res.status(201).json({
+      message: "Shipping distance created (cost auto-calculated)",
+      data: created,
+    });
+  } catch (error: any) {
+    return res.status(500).json({ message: error.message });
+  }
+};
 
-//     const shippings = await getShippingsByDateRangeService(
-//       new Date(startDate as string),
-//       new Date(endDate as string)
-//     );
+export const updateShippingDistanceController = async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ message: "Invalid distance ID" });
 
-//     return res.status(200).json({ shippings });
-//   } catch (error: any) {
-//     return res.status(500).json({ message: error.message });
-//   }
-// };
+    const { from_station_id, to_station_id, to_agent_id, kilometers } = req.body;
+    const updated = await updateShippingDistanceService(id, {
+      ...(from_station_id !== undefined && { from_station_id: Number(from_station_id) }),
+      ...(to_station_id !== undefined && { to_station_id: to_station_id === null ? null : Number(to_station_id) }),
+      ...(to_agent_id !== undefined && { to_agent_id: to_agent_id === null ? null : Number(to_agent_id) }),
+      ...(kilometers !== undefined && { kilometers: String(kilometers) }),
+    });
 
-// // Shipping with related Order
-// export const getShippingWithOrderController = async (req: Request, res: Response) => {
-//   try {
-//     const id = parseInt(req.params.id);
-//     const shipping = await getShippingWithOrderService(id);
+    if (!updated) return res.status(404).json({ message: "Distance record not found" });
 
-//     if (!shipping) {
-//       return res.status(404).json({ message: "Shipping not found" });
-//     }
+    return res.status(200).json({ message: updated });
+  } catch (error: any) {
+    return res.status(500).json({ message: error.message });
+  }
+};
 
-//     return res.status(200).json({ shipping });
-//   } catch (error: any) {
-//     return res.status(500).json({ message: error.message });
-//   }
-// };
+export const deleteShippingDistanceController = async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ message: "Invalid distance ID" });
+
+    const deleted = await deleteShippingDistanceService(id);
+    if (!deleted) return res.status(404).json({ message: "Distance record not found" });
+
+    return res.status(200).json({ message: deleted });
+  } catch (error: any) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+// CALCULATE SHIPPING FOR ORDER
+export const calculateOrderShippingController = async (req: Request, res: Response) => {
+  try {
+    const orderId = parseInt(req.params.orderId);
+    if (isNaN(orderId)) return res.status(400).json({ message: "Invalid order ID" });
+
+    const breakdown = await calculateOrderShipping(orderId);
+    return res.status(200).json({
+      message: "Shipping calculated successfully",
+      data: breakdown,
+    });
+  } catch (error: any) {
+    return res.status(500).json({ message: error.message });
+  }
+};
