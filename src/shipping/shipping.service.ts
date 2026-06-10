@@ -13,7 +13,7 @@ import {
 
 // ADMIN SHIPPING SETTINGS
 
-//Get the current shipping settings (singleton row)
+//Get the current shipping settings 
 export const getShippingSettingsService = async () => {
   const settings = await db.query.shipping_settings.findFirst();
   if (!settings) throw new Error("Shipping settings not configured");
