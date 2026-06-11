@@ -395,7 +395,6 @@ export const payments = pgTable("payments", {
   transactionRef: varchar("transaction_ref", { length: 255 }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow().notNull()
-
 });
 // SHIPPING SETTINGS
 export const shipping_settings = pgTable("shipping_settings", {

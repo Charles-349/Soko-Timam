@@ -97,7 +97,6 @@ export const getShippingDistanceByIdService = async (id: number) => {
     where: eq(shipping_distances.id, id),
   });
 };
-
 export const createShippingDistanceService = async (data: {
   from_station_id: number;
   to_station_id?: number;
@@ -106,17 +105,30 @@ export const createShippingDistanceService = async (data: {
 }) => {
   const settings = await db.query.shipping_settings.findFirst();
   const pricePerKm = Number(settings?.price_per_km ?? 0);
-  const cost = (Number(data.kilometers) * pricePerKm).toFixed(2);
+
+  const km = Number(data.kilometers);
+  const cost = (km * pricePerKm).toFixed(2);
+
+  const from_station_id = Number(data.from_station_id);
+
+  const baseInsert: any = {
+    from_station_id,
+    kilometers: String(data.kilometers),
+    cost,
+  };
+
+  if (data.to_station_id !== undefined && data.to_station_id !== null) {
+    baseInsert.to_station_id = Number(data.to_station_id);
+  }
+
+  if (data.to_agent_id !== undefined && data.to_agent_id !== null) {
+    baseInsert.to_agent_id = Number(data.to_agent_id);
+  }
+
 
   const [created] = await db
     .insert(shipping_distances)
-    .values({
-      from_station_id: data.from_station_id,
-      to_station_id: data.to_station_id ?? null,
-      to_agent_id: data.to_agent_id ?? null,
-      kilometers: data.kilometers,
-      cost,
-    })
+    .values(baseInsert)
     .returning();
 
   return created;

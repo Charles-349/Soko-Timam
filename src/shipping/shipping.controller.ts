@@ -92,50 +92,116 @@ export const getShippingDistanceByIdController = async (req: Request, res: Respo
   }
 };
 
+const toOptionalNumber = (value: any): number | undefined => {
+  if (value === undefined || value === null || value === "") return undefined;
+
+  const num = Number(value);
+  return Number.isNaN(num) ? undefined : num;
+};
+
 export const createShippingDistanceController = async (req: Request, res: Response) => {
   try {
     const { from_station_id, to_station_id, to_agent_id, kilometers } = req.body;
 
-    if (!from_station_id || (!to_station_id && !to_agent_id) || !kilometers) {
+    if (!from_station_id || !kilometers) {
       return res.status(400).json({
-        message: "from_station_id, kilometers, and either to_station_id or to_agent_id are required",
+        message: "from_station_id and kilometers are required",
+      });
+    }
+
+    const fromStationId = Number(from_station_id);
+    const km = Number(kilometers);
+
+    if (Number.isNaN(fromStationId) || Number.isNaN(km)) {
+      return res.status(400).json({
+        message: "Invalid numeric values provided",
+      });
+    }
+
+    const toStationId = toOptionalNumber(to_station_id);
+    const toAgentId = toOptionalNumber(to_agent_id);
+
+    if (toStationId === undefined && toAgentId === undefined) {
+      return res.status(400).json({
+        message: "Either to_station_id or to_agent_id is required",
+      });
+    }
+
+    if (toStationId !== undefined && toAgentId !== undefined) {
+      return res.status(400).json({
+        message: "Provide either to_station_id or to_agent_id, not both",
       });
     }
 
     const created = await createShippingDistanceService({
-      from_station_id: Number(from_station_id),
-      to_station_id: to_station_id ? Number(to_station_id) : undefined,
-      to_agent_id: to_agent_id ? Number(to_agent_id) : undefined,
-      kilometers: String(kilometers),
+      from_station_id: fromStationId,
+      to_station_id: toStationId,
+      to_agent_id: toAgentId,
+      kilometers: km.toFixed(2),
     });
 
     return res.status(201).json({
-      message: "Shipping distance created (cost auto-calculated)",
+      message: "Shipping distance created successfully",
       data: created,
     });
   } catch (error: any) {
-    return res.status(500).json({ message: error.message });
+    console.error("Shipping Controller Error:", error);
+    const detail = error.cause?.message || error.detail || error.message;
+    return res.status(500).json({ message: error.message, detail });
   }
 };
 
 export const updateShippingDistanceController = async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
-    if (isNaN(id)) return res.status(400).json({ message: "Invalid distance ID" });
 
-    const { from_station_id, to_station_id, to_agent_id, kilometers } = req.body;
-    const updated = await updateShippingDistanceService(id, {
-      ...(from_station_id !== undefined && { from_station_id: Number(from_station_id) }),
-      ...(to_station_id !== undefined && { to_station_id: to_station_id === null ? null : Number(to_station_id) }),
-      ...(to_agent_id !== undefined && { to_agent_id: to_agent_id === null ? null : Number(to_agent_id) }),
-      ...(kilometers !== undefined && { kilometers: String(kilometers) }),
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid distance ID" });
+    }
+
+    const {
+      from_station_id,
+      to_station_id,
+      to_agent_id,
+      kilometers,
+    } = req.body;
+
+    if (to_station_id && to_agent_id) {
+      return res.status(400).json({
+        message: "Provide either to_station_id or to_agent_id, not both",
+      });
+    }
+
+    const updatePayload: any = {};
+    if (from_station_id !== undefined) updatePayload.from_station_id = Number(from_station_id);
+    if (kilometers !== undefined) updatePayload.kilometers = String(kilometers);
+
+    // If to_station_id is provided, set it and clear agent
+    if (to_station_id !== undefined && to_station_id !== null && to_station_id !== "") {
+      updatePayload.to_station_id = Number(to_station_id);
+      updatePayload.to_agent_id = null;
+    }
+    // If to_agent_id is provided, set it and clear station
+    else if (to_agent_id !== undefined && to_agent_id !== null && to_agent_id !== "") {
+      updatePayload.to_agent_id = Number(to_agent_id);
+      updatePayload.to_station_id = null;
+    }
+
+    const updated = await updateShippingDistanceService(id, updatePayload);
+
+    if (!updated) {
+      return res.status(404).json({
+        message: "Distance record not found",
+      });
+    }
+
+    return res.status(200).json({
+      message: updated,
     });
-
-    if (!updated) return res.status(404).json({ message: "Distance record not found" });
-
-    return res.status(200).json({ message: updated });
   } catch (error: any) {
-    return res.status(500).json({ message: error.message });
+    console.error("Shipping Controller Error:", error);
+    const detail = error.cause?.message || error.detail || error.message;
+    return res.status(500).json({ message: error.message, detail });
   }
 };
 
@@ -149,7 +215,9 @@ export const deleteShippingDistanceController = async (req: Request, res: Respon
 
     return res.status(200).json({ message: deleted });
   } catch (error: any) {
-    return res.status(500).json({ message: error.message });
+    console.error("Shipping Controller Error:", error);
+    const detail = error.cause?.message || error.detail || error.message;
+    return res.status(500).json({ message: error.message, detail });
   }
 };
 
@@ -165,6 +233,8 @@ export const calculateOrderShippingController = async (req: Request, res: Respon
       data: breakdown,
     });
   } catch (error: any) {
-    return res.status(500).json({ message: error.message });
+    console.error("Shipping Controller Error:", error);
+    const detail = error.cause?.message || error.detail || error.message;
+    return res.status(500).json({ message: error.message, detail });
   }
 };
